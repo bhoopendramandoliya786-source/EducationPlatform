@@ -15,7 +15,7 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // Groq के एक्टिव मॉडल्स की डायनामिक लिस्ट
+    // Groq के लाइव एक्टिव मॉडल्स
     let activeModels = ['gemma2-9b-it', 'mixtral-8x7b-32768'];
     try {
       const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
@@ -40,12 +40,13 @@ export async function POST(req) {
       console.log('Model list fetch error:', e);
     }
 
-    const systemPrompt = `आप EduAI के एक सर्वगुण संपन्न, अत्यधिक ज्ञानी और अनुभवी शिक्षक हैं। 
-छात्र आपसे कुछ भी पूछ सकते हैं:
-1. PYQs (जैसे 100 PYQ, 50 PYQ): हर प्रश्न स्पष्ट नंबरिंग, 4 ऑप्शन्स और सही उत्तर व व्याख्या के साथ दें।
-2. MCQs / Quiz: तुरंत साफ़-सुथरे बहुविकल्पीय प्रश्न तैयार करें।
-3. थ्योरी/कॉन्सेप्ट: किसी भी विषय (इतिहास, राजस्थान GK, भूगोल, गणित, विज्ञान, राजनीति आदि) को आसान व बिंदुवार (Bullet points) समझाएँ।
-4. उत्तर हमेशा शुद्ध, प्राकृतिक और उत्साहवर्धक हिंदी में दें। सीधे मुख्य उत्तर से शुरू करें।`;
+    const systemPrompt = `आप EduAI के एक सर्वश्रेष्ठ शिक्षक और परीक्षा विशेषज्ञ हैं।
+नियम:
+1. उत्तर हमेशा साफ़, पठनीय और शुद्ध हिंदी में दें।
+2. टेबल सिंबल (| |), HTML टैग (<br>) या हैशटैग (###) का उपयोग बिल्कुल न करें।
+3. क्विज़ और PYQ के लिए साफ़ नंबरिंग (1, 2, 3...) और विकल्पों (A, B, C, D) को अलग-अलग लाइनों पर लिखें।
+4. महत्वपूर्ण शीर्षकों को सिर्फ **बोल्ड** करें।
+5. उत्तर के अंत में सही उत्तर और उसकी छोटी व्याख्या स्पष्ट रूप से दें।`;
 
     for (const modelName of activeModels) {
       try {
@@ -61,8 +62,7 @@ export async function POST(req) {
               { role: 'system', content: systemPrompt },
               { role: 'user', content: question }
             ],
-            temperature: 0.5,
-            max_tokens: 3500
+            temperature: 0.4
           })
         });
 
@@ -70,11 +70,15 @@ export async function POST(req) {
 
         if (data && data.choices && data.choices[0]?.message?.content) {
           let rawAnswer = data.choices[0].message.content;
-          const cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          // Clean thinking and raw HTML/pipes
+          let cleanAnswer = rawAnswer
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/<br\s*[\/]?>/gi, '\n')
+            .trim();
           return NextResponse.json({ answer: cleanAnswer || rawAnswer });
         }
       } catch (err) {
-        console.log(`Failed with ${modelName}, switching to next...`);
+        console.log(`Failed with ${modelName}, trying next...`);
       }
     }
 
