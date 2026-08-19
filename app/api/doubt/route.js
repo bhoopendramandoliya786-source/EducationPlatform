@@ -8,47 +8,42 @@ export async function POST(req) {
       return NextResponse.json({ error: 'सवाल खाली नहीं हो सकता' }, { status: 400 });
     }
 
-    const systemPrompt = `आप EduAI के एक उच्च-स्तरीय शिक्षक और विशेषज्ञ मार्गदर्शक हैं।
-छात्र के सवाल का उत्तर अत्यंत विस्तृत, प्रामाणिक और उच्च-गुणवत्ता वाले हिंदी प्रारूप में दें:
-1. संपूर्ण थ्योरी और पृष्ठभूमि (Concepts & Deep Theory)
-2. परीक्षा उपयोगी महत्वपूर्ण बिंदु व मुख्य तिथियां (Key Facts/Dates)
-3. पिछले वर्षों के प्रश्न (Previous Year Questions - PYQs)
-4. अभ्यास हेतु बहुविकल्पीय प्रश्न (MCQs with Explanations)
-उत्तर हमेशा बिंदुवार, स्वच्छ और पढ़ने में आसान बनाएं।`;
+    const fullPrompt = `आप EduAI के वरिष्ठ शिक्षक हैं। छात्र के निम्नलिखित सवाल का विस्तृत, स्पष्ट और बिंदुवार उत्तर शुद्ध हिंदी में दें। यदि परीक्षा संबंधी टॉपिक हो तो महत्वपूर्ण बिंदु, इतिहास/थ्योरी, और अभ्यास हेतु 2-3 PYQs/MCQs भी शामिल करें:\n\nप्रश्न: ${question}`;
 
-    const promptText = `${systemPrompt}\n\nछात्र का प्रश्न: ${question}`;
-
-    // Free High-Power Open LLM Engine (DeepSeek / Mistral Backend)
-    const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=deepseek&system=${encodeURIComponent(systemPrompt)}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/plain',
-        'User-Agent': 'Mozilla/5.0'
-      }
+    // Reliable Free High-Performance AI Endpoint
+    const res = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'user', content: fullPrompt }
+        ],
+        jsonMode: false
+      })
     });
 
-    let answer = await response.text();
+    const answer = await res.text();
 
-    // अगर पहले मॉडल से उत्तर न मिले तो बैकअप मॉडल
-    if (!answer || answer.includes('Payment Required') || answer.length < 20) {
-      const fallbackRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=mistral`, {
-        method: 'GET'
-      });
-      answer = await fallbackRes.text();
-    }
-
-    if (answer && answer.trim().length > 0) {
+    if (answer && !answer.includes('"error"') && answer.trim().length > 10) {
       return NextResponse.json({ answer });
     }
 
+    // Direct Clean Secondary Request
+    const backupRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}`);
+    const backupText = await backupRes.text();
+
+    if (backupText && !backupText.includes('"error"') && backupText.trim().length > 10) {
+      return NextResponse.json({ answer: backupText });
+    }
+
     return NextResponse.json({ 
-      error: 'उत्तर लोड करने में समस्या हुई, कृपया दोबारा प्रयास करें।' 
+      error: 'उत्तर लोड नहीं हो सका। कृपया पुनः प्रयास करें।' 
     }, { status: 500 });
 
   } catch (error) {
-    console.error('AI Engine Error:', error);
+    console.error('AI Error:', error);
     return NextResponse.json({ 
-      error: 'सर्वर व्यस्त है। कृपया 10 सेकंड बाद पुनः प्रयास करें।' 
+      error: 'सर्वर से संपर्क नहीं हो पाया।' 
     }, { status: 500 });
   }
 }
