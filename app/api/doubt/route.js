@@ -4,10 +4,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
-    const { question } = await req.json();
+    const { question, image } = await req.json();
 
-    if (!question || !question.trim()) {
-      return NextResponse.json({ error: 'सवाल खाली नहीं हो सकता' }, { status: 400 });
+    if ((!question || !question.trim()) && !image) {
+      return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ोटो अपलोड करें' }, { status: 400 });
     }
 
     const k1 = "gsk_Cq74Rachwl";
@@ -15,38 +15,66 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // Groq के लाइव एक्टिव मॉडल्स
-    let activeModels = ['gemma2-9b-it', 'mixtral-8x7b-32768'];
+    // Determine if request is Quiz or General / Image
+    const isQuizReq = question && (question.toLowerCase().includes('quiz') || question.toLowerCase().includes('mcq') || question.toLowerCase().includes('टेस्ट'));
+
+    let systemPrompt = `आप EduAI के एक सर्वश्रेष्ठ, अत्यंत ज्ञानी शिक्षक और परीक्षा विशेषज्ञ हैं।
+छात्र के हर सवाल (राजस्थान GK, इतिहास, भूगोल, गणित, विज्ञान, PYQs) का उत्तर अत्यंत विस्तृत, स्पष्ट, बिंदुवार और शुद्ध हिंदी में दें। सीधे उत्तर से शुरुआत करें।`;
+
+    if (isQuizReq) {
+      systemPrompt = `आप EduAI के क्विज़ और टेस्ट मास्टर हैं।
+जब भी छात्र क्विज़ या MCQs माँगें, आपको JSON फॉर्मेट में शुद्ध डेटा देना होगा ताकि ऐप उसे इंटरएक्टिव क्लिकेबल टेस्ट बना सके।
+रिस्पॉन्स का फॉर्मेट केवल और केवल इस तरह का वैलिड JSON होना चाहिए:
+{
+  "quiz_title": "क्विज़ का नाम",
+  "questions": [
+    {
+      "id": 1,
+      "question": "प्रश्न यहाँ लिखें?",
+      "options": ["विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D"],
+      "correctIndex": 0,
+      "explanation": "इस उत्तर का संक्षिप्त और सटीक कारण।"
+    }
+  ]
+}
+कोई भी अतिरिक्त वाक्य, बैकग्राउंड थिंकिंग या <think> टैग न लिखें, केवल शुद्ध JSON दें।`;
+    }
+
+    // Prepare message payload
+    let userContent = [];
+    if (image) {
+      userContent.push({
+        type: 'image_url',
+        image_url: { url: image }
+      });
+      userContent.push({
+        type: 'text',
+        text: question ? `${question}\n(कृपया इस फ़ोटो में दिए गए सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो में दिए गए सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ।'
+      });
+    } else {
+      userContent = question;
+    }
+
+    // Active Models
+    let activeModels = image ? ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'] : ['gemma2-9b-it', 'mixtral-8x7b-32768'];
+
     try {
       const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       const modelsData = await modelsRes.json();
       if (modelsData?.data?.length > 0) {
-        const textModels = modelsData.data
-          .filter(m => 
-            m.active !== false &&
-            !m.id.includes('guard') &&
-            !m.id.includes('whisper') &&
-            !m.id.includes('audio') &&
-            !m.id.includes('embed') &&
-            !m.id.includes('vision')
-          )
-          .map(m => m.id);
-
-        if (textModels.length > 0) activeModels = textModels;
+        if (image) {
+          const visionModels = modelsData.data.filter(m => m.active !== false && m.id.includes('vision')).map(m => m.id);
+          if (visionModels.length > 0) activeModels = visionModels;
+        } else {
+          const textModels = modelsData.data.filter(m => m.active !== false && !m.id.includes('guard') && !m.id.includes('whisper') && !m.id.includes('embed') && !m.id.includes('vision')).map(m => m.id);
+          if (textModels.length > 0) activeModels = textModels;
+        }
       }
     } catch (e) {
-      console.log('Model list fetch error:', e);
+      console.log('Model check error:', e);
     }
-
-    const systemPrompt = `आप EduAI के एक सर्वश्रेष्ठ शिक्षक और परीक्षा विशेषज्ञ हैं।
-नियम:
-1. उत्तर हमेशा साफ़, पठनीय और शुद्ध हिंदी में दें।
-2. टेबल सिंबल (| |), HTML टैग (<br>) या हैशटैग (###) का उपयोग बिल्कुल न करें।
-3. क्विज़ और PYQ के लिए साफ़ नंबरिंग (1, 2, 3...) और विकल्पों (A, B, C, D) को अलग-अलग लाइनों पर लिखें।
-4. महत्वपूर्ण शीर्षकों को सिर्फ **बोल्ड** करें।
-5. उत्तर के अंत में सही उत्तर और उसकी छोटी व्याख्या स्पष्ट रूप से दें।`;
 
     for (const modelName of activeModels) {
       try {
@@ -60,7 +88,7 @@ export async function POST(req) {
             model: modelName,
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: question }
+              { role: 'user', content: userContent }
             ],
             temperature: 0.4
           })
@@ -70,15 +98,25 @@ export async function POST(req) {
 
         if (data && data.choices && data.choices[0]?.message?.content) {
           let rawAnswer = data.choices[0].message.content;
-          // Clean thinking and raw HTML/pipes
-          let cleanAnswer = rawAnswer
-            .replace(/<think>[\s\S]*?<\/think>/gi, '')
-            .replace(/<br\s*[\/]?>/gi, '\n')
-            .trim();
-          return NextResponse.json({ answer: cleanAnswer || rawAnswer });
+          let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+          if (isQuizReq) {
+            try {
+              // Extract pure json
+              const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const parsedQuiz = JSON.parse(jsonMatch[0]);
+                return NextResponse.json({ quiz: parsedQuiz });
+              }
+            } catch (pErr) {
+              console.log('Quiz parse fallback to text');
+            }
+          }
+
+          return NextResponse.json({ answer: cleanAnswer });
         }
       } catch (err) {
-        console.log(`Failed with ${modelName}, trying next...`);
+        console.log(`Failed with ${modelName}`);
       }
     }
 
