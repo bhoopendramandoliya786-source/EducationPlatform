@@ -15,7 +15,7 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    const systemPrompt = `आप EduAI के एक सर्वश्रेष्ठ, अत्यंत ज्ञानी शिक्षक और परीक्षा विशेषज्ञ हैं।
+    const systemPrompt = `आप EduAI के सर्वश्रेष्ठ शिक्षक और परीक्षा विशेषज्ञ हैं।
 छात्र के हर सवाल (राजस्थान GK, इतिहास, भूगोल, गणित, विज्ञान, 100 PYQs, 50 MCQs, क्विज़) का उत्तर तुरंत, सटीक, विस्तृत और शुद्ध हिंदी में दें। सीधे उत्तर से शुरुआत करें।
 
 यदि छात्र क्विज़ / MCQs / PYQ माँगे, तो इस निश्चित फॉर्मेट में दें:
@@ -27,73 +27,57 @@ D) [विकल्प D]
 सही उत्तर: [A/B/C/D]
 व्याख्या: [संक्षिप्त कारण]`;
 
-    let payload = {
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: question || 'कृपया इस प्रश्न को हल करें।' }
-      ],
-      temperature: 0.5
-    };
+    // Groq के वर्तमान एक्टिव प्रोडक्शन मॉडल्स
+    let candidateModels = [
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3-32b',
+      'meta-llama/llama-4-scout-17b-16e-instruct',
+      'qwen/qwen3.6-27b'
+    ];
 
-    // If image exists, route to vision model
+    let userContent = question || 'कृपया इस प्रश्न को हल करें।';
+
     if (image) {
-      payload.model = 'llama-3.2-11b-vision-preview';
-      payload.messages = [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: image } },
-            { type: 'text', text: question ? `${question}\n(कृपया इस फ़ोटो को पढ़कर पूरा हल हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो में लिखे सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ।' }
-          ]
-        }
+      userContent = [
+        { type: 'image_url', image_url: { url: image } },
+        { type: 'text', text: question ? `${question}\n(कृपया इस फ़ोटो को पढ़कर पूरा हल हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो में लिखे सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ।' }
       ];
+      candidateModels = ['qwen/qwen3.6-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
     }
 
-    const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    for (const modelName of candidateModels) {
+      try {
+        const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userContent }
+            ],
+            temperature: 0.5
+          })
+        });
 
-    const data = await chatRes.json();
+        const data = await chatRes.json();
 
-    if (data && data.choices && data.choices[0]?.message?.content) {
-      let rawAnswer = data.choices[0].message.content;
-      let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-      return NextResponse.json({ answer: cleanAnswer });
-    }
-
-    // Fallback model if vision/primary gets busy
-    const fallbackModel = 'gemma2-9b-it';
-    const fallbackRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: fallbackModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: question || 'कृपया प्रश्न हल करें।' }
-        ],
-        temperature: 0.5
-      })
-    });
-
-    const fallbackData = await fallbackRes.json();
-    if (fallbackData?.choices?.[0]?.message?.content) {
-      let cleanFallback = fallbackData.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-      return NextResponse.json({ answer: cleanFallback });
+        if (data && data.choices && data.choices[0]?.message?.content) {
+          let rawAnswer = data.choices[0].message.content;
+          let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          return NextResponse.json({ answer: cleanAnswer });
+        }
+      } catch (err) {
+        console.log(`Failed with ${modelName}, trying next...`);
+      }
     }
 
     return NextResponse.json({ 
-      error: data?.error?.message || 'AI सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।' 
+      error: 'AI सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।' 
     }, { status: 500 });
 
   } catch (error) {
