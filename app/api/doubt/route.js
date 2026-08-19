@@ -15,19 +15,15 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    const systemPrompt = `आप EduAI के सर्वश्रेष्ठ शिक्षक और परीक्षा विशेषज्ञ हैं।
-छात्र के हर सवाल (राजस्थान GK, इतिहास, भूगोल, गणित, विज्ञान, 100 PYQs, 50 MCQs, क्विज़) का उत्तर तुरंत, सटीक, विस्तृत और शुद्ध हिंदी में दें। सीधे उत्तर से शुरुआत करें।
+    // Universal and completely open system prompt
+    const systemPrompt = `आप EduAI के एक अत्यंत बुद्धिमान, बहुमुखी और सर्वज्ञानी AI सहायक (Universal AI Tutor & Assistant) हैं। 
+आपकी कोई सीमा नहीं है—छात्र या उपयोगकर्ता आपसे दुनिया का कोई भी सवाल पूछ सकते हैं (जैसे सामान्य बातचीत, हर तरह की परीक्षा, राजस्थान GK, भारत व विश्व का इतिहास, भूगोल, राजनीति, गणित, भौतिकी, रसायन, जीवविज्ञान, कंप्यूटर/कोडिंग, करंट अफेयर्स, 100 PYQs, 50 MCQs क्विज़, निबंध, या कोई भी जिज्ञासा)।
 
-यदि छात्र क्विज़ / MCQs / PYQ माँगे, तो इस निश्चित फॉर्मेट में दें:
-प्रश्न 1: [प्रश्न]
-A) [विकल्प A]
-B) [विकल्प B]
-C) [विकल्प C]
-D) [विकल्प D]
-सही उत्तर: [A/B/C/D]
-व्याख्या: [संक्षिप्त कारण]`;
+दिशानिर्देश:
+1. उपयोगकर्ता जैसा पूछे, उसी के अनुसार सबसे सटीक, उपयोगी और स्पष्ट उत्तर शुद्ध व प्राकृतिक हिंदी में दें।
+2. अगर कोई क्विज़ या टेस्ट माँगे, तो प्रश्न, 4 विकल्प (A, B, C, D) और सही उत्तर व संक्षिप्त व्याख्या दें।
+3. अगर कोई बातचीत करे या सवाल पूछे, तो दोस्ताना और मार्गदर्शक रूप में सीधे काम की बात समझाएँ।`;
 
-    // Groq के वर्तमान एक्टिव प्रोडक्शन मॉडल्स
     let candidateModels = [
       'openai/gpt-oss-120b',
       'openai/gpt-oss-20b',
@@ -41,7 +37,7 @@ D) [विकल्प D]
     if (image) {
       userContent = [
         { type: 'image_url', image_url: { url: image } },
-        { type: 'text', text: question ? `${question}\n(कृपया इस फ़ोटो को पढ़कर पूरा हल हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो में लिखे सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ।' }
+        { type: 'text', text: question ? `${question}\n(कृपया इस फ़ोटो को देखकर पूरा हल विस्तार से समझाएँ)` : 'कृपया इस फ़ोटो में दी गई सामग्री/सवाल को देखकर पूरा हल विस्तार से समझाएँ।' }
       ];
       candidateModels = ['qwen/qwen3.6-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
     }
@@ -60,7 +56,7 @@ D) [विकल्प D]
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userContent }
             ],
-            temperature: 0.5
+            temperature: 0.6
           })
         });
 
@@ -72,12 +68,12 @@ D) [विकल्प D]
           return NextResponse.json({ answer: cleanAnswer });
         }
       } catch (err) {
-        console.log(`Failed with ${modelName}, trying next...`);
+        console.log(`Fallback from ${modelName}`);
       }
     }
 
     return NextResponse.json({ 
-      error: 'AI सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।' 
+      error: 'AI सर्वर से उत्तर नहीं मिल पाया। कृपया पुनः प्रयास करें।' 
     }, { status: 500 });
 
   } catch (error) {
