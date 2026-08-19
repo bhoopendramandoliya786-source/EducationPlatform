@@ -15,33 +15,28 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // 1. सीधे Groq से वर्तमान में चालू (Active) मॉडल्स की लिस्ट लाएँ
-    let selectedModel = 'gemma2-9b-it';
+    // Active verified fast model
+    let activeModel = 'deepseek-r1-distill-llama-70b';
     try {
       const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       const modelsData = await modelsRes.json();
-      
       if (modelsData?.data?.length > 0) {
-        // Guard / Whisper / Decommissioned हटाकर एक्टिव चैट मॉडल चुनें
-        const available = modelsData.data.filter(m => 
-          m.active !== false &&
+        const textModels = modelsData.data.filter(m => 
+          (m.id.includes('llama-3') || m.id.includes('deepseek') || m.id.includes('gemma')) &&
           !m.id.includes('guard') &&
           !m.id.includes('whisper') &&
-          !m.id.includes('embed') &&
-          !m.id.includes('deprecated')
+          !m.id.includes('arabic')
         );
-
-        if (available.length > 0) {
-          selectedModel = available[0].id;
+        if (textModels.length > 0) {
+          activeModel = textModels[0].id;
         }
       }
     } catch (e) {
-      console.log('Model fetch error, using default:', e);
+      console.log('Model check fallback:', e);
     }
 
-    // 2. लाइव मॉडल से रिस्पॉन्स लें
     const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -49,11 +44,11 @@ export async function POST(req) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: activeModel,
         messages: [
           {
             role: 'system',
-            content: 'आप EduAI के एक सर्वश्रेष्ठ, अत्यंत ज्ञानी और समर्पित शिक्षक हैं। छात्र द्वारा पूछे गए किसी भी विषय (जैसे राजस्थान GK, प्रजामंडल, इतिहास, भूगोल, गणित, विज्ञान, पिछले वर्षों के PYQs, क्विज़, 50 MCQs या कोई भी सामान्य ज्ञान) का उत्तर अत्यंत विस्तृत, स्पष्ट, सटीक और शुद्ध हिंदी में प्रदान करें। जहाँ आवश्यकता हो, वहाँ बिंदुवार (Bullet points) समझाएँ।'
+            content: 'आप EduAI के एक सर्वश्रेष्ठ, अत्यंत ज्ञानी शिक्षक हैं। छात्र के हर सवाल (GK, इतिहास, भूगोल, गणित, विज्ञान, PYQs, क्विज़) का उत्तर अत्यंत साफ़, सटीक, बिंदुवार (Bullet Points) और शुद्ध हिंदी में दें। अनावश्यक इंग्लिश या विचार न लिखें।'
           },
           {
             role: 'user',
@@ -66,12 +61,16 @@ export async function POST(req) {
 
     const data = await chatRes.json();
 
-    if (data && data.choices && data.choices[0]?.message?.content) {
-      return NextResponse.json({ answer: data.choices[0].message.content });
+    let rawAnswer = data?.choices?.[0]?.message?.content || '';
+
+    if (rawAnswer) {
+      // Clean <think> tags completely so student sees clean output
+      const cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      return NextResponse.json({ answer: cleanAnswer || rawAnswer });
     }
 
     return NextResponse.json({ 
-      error: data?.error?.message || 'API से उत्तर नहीं मिला। कृपया पुनः प्रयास करें।' 
+      error: data?.error?.message || 'उत्तर लोड करने में समस्या हुई।' 
     }, { status: 500 });
 
   } catch (error) {
