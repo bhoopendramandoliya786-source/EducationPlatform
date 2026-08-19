@@ -8,38 +8,47 @@ export async function POST(req) {
       return NextResponse.json({ error: 'सवाल खाली नहीं हो सकता' }, { status: 400 });
     }
 
-    const systemPrompt = "आप EduAI के विशेषज्ञ शिक्षक हैं। छात्र के प्रश्नों का उत्तर आसान, विस्तृत, परीक्षा-उपयोगी और सुंदर बुलेट पॉइंट्स में शुद्ध हिंदी में दें।";
+    const systemPrompt = `आप EduAI के एक उच्च-स्तरीय शिक्षक और विशेषज्ञ मार्गदर्शक हैं।
+छात्र के सवाल का उत्तर अत्यंत विस्तृत, प्रामाणिक और उच्च-गुणवत्ता वाले हिंदी प्रारूप में दें:
+1. संपूर्ण थ्योरी और पृष्ठभूमि (Concepts & Deep Theory)
+2. परीक्षा उपयोगी महत्वपूर्ण बिंदु व मुख्य तिथियां (Key Facts/Dates)
+3. पिछले वर्षों के प्रश्न (Previous Year Questions - PYQs)
+4. अभ्यास हेतु बहुविकल्पीय प्रश्न (MCQs with Explanations)
+उत्तर हमेशा बिंदुवार, स्वच्छ और पढ़ने में आसान बनाएं।`;
 
-    // 1. First Priority: Free Fast Open Engine
-    try {
-      const freeRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(systemPrompt + '\n\nसवाल: ' + question)}?model=mistral`, {
+    const promptText = `${systemPrompt}\n\nछात्र का प्रश्न: ${question}`;
+
+    // Free High-Power Open LLM Engine (DeepSeek / Mistral Backend)
+    const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=deepseek&system=${encodeURIComponent(systemPrompt)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/plain',
+        'User-Agent': 'Mozilla/5.0'
+      }
+    });
+
+    let answer = await response.text();
+
+    // अगर पहले मॉडल से उत्तर न मिले तो बैकअप मॉडल
+    if (!answer || answer.includes('Payment Required') || answer.length < 20) {
+      const fallbackRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=mistral`, {
         method: 'GET'
       });
-      const dataText = await freeRes.text();
-
-      if (dataText && !dataText.includes('"error"') && !dataText.includes('Payment Required') && dataText.trim().length > 10) {
-        return NextResponse.json({ answer: dataText });
-      }
-    } catch (e) {
-      console.log('Online endpoint bypass, switching to backup...');
+      answer = await fallbackRes.text();
     }
 
-    // 2. High-Accuracy Fallback Smart Response
-    const q = question.toLowerCase();
-
-    if (q.includes('1857') || q.includes('kranti')) {
-      return NextResponse.json({
-        answer: `🔥 **1857 की क्रांति (विस्तृत नोट्स):**\n\n• **भारत में शुरुआत:** 10 मई 1857 को मेरठ छावनी से हुई।\n• **राजस्थान में शुरुआत:** 28 मई 1857 को नसीराबाद (अजमेर) छावनी से 15वीं बंगाल नेटिव इन्फैंट्री के सैनिकों ने की।\n• **राजस्थान की 6 छावनियां:** नसीराबाद, नीमच, एरिनपुरा, देवली, ब्यावर और खेरवाड़ा।\n• **प्रमुख नायक:** आउवा के ठाकुर कुशाल सिंह, कोटा के जयदयाल व मेहराब खान, अमरचंद बांठिया।\n• **परीक्षा टिप:** ब्यावर और खेरवाड़ा छावनियों ने प्रत्यक्ष विद्रोह में भाग नहीं लिया था।`
-      });
+    if (answer && answer.trim().length > 0) {
+      return NextResponse.json({ answer });
     }
 
-    return NextResponse.json({
-      answer: `📚 **उत्तर (${question}):**\n\n• **मुख्य तथ्य:** इस प्रश्न का संबंध प्रतियोगी परीक्षा के प्रमुख पाठ्यक्रम से है।\n• **महत्वपूर्ण बिंदु:** परीक्षा की दृष्टि से इसके मूल सिद्धांतों और पिछले वर्षों में पूछे गए प्रश्नों का अभ्यास अनिवार्य है।\n• **सुझाव:** परीक्षा में अधिकतम अंक लाने के लिए तथ्यों और तिथियों के संक्षिप्त नोट्स अवश्य बनाएं।`
-    });
+    return NextResponse.json({ 
+      error: 'उत्तर लोड करने में समस्या हुई, कृपया दोबारा प्रयास करें।' 
+    }, { status: 500 });
 
   } catch (error) {
-    return NextResponse.json({
-      answer: 'माफ़ कीजिए, सर्वर व्यस्त है। कृपया दोबारा पूछें।'
-    });
+    console.error('AI Engine Error:', error);
+    return NextResponse.json({ 
+      error: 'सर्वर व्यस्त है। कृपया 10 सेकंड बाद पुनः प्रयास करें।' 
+    }, { status: 500 });
   }
 }
