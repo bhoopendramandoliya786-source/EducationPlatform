@@ -15,30 +15,33 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // 1. Groq के लाइव मॉडल्स में से सिर्फ़ मुख्य टेक्स्ट चैट मॉडल चुनें (Guard / Whisper हटाकर)
-    let activeModel = 'llama3-8b-8192';
+    // 1. सीधे Groq से वर्तमान में चालू (Active) मॉडल्स की लिस्ट लाएँ
+    let selectedModel = 'gemma2-9b-it';
     try {
       const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       const modelsData = await modelsRes.json();
-      if (modelsData && modelsData.data && modelsData.data.length > 0) {
-        const chatModels = modelsData.data.filter(m => 
-          (m.id.includes('llama') || m.id.includes('mixtral') || m.id.includes('gemma') || m.id.includes('deepseek')) &&
-          !m.id.includes('guard') && 
+      
+      if (modelsData?.data?.length > 0) {
+        // Guard / Whisper / Decommissioned हटाकर एक्टिव चैट मॉडल चुनें
+        const available = modelsData.data.filter(m => 
+          m.active !== false &&
+          !m.id.includes('guard') &&
           !m.id.includes('whisper') &&
-          !m.id.includes('embed')
+          !m.id.includes('embed') &&
+          !m.id.includes('deprecated')
         );
 
-        if (chatModels.length > 0) {
-          activeModel = chatModels[0].id;
+        if (available.length > 0) {
+          selectedModel = available[0].id;
         }
       }
     } catch (e) {
-      console.log('Model selection fallback:', e);
+      console.log('Model fetch error, using default:', e);
     }
 
-    // 2. चैट मॉडल से विस्तृत उत्तर प्राप्त करें
+    // 2. लाइव मॉडल से रिस्पॉन्स लें
     const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -46,7 +49,7 @@ export async function POST(req) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: activeModel,
+        model: selectedModel,
         messages: [
           {
             role: 'system',
