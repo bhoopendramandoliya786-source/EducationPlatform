@@ -19,34 +19,32 @@ export async function POST(req) {
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
       question.toLowerCase().includes('टेस्ट') ||
-      question.toLowerCase().includes('क्विज') ||
-      question.toLowerCase().includes('pyq')
+      question.toLowerCase().includes('क्विज')
     );
 
-    let systemPrompt = `आप भारत और राजस्थान की प्रतियोगी परीक्षाओं (RPSC, RSMSSB, UPSC, SSC, REET, Police) के वरिष्ठ परीक्षा विशेषज्ञ व शिक्षक हैं।
-छात्र के हर सवाल का उत्तर पूरी तरह ऐतिहासिक और प्रमाणिक तथ्यों के आधार पर शुद्ध हिंदी में दें।`;
+    let systemPrompt = `आप राजस्थान व भारत की प्रतियोगी परीक्षाओं (RPSC RAS, SI, RSMSSB, REET, Police, SSC, UPSC) के वरिष्ठ प्रामाणिक शिक्षक हैं।
+
+नियम:
+1. उत्तर में कभी भी टूटी हुई टेबल सिंबल (| |), हैशटैग (##), या HTML टैग्स का प्रयोग न करें।
+2. हमेशा साफ़, पठनीय बिंदुवार (Bullet Points) और आसान ट्रिक्स में उत्तर दें।
+3. विषय के अनुसार 100% प्रामाणिक ऐतिहासिक तथ्य दें (जैसे राजस्थान प्रजामंडल आंदोलन में: जयपुर-1931 कपूरचंद पाटनी/जमनालाल बजाज, बूंदी-1931 कांतिलाल, मारवाड़-1934 जयनारायण व्यास, मेवाड़-1938 माणिक्यलाल वर्मा/बलवंत सिंह मेहता, बीकानेर-1936 मघाराम वैद्य, कोटा-1939 नयनूराम शर्मा आदि)।`;
 
     if (isQuizReq) {
-      systemPrompt = `आप भारत व राजस्थान प्रतियोगी परीक्षाओं के आधिकारिक प्रश्नपत्र निर्माता हैं।
-जब छात्र "Raj" या राजस्थान से जुड़ा कोई भी विषय माँगे (जैसे प्रजामंडल, 1857 क्रांति, किसान आंदोलन, एकीकरण, भूगोल, कला-संस्कृति):
-- प्रश्न वास्तविक परीक्षा स्तर (PYQ/Standard) के होने चाहिए। उदाहरण के लिए 'प्रजामंडल' का अर्थ 'राजस्थान का प्रजामंडल आंदोलन' (जयपुर, मेवाड़, मारवाड़, हाड़ौती, बीकानेर प्रजामंडल, संस्थापक, वर्ष, अधिवेशन) है।
-- कोई भी अप्रासंगिक या मनगढ़ंत प्रश्न न बनाएँ।
-
-अनिवार्य JSON फॉर्मेट:
+      systemPrompt = `आप राजस्थान व भारत प्रतियोगी परीक्षाओं के प्रश्नपत्र निर्माता हैं।
+अनिवार्य रूप से केवल शुद्ध JSON दें:
 {
   "is_quiz": true,
-  "quiz_title": "विशिष्ट विषय का नाम (जैसे: राजस्थान प्रजामंडल आंदोलन टेस्ट)",
+  "quiz_title": "विषय का नाम",
   "questions": [
     {
       "id": 1,
       "question": "प्रामाणिक प्रश्न यहाँ लिखें?",
       "options": ["सटीक विकल्प A", "सटीक विकल्प B", "सटीक विकल्प C", "सटीक विकल्प D"],
       "correctIndex": 0,
-      "explanation": "विस्तृत प्रमाणिक व्याख्या (तारीख, स्थान, व्यक्ति सहित)"
+      "explanation": "विस्तृत प्रमाणिक व्याख्या"
     }
   ]
-}
-केवल शुद्ध JSON प्रदान करें।`;
+}`;
     }
 
     let candidateModels = [
@@ -89,11 +87,15 @@ export async function POST(req) {
 
         if (data && data.choices && data.choices[0]?.message?.content) {
           let rawAnswer = data.choices[0].message.content;
-          let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          let cleanAnswer = rawAnswer
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/\|/g, '')
+            .replace(/##+/g, '')
+            .trim();
 
           if (isQuizReq) {
             try {
-              const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
+              const jsonMatch = rawAnswer.match(/\{[\s\S]*\}/);
               if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.questions && parsed.questions.length > 0) {
