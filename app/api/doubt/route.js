@@ -15,68 +15,37 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // Determine if request is Quiz or General / Image
-    const isQuizReq = question && (question.toLowerCase().includes('quiz') || question.toLowerCase().includes('mcq') || question.toLowerCase().includes('टेस्ट'));
+    let systemPrompt = `आप EduAI के सर्वश्रेष्ठ शिक्षक और परीक्षा विशेषज्ञ हैं।
+छात्र के हर सवाल (राजस्थान GK, इतिहास, भूगोल, गणित, विज्ञान, 100 PYQs, 50 MCQs, क्विज़) का उत्तर शुद्ध, सटीक और स्पष्ट हिंदी में दें।
 
-    let systemPrompt = `आप EduAI के एक सर्वश्रेष्ठ, अत्यंत ज्ञानी शिक्षक और परीक्षा विशेषज्ञ हैं।
-छात्र के हर सवाल (राजस्थान GK, इतिहास, भूगोल, गणित, विज्ञान, PYQs) का उत्तर अत्यंत विस्तृत, स्पष्ट, बिंदुवार और शुद्ध हिंदी में दें। सीधे उत्तर से शुरुआत करें।`;
+यदि छात्र क्विज़ / MCQs / PYQ माँगे, तो इस निश्चित फॉर्मेट में दें ताकि सिस्टम उसे इंटरएक्टिव बना सके:
 
-    if (isQuizReq) {
-      systemPrompt = `आप EduAI के क्विज़ और टेस्ट मास्टर हैं।
-जब भी छात्र क्विज़ या MCQs माँगें, आपको JSON फॉर्मेट में शुद्ध डेटा देना होगा ताकि ऐप उसे इंटरएक्टिव क्लिकेबल टेस्ट बना सके।
-रिस्पॉन्स का फॉर्मेट केवल और केवल इस तरह का वैलिड JSON होना चाहिए:
-{
-  "quiz_title": "क्विज़ का नाम",
-  "questions": [
-    {
-      "id": 1,
-      "question": "प्रश्न यहाँ लिखें?",
-      "options": ["विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D"],
-      "correctIndex": 0,
-      "explanation": "इस उत्तर का संक्षिप्त और सटीक कारण।"
-    }
-  ]
-}
-कोई भी अतिरिक्त वाक्य, बैकग्राउंड थिंकिंग या <think> टैग न लिखें, केवल शुद्ध JSON दें।`;
-    }
+प्रश्न 1: [यहाँ प्रश्न लिखें]
+A) [विकल्प A]
+B) [विकल्प B]
+C) [विकल्प C]
+D) [विकल्प D]
+सही उत्तर: [A/B/C/D]
+व्याख्या: [संक्षिप्त कारण]
 
-    // Prepare message payload
-    let userContent = [];
+(इसी तरह प्रश्न 2, प्रश्न 3 आगे लिखें)`;
+
+    let userContent = question || 'कृपया इस फ़ोटो में दिए गए प्रश्न का पूरा हल समझाएँ।';
+    let modelName = 'gemma2-9b-it';
+
+    // Image analysis model
     if (image) {
-      userContent.push({
-        type: 'image_url',
-        image_url: { url: image }
-      });
-      userContent.push({
-        type: 'text',
-        text: question ? `${question}\n(कृपया इस फ़ोटो में दिए गए सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो में दिए गए सवाल को पढ़कर पूरा विस्तृत हल हिंदी में समझाएँ।'
-      });
-    } else {
-      userContent = question;
+      modelName = 'llama-3.2-11b-vision-preview';
+      userContent = [
+        { type: 'image_url', image_url: { url: image } },
+        { type: 'text', text: question ? `${question}\n(कृपया इस फ़ोटो को पढ़कर पूरा हल हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो को पढ़कर पूरा हल हिंदी में समझाएँ।' }
+      ];
     }
 
-    // Active Models
-    let activeModels = image ? ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'] : ['gemma2-9b-it', 'mixtral-8x7b-32768'];
+    // Try primary, fallback to backup
+    const modelsToTry = image ? ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'] : ['gemma2-9b-it', 'mixtral-8x7b-32768'];
 
-    try {
-      const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
-        headers: { 'Authorization': `Bearer ${apiKey}` }
-      });
-      const modelsData = await modelsRes.json();
-      if (modelsData?.data?.length > 0) {
-        if (image) {
-          const visionModels = modelsData.data.filter(m => m.active !== false && m.id.includes('vision')).map(m => m.id);
-          if (visionModels.length > 0) activeModels = visionModels;
-        } else {
-          const textModels = modelsData.data.filter(m => m.active !== false && !m.id.includes('guard') && !m.id.includes('whisper') && !m.id.includes('embed') && !m.id.includes('vision')).map(m => m.id);
-          if (textModels.length > 0) activeModels = textModels;
-        }
-      }
-    } catch (e) {
-      console.log('Model check error:', e);
-    }
-
-    for (const modelName of activeModels) {
+    for (const m of modelsToTry) {
       try {
         const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -85,7 +54,7 @@ export async function POST(req) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: modelName,
+            model: m,
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userContent }
@@ -99,24 +68,10 @@ export async function POST(req) {
         if (data && data.choices && data.choices[0]?.message?.content) {
           let rawAnswer = data.choices[0].message.content;
           let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-
-          if (isQuizReq) {
-            try {
-              // Extract pure json
-              const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                const parsedQuiz = JSON.parse(jsonMatch[0]);
-                return NextResponse.json({ quiz: parsedQuiz });
-              }
-            } catch (pErr) {
-              console.log('Quiz parse fallback to text');
-            }
-          }
-
           return NextResponse.json({ answer: cleanAnswer });
         }
-      } catch (err) {
-        console.log(`Failed with ${modelName}`);
+      } catch (e) {
+        console.log(`Model ${m} failed, trying next...`);
       }
     }
 
