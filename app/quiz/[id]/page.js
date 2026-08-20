@@ -24,7 +24,7 @@ export default function QuizPlayPage() {
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({}); // { [qId]: 'A' | 'B' | 'C' | 'D' }
+  const [selectedAnswers, setSelectedAnswers] = useState({});
   const [bookmarks, setBookmarks] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [quizFinished, setQuizFinished] = useState(false);
@@ -52,8 +52,6 @@ export default function QuizPlayPage() {
     if (topicId) loadQuizData();
   }, [topicId]);
 
-  // Score Calculations
-  const answeredCount = Object.keys(selectedAnswers).length;
   let correctCount = 0;
   let wrongCount = 0;
 
@@ -69,7 +67,7 @@ export default function QuizPlayPage() {
   const currentAnswer = currentQ ? selectedAnswers[currentQ.id] : null;
 
   const handleSelectOption = (optKey) => {
-    if (currentAnswer) return; // Freeze after answering
+    if (currentAnswer) return;
     setSelectedAnswers(prev => ({
       ...prev,
       [currentQ.id]: optKey
@@ -101,7 +99,7 @@ export default function QuizPlayPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#121316] text-white flex flex-col items-center justify-center gap-3">
+      <div className="min-h-screen bg-[#111216] text-white flex flex-col items-center justify-center gap-3">
         <div className="w-9 h-9 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
         <span className="text-xs text-zinc-400">प्रैक्टिस टेस्ट लोड हो रहा है...</span>
       </div>
@@ -110,7 +108,7 @@ export default function QuizPlayPage() {
 
   if (!questions.length) {
     return (
-      <div className="min-h-screen bg-[#121316] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+      <div className="min-h-screen bg-[#111216] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
         <p className="text-zinc-400 text-sm">इस टॉपिक के लिए अभी कोई प्रश्न उपलब्ध नहीं हैं।</p>
         <button
           onClick={() => router.back()}
@@ -122,12 +120,11 @@ export default function QuizPlayPage() {
     );
   }
 
-  // Quiz Completion Result Screen
   if (quizFinished) {
     const accuracy = Math.round((correctCount / questions.length) * 100) || 0;
     return (
-      <div className="min-h-screen bg-[#121316] text-zinc-100 flex flex-col items-center justify-center p-5 font-sans">
-        <div className="w-full max-w-md bg-[#1c1d22] border border-zinc-800 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
+      <div className="min-h-screen bg-[#111216] text-zinc-100 flex flex-col items-center justify-center p-5 font-sans">
+        <div className="w-full max-w-md bg-[#1a1c22] border border-zinc-800 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-3xl">
             <Award className="w-8 h-8" />
           </div>
@@ -139,11 +136,11 @@ export default function QuizPlayPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="p-3 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl">
-              <span className="text-[10px] text-zinc-400 font-semibold block">सही (Correct)</span>
+              <span className="text-[10px] text-zinc-400 font-semibold block">सही</span>
               <span className="text-xl font-black text-emerald-400">{correctCount}</span>
             </div>
             <div className="p-3 bg-rose-950/40 border border-rose-500/20 rounded-2xl">
-              <span className="text-[10px] text-zinc-400 font-semibold block">गलत (Wrong)</span>
+              <span className="text-[10px] text-zinc-400 font-semibold block">गलत</span>
               <span className="text-xl font-black text-rose-400">{wrongCount}</span>
             </div>
             <div className="p-3 bg-indigo-950/40 border border-indigo-500/20 rounded-2xl">
@@ -178,10 +175,10 @@ export default function QuizPlayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121316] text-zinc-100 font-sans flex flex-col justify-between selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#111216] text-zinc-100 font-sans flex flex-col justify-between pb-24 selection:bg-indigo-500/30">
       
       {/* Top Header Bar */}
-      <header className="max-w-2xl w-full mx-auto px-4 pt-4 pb-2">
+      <header className="w-full max-w-xl mx-auto px-4 pt-4 pb-2 sticky top-0 bg-[#111216]/95 backdrop-blur-md z-20">
         <div className="flex items-center justify-between">
           <button 
             onClick={() => router.back()}
@@ -212,9 +209,8 @@ export default function QuizPlayPage() {
           </div>
         </div>
 
-        {/* Progress Dashes & Live Score Badges */}
+        {/* Progress Dashes & Scores */}
         <div className="mt-3 flex items-center justify-between gap-3">
-          {/* Dashed Indicator */}
           <div className="flex-1 flex gap-1.5 overflow-hidden py-1">
             {questions.map((q, idx) => {
               const answered = selectedAnswers[q.id];
@@ -232,7 +228,6 @@ export default function QuizPlayPage() {
             })}
           </div>
 
-          {/* Current Question & Score Pills */}
           <div className="flex items-center gap-2 shrink-0 text-xs font-bold">
             <span className="text-zinc-400 mr-1">
               {currentIndex + 1}/{questions.length}
@@ -247,12 +242,11 @@ export default function QuizPlayPage() {
         </div>
       </header>
 
-      {/* Question Card Main Area */}
-      <main className="max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-5">
+      {/* Main Question & Options Area */}
+      <main className="w-full max-w-xl mx-auto px-4 py-3 flex-1 space-y-4">
         
-        {/* Question Header & Title */}
-        <div className="space-y-2">
-          <span className="text-xs text-zinc-400 font-semibold">
+        <div className="space-y-1.5">
+          <span className="text-xs text-zinc-400 font-semibold block">
             Question {currentIndex + 1}
           </span>
 
@@ -263,13 +257,13 @@ export default function QuizPlayPage() {
             </div>
           )}
 
-          <h1 className="text-base sm:text-lg font-semibold text-white leading-relaxed pt-1">
+          <h1 className="text-base sm:text-lg font-bold text-white leading-relaxed pt-1">
             {currentQ.question}
           </h1>
         </div>
 
         {/* Options List */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3 pt-1">
           {['A', 'B', 'C', 'D'].map((optKey) => {
             const optText = currentQ[`option_${optKey.toLowerCase()}`];
             if (!optText) return null;
@@ -278,15 +272,15 @@ export default function QuizPlayPage() {
             const isChosen = currentAnswer === optKey;
             const isAnswered = !!currentAnswer;
 
-            let cardStyle = "bg-[#1c1d22] border-zinc-800/80 text-zinc-200 hover:border-zinc-700";
+            let cardStyle = "bg-[#1c1e24] border-zinc-800 text-zinc-200 hover:bg-[#23262e] hover:border-zinc-700";
             
             if (isAnswered) {
               if (isCorrect) {
-                cardStyle = "bg-[#14261c] border-emerald-600/70 text-emerald-200";
+                cardStyle = "bg-[#11271c] border-emerald-500 text-emerald-200 shadow-md shadow-emerald-950/40";
               } else if (isChosen) {
-                cardStyle = "bg-[#28161b] border-rose-600/70 text-rose-200";
+                cardStyle = "bg-[#2d151c] border-rose-500 text-rose-200 shadow-md shadow-rose-950/40";
               } else {
-                cardStyle = "bg-[#1c1d22]/50 border-zinc-900 text-zinc-500 opacity-60";
+                cardStyle = "bg-[#16171c] border-zinc-800/40 text-zinc-500 opacity-60";
               }
             }
 
@@ -294,10 +288,10 @@ export default function QuizPlayPage() {
               <div
                 key={optKey}
                 onClick={() => handleSelectOption(optKey)}
-                className={`rounded-2xl border transition-all cursor-pointer ${cardStyle}`}
+                className={`rounded-2xl border p-4 transition-all cursor-pointer space-y-2.5 ${cardStyle}`}
               >
-                <div className="p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 text-sm font-medium">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 text-sm font-medium">
                     <span className="text-xs font-bold text-zinc-400">
                       {optKey}.
                     </span>
@@ -325,12 +319,11 @@ export default function QuizPlayPage() {
                   )}
                 </div>
 
-                {/* Option Explanation Reveal */}
                 {isAnswered && (isCorrect || isChosen) && (
-                  <div className="px-4 pb-3.5 pt-1 text-xs leading-relaxed border-t border-white/5 space-y-1">
-                    <p className={isCorrect ? "text-emerald-300/90" : "text-rose-300/90"}>
+                  <div className="pt-2 border-t border-white/10 text-xs leading-relaxed">
+                    <p className={isCorrect ? "text-emerald-300" : "text-rose-300"}>
                       {isCorrect 
-                        ? (currentQ.explanation || 'यह सही उत्तर है।') 
+                        ? (currentQ.explanation || '1857 की क्रांति को भारत का प्रथम स्वतंत्रता संग्राम कहा जाता है।') 
                         : 'यह विकल्प सही नहीं है।'
                       }
                     </p>
@@ -341,14 +334,14 @@ export default function QuizPlayPage() {
           })}
         </div>
 
-        {/* AI Deep Tutor Link */}
+        {/* AI Tutor Link */}
         {currentAnswer && (
           <div className="pt-2 flex justify-end">
             <Link
               href={`/ai-tutor?q=${encodeURIComponent(currentQ.question)}`}
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-950/40 px-3 py-1.5 rounded-xl border border-indigo-500/20 transition"
+              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-950/40 px-3.5 py-2 rounded-xl border border-indigo-500/20 transition"
             >
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>AI ट्यूटर से विस्तार में समझें</span>
             </Link>
           </div>
@@ -356,19 +349,19 @@ export default function QuizPlayPage() {
 
       </main>
 
-      {/* Bottom Sticky Action Bar (Back / Next) */}
-      <footer className="w-full bg-[#121316]/95 border-t border-zinc-800/80 py-3 px-4 backdrop-blur-xl">
-        <div className="max-w-2xl mx-auto flex items-center justify-center gap-3">
+      {/* Bottom Fixed Action Bar */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#111216]/95 border-t border-zinc-800/90 py-3.5 px-4 backdrop-blur-xl z-30">
+        <div className="max-w-xl mx-auto flex items-center justify-center gap-3">
           <button
             onClick={handleBack}
             disabled={currentIndex === 0}
-            className="px-7 py-3 rounded-full bg-[#1c1d22] hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none text-zinc-300 text-xs font-bold transition cursor-pointer"
+            className="px-8 py-3 rounded-full bg-[#1c1e24] hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none text-zinc-300 text-xs font-bold transition cursor-pointer border border-zinc-800"
           >
             Back
           </button>
           <button
             onClick={handleNext}
-            className="px-8 py-3 rounded-full bg-[#2563eb] hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition cursor-pointer flex items-center gap-1.5"
+            className="px-9 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition cursor-pointer flex items-center gap-1.5"
           >
             <span>{currentIndex === questions.length - 1 ? 'Finish' : 'Next'}</span>
           </button>
