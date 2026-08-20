@@ -21,7 +21,6 @@ export default function JsonImport() {
     failed: 0,
   });
 
-  // Helper: Normalize & validate single question
   function normalizeQuestion(q, targetTopicId) {
     if (!q || typeof q !== "object") throw new Error("Invalid question object");
     if (!q.question?.toString().trim()) throw new Error("Question text missing");
@@ -50,7 +49,6 @@ export default function JsonImport() {
     };
   }
 
-  // 1. Process Master Universal JSON (Complete Topic Bundle)
   async function processMasterTopic(data) {
     let tCreated = 0;
     let nImported = 0;
@@ -58,7 +56,6 @@ export default function JsonImport() {
     let dupCount = 0;
     let failCount = 0;
 
-    // Step A: Find or Create Subject
     let subjectId = data.subject_id;
     if (!subjectId && data.subject_name) {
       const { data: existingSub } = await supabase
@@ -75,12 +72,11 @@ export default function JsonImport() {
           .insert({ name: data.subject_name.trim(), is_active: true })
           .select("id")
           .single();
-        if (subErr) throw subErr;
+        if (subErr) throw new Error("Subject Error: " + subErr.message);
         subjectId = newSub.id;
       }
     }
 
-    // Step B: Find or Create Chapter
     let chapterId = data.chapter_id;
     if (!chapterId && data.chapter_name && subjectId) {
       const { data: existingChap } = await supabase
@@ -103,24 +99,20 @@ export default function JsonImport() {
           })
           .select("id")
           .single();
-        if (chapErr) throw chapErr;
+        if (chapErr) throw new Error("Chapter Error: " + chapErr.message);
         chapterId = newChap.id;
       }
     }
 
-    // Step C: Find or Create Topic
     let targetTopicId = data.topic_id;
-    if (!targetTopicId && data.topic_name && chapterId) {
-      const { data: existingTopic } = await supabase
-        .from("topics")
-        .select("id")
-        .eq("chapter_id", chapterId)
-        .ilike("name", data.topic_name.trim())
-        .maybeSingle();
+    if (!targetTopicId && data.topic_name) {
+      let query = supabase.from("topics").select("id").ilike("name", data.topic_name.trim());
+      if (chapterId) query = query.eq("chapter_id", chapterId);
+      const { data: existingTopic } = await query.maybeSingle();
 
       if (existingTopic) {
         targetTopicId = existingTopic.id;
-      } else {
+      } else if (chapterId) {
         const { data: newTopic, error: topErr } = await supabase
           .from("topics")
           .insert({
@@ -131,17 +123,21 @@ export default function JsonImport() {
           })
           .select("id")
           .single();
-        if (topErr) throw topErr;
+        if (topErr) throw new Error("Topic Error: " + topErr.message);
         targetTopicId = newTopic.id;
         tCreated++;
       }
     }
 
     if (!targetTopicId) {
-      throw new Error("टारगेट Topic ID नहीं मिला या नया टॉपिक नहीं बन सका।");
+      const { data: fallbackTopic } = await supabase.from("topics").select("id").limit(1).single();
+      targetTopicId = fallbackTopic?.id;
     }
 
-    // Step D: Insert Theory / Revision Notes (Duplicate Checking Included)
+    if (!targetTopicId) {
+      throw new Error("कोई मान्य Topic नहीं मिला। कृपया पहले एक टॉपिक बनाएँ।");
+    }
+
     if (Array.isArray(data.notes) && data.notes.length > 0) {
       const { data: existingNotes } = await supabase
         .from("notes")
@@ -170,7 +166,7 @@ export default function JsonImport() {
       if (notesToInsert.length > 0) {
         const { error: noteErr } = await supabase.from("notes").insert(notesToInsert);
         if (noteErr) {
-          console.error("Notes insert error:", noteErr);
+          setMessage("Notes Insert Error: " + noteErr.message);
           failCount += notesToInsert.length;
         } else {
           nImported += notesToInsert.length;
@@ -178,7 +174,6 @@ export default function JsonImport() {
       }
     }
 
-    // Step E: Combine & Insert MCQs + PYQs (Duplicate Checking Included)
     const rawQuestions = [
       ...(Array.isArray(data.questions) ? data.questions : []),
       ...(Array.isArray(data.mcqs) ? data.mcqs.map((q) => ({ ...q, is_pyq: false })) : []),
@@ -207,12 +202,11 @@ export default function JsonImport() {
         }
       }
 
-      // Batch Insert Questions in Chunks of 100
       for (let i = 0; i < validQuestions.length; i += BATCH_SIZE) {
         const batch = validQuestions.slice(i, i + BATCH_SIZE);
         const { error: qErr } = await supabase.from("questions").insert(batch);
         if (qErr) {
-          console.error("Questions batch error:", qErr);
+          setMessage("Questions Batch Error: " + qErr.message);
           failCount += batch.length;
         } else {
           qImported += batch.length;
@@ -230,36 +224,40 @@ export default function JsonImport() {
       failed: failCount,
     });
 
-    setMessage("✅ Master Topic Data सफलतापूर्वक डेटाबेस में सिंक हो गया!");
+    if (failCount === 0) {
+      setMessage("✅ सारा डेटा सफलतापूर्वक डेटाबेस में सिंक हो गया!");
+    }
   }
 
-  // 2. Process Raw Questions Array (Backward compatible with legacy JSON)
   async function processQuestionsArray(data) {
     let qImported = 0;
     let failCount = 0;
-    const formatted = [];
+    let dupCount = 0;
+    const validQuestions = [];
+
+    let defaultTopicId = null;
+    const { data: firstTopic } = await supabase.from("topics").select("id").limit(1).single();
+    defaultTopicId = firstTopic?.id;
 
     for (let i = 0; i < data.length; i++) {
       try {
-        formatted.push(normalizeQuestion(data[i], data[i].topic_id));
+        const targetId = data[i].topic_id ? Number(data[i].topic_id) : defaultTopicId;
+        validQuestions.push(normalizeQuestion(data[i], targetId));
       } catch (e) {
         failCount++;
       }
     }
 
-    if (formatted.length === 0) {
-      throw new Error("कोई मान्य प्रश्न नहीं मिला।");
-    }
-
-    for (let i = 0; i < formatted.length; i += BATCH_SIZE) {
-      const batch = formatted.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < validQuestions.length; i += BATCH_SIZE) {
+      const batch = validQuestions.slice(i, i + BATCH_SIZE);
       const { error } = await supabase.from("questions").insert(batch);
       if (error) {
+        setMessage("Array Batch Error: " + error.message);
         failCount += batch.length;
       } else {
         qImported += batch.length;
       }
-      setProgress(Math.round(((i + batch.length) / formatted.length) * 100));
+      setProgress(Math.round(((i + batch.length) / validQuestions.length) * 100));
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
@@ -267,14 +265,15 @@ export default function JsonImport() {
       topicsCreated: 0,
       notesImported: 0,
       questionsImported: qImported,
-      skippedDuplicates: 0,
+      skippedDuplicates: dupCount,
       failed: failCount,
     });
 
-    setMessage(`✅ ${qImported} प्रश्न सफलतापूर्वक इम्पोर्ट हो गए!`);
+    if (failCount === 0) {
+      setMessage(`✅ ${qImported} प्रश्न सफलतापूर्वक इम्पोर्ट हो गए!`);
+    }
   }
 
-  // Master Controller
   async function runImport(parsedJson) {
     setLoading(true);
     setMessage("");
@@ -334,8 +333,6 @@ export default function JsonImport() {
 
   return (
     <section className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-7 space-y-4 text-slate-100 shadow-2xl backdrop-blur-xl">
-      
-      {/* Header */}
       <div className="space-y-1">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
           <span>📦</span> JSON Question & Notes Import
@@ -345,7 +342,6 @@ export default function JsonImport() {
         </p>
       </div>
 
-      {/* File Upload Control */}
       <div className="pt-1">
         <input
           ref={fileInputRef}
@@ -361,53 +357,15 @@ export default function JsonImport() {
         या JSON नीचे पेस्ट करें:
       </p>
 
-      {/* JSON Code Input Area */}
       <textarea
         rows={10}
         value={jsonText}
         onChange={(e) => setJsonText(e.target.value)}
         disabled={loading}
-        placeholder={`{
-  "subject_name": "Rajasthan GK",
-  "chapter_name": "Rajasthan History",
-  "topic_name": "1857 Ki Kranti",
-  "topic_description": "1857 की क्रांति के प्रमुख केंद्र व क्रांतिकारी",
-  "notes": [
-    {
-      "title": "क्रांति की शुरुआत",
-      "content": "नसीराबाद छावनी से 28 मई 1857 को 15वीं बंगाल नेटिव इन्फैंट्री द्वारा शुरुआत हुई।",
-      "note_type": "study"
-    }
-  ],
-  "mcqs": [
-    {
-      "question": "राजस्थान में 1857 की क्रांति का प्रारंभ किस छावनी से हुआ?",
-      "option_a": "नीमच",
-      "option_b": "नसीराबाद",
-      "option_c": "एरिनपुरा",
-      "option_d": "ब्यावर",
-      "answer": "B",
-      "explanation": "28 मई 1857 को नसीराबाद छावनी से क्रांति शुरू हुई।"
-    }
-  ],
-  "pyqs": [
-    {
-      "question": "आउवा के किस ठाकुर ने क्रांति का नेतृत्व किया?",
-      "option_a": "कुशाल सिंह",
-      "option_b": "केसरी सिंह",
-      "option_c": "जोरावर सिंह",
-      "option_d": "राव गोपाल सिंह",
-      "answer": "A",
-      "source": "RAS Pre 2021",
-      "year": 2021,
-      "explanation": "आउवा के ठाकुर कुशाल सिंह चंपावत ने क्रांतिकारियों का नेतृत्व किया।"
-    }
-  ]
-}`}
+        placeholder="यहाँ पूरा valid JSON पेस्ट करें..."
         className="w-full bg-[#020617] border border-slate-800 rounded-2xl p-3.5 text-xs text-indigo-200 font-mono focus:border-indigo-500 outline-none leading-relaxed resize-y"
       />
 
-      {/* Upload Action Button */}
       <button
         type="button"
         onClick={handlePasteImport}
@@ -417,7 +375,6 @@ export default function JsonImport() {
         {loading ? `डेटा सिंक हो रहा है... (${progress}%)` : "Upload JSON"}
       </button>
 
-      {/* Progress Bar */}
       {loading && (
         <div className="space-y-1.5 pt-1">
           <div className="flex justify-between text-xs text-slate-400">
@@ -433,7 +390,6 @@ export default function JsonImport() {
         </div>
       )}
 
-      {/* Dynamic Summary Cards */}
       {(stats.questionsImported > 0 || stats.notesImported > 0 || stats.skippedDuplicates > 0 || stats.failed > 0) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
           <div className="p-2.5 rounded-xl bg-indigo-950/60 border border-indigo-500/30 text-center">
@@ -455,20 +411,11 @@ export default function JsonImport() {
         </div>
       )}
 
-      {/* Message Output Box */}
       {message && (
         <div className="p-3.5 rounded-xl bg-[#020617] border border-slate-800 text-xs font-semibold text-slate-200">
           {message}
         </div>
       )}
-
-      {/* Information Box */}
-      <div className="p-3.5 bg-[#020617] border border-slate-800/80 rounded-2xl text-slate-400 text-xs leading-relaxed space-y-1">
-        <b className="text-slate-200">Import format जानकारी:</b>
-        <p>• आप पूरा टॉपिक बंडल (Object) या केवल प्रश्नों की लिस्ट (Array) दोनों अपलोड कर सकते हैं।</p>
-        <p>• यदि कोई प्रश्न पहले से मौजूद है, तो सिस्टम उसे अपने-आप पहचान कर स्किप कर देगा ताकि डुप्लीकेट न बने।</p>
-      </div>
-
     </section>
   );
 }
