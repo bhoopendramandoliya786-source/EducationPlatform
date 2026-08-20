@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
-    const { question, image, messagesHistory } = await req.json();
+    const { question, image, messagesHistory, mode } = await req.json();
 
     if ((!question || !question.trim()) && !image) {
       return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ोटो अपलोड करें' }, { status: 400 });
@@ -15,34 +15,58 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    const isQuizReq = question && (
+    // Check if user specifically requested an image generation
+    const isImageGeneration = mode === 'image' || (
+      question && (
+        question.toLowerCase().includes('photo banao') ||
+        question.toLowerCase().includes('image banao') ||
+        question.toLowerCase().includes('tasveer') ||
+        question.toLowerCase().includes('फोटो बनाओ') ||
+        question.toLowerCase().includes('चित्र बनाओ') ||
+        question.toLowerCase().includes('photo dikhao')
+      )
+    );
+
+    if (isImageGeneration) {
+      const cleanPrompt = encodeURIComponent(
+        question
+          .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao/gi, '')
+          .trim() || 'beautiful scenery photorealistic 8k'
+      );
+      const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
+      
+      return NextResponse.json({
+        answer: `यहाँ आपका तैयार किया गया AI चित्र है:\n\n![${question}](${generatedImageUrl})\n\n💡 आप इसमें कोई बदलाव या नई फोटो भी बनवा सकते हैं!`
+      });
+    }
+
+    const isQuizReq = mode === 'quiz' || (question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
       question.toLowerCase().includes('टेस्ट') ||
       question.toLowerCase().includes('क्विज')
-    );
+    ));
 
-    const baseSystemPrompt = `You are a world-class visual AI Assistant & Tutor (ChatGPT & Gemini Pro level).
+    const baseSystemPrompt = `You are EduAI Super Intelligence (powered by ChatGPT-4o and Google Gemini architecture).
 
-RULES FOR IMAGES & VISUAL EXPLANATION:
-- When the user asks for photos, diagrams, or visual steps (e.g. "photo se samjhao", "diagram dikhao", "car making photos"):
-  Insert real image embeds using this exact markdown syntax:
-  ![Description](https://image.pollinations.ai/prompt/{english_visual_keyword_detailed}?width=800&height=500&nologo=true)
-  (Example: ![Car Body Assembly](https://image.pollinations.ai/prompt/industrial%20robotic%20car%20assembly%20line%20modern%20factory%20photorealistic?width=800&height=500&nologo=true))
-- Do NOT output raw broken table characters (| |---) or broken link text.
-- Use natural conversational Hindi/Hinglish with emojis. Format headers and steps cleanly.`;
+CORE CAPABILITIES:
+1. Deep Research & Learning: Deliver structured, accurate, and deeply reasoned answers across all subjects (Math, Coding, Science, History, GK, Exams, Creativity).
+2. Clean Presentation: Use clear bold headings, bullet points, and code blocks. Avoid broken table formatting.
+3. Natural Tone: Use friendly Hindi/Hinglish with emojis.
+4. Visual Enhancer: If the user asks for visual aids or step-by-step diagrams, embed images using:
+   ![Visual](https://image.pollinations.ai/prompt/{english_query}?width=800&height=500&nologo=true)`;
 
     const quizSystemPrompt = `You are an expert exam quiz architect. Output ONLY valid JSON:
 {
   "is_quiz": true,
-  "quiz_title": "Quiz Title with Emoji",
+  "quiz_title": "Interactive Quiz Title with Emoji",
   "questions": [
     {
       "id": 1,
       "question": "Question text?",
       "options": ["A", "B", "C", "D"],
       "correctIndex": 0,
-      "explanation": "Explanation text."
+      "explanation": "Clear explanation with facts."
     }
   ]
 }`;
@@ -52,9 +76,9 @@ RULES FOR IMAGES & VISUAL EXPLANATION:
     ];
 
     if (Array.isArray(messagesHistory) && messagesHistory.length > 0) {
-      const recent = messagesHistory.slice(-6);
+      const recent = messagesHistory.slice(-4);
       for (const m of recent) {
-        if (m.text && typeof m.text === 'string') {
+        if (m.text && typeof m.text === 'string' && !m.image) {
           messages.push({
             role: m.role === 'user' ? 'user' : 'assistant',
             content: m.text
@@ -68,7 +92,7 @@ RULES FOR IMAGES & VISUAL EXPLANATION:
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: image } },
-          { type: 'text', text: question ? `${question}\n(Analyze this photo and provide a detailed solution)` : 'Please analyze this photo in detail.' }
+          { type: 'text', text: question ? `${question}\n(फ़ोटो को देखकर पूरा समाधान हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो का विस्तृत विश्लेषण और समाधान करें।' }
         ]
       });
     } else {
