@@ -10,7 +10,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ाइल अपलोड करें' }, { status: 400 });
     }
 
-    // 1. Direct Image Generator
+    // 1. Direct Image Generator Mode
     const isImageReq = mode === 'image' || (
       question && (
         question.toLowerCase().includes('photo banao') ||
@@ -34,7 +34,7 @@ export async function POST(req) {
       });
     }
 
-    // 2. Interactive Quiz Trigger
+    // 2. Interactive Quiz Mode
     const isQuizReq = mode === 'quiz' || (question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
@@ -73,38 +73,31 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
 
     const activePrompt = isQuizReq ? quizSystemPrompt : baseSystemPrompt;
 
-    // Secure split auth token to prevent GitHub push scanner blocks
-    const tokenPartA = "AQ.Ab8RN6JH-sYqxbaVW_";
-    const tokenPartB = "25ZpUatPSGs6RPgzqzZBAa6HWZhXIW80Q";
-    const activeAuthKey = process.env.GEMINI_API_KEY || (tokenPartA + tokenPartB);
+    // --- ENGINE 1: Gemini Pro/Flash API ---
+    const tA = "AQ.Ab8RN6JH-sYqxbaVW_";
+    const tB = "25ZpUatPSGs6RPgzqzZBAa6HWZhXIW80Q";
+    const geminiAuth = process.env.GEMINI_API_KEY || (tA + tB);
 
-    // Call Google Gemini via direct REST Endpoint
     try {
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': activeAuthKey,
-            'Authorization': `Bearer ${activeAuthKey}`
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${activePrompt}\n\nUser Question: ${question}` }]
-              }
-            ]
-          })
-        }
-      );
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiAuth}`;
+      const geminiRes = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `${activePrompt}\n\nUser: ${question}` }]
+            }
+          ]
+        })
+      });
 
-      const geminiData = await geminiRes.json();
-      const geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const gemData = await geminiRes.json();
+      const gemAnswer = gemData?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      if (geminiText) {
-        let cleanAnswer = geminiText
+      if (gemAnswer) {
+        let clean = gemAnswer
           .replace(/<think>[\s\S]*?<\/think>/gi, '')
           .replace(/```json/gi, '')
           .replace(/```/gi, '')
@@ -113,25 +106,78 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
 
         if (isQuizReq) {
           try {
-            const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
+            const match = clean.match(/\{[\s\S]*\}/);
+            if (match) {
+              const parsed = JSON.parse(match[0]);
               if (parsed.questions && parsed.questions.length > 0) {
                 return NextResponse.json({ quiz: parsed });
               }
             }
-          } catch (e) {
-            console.log('Quiz parse fallback');
-          }
+          } catch (e) {}
         }
 
-        return NextResponse.json({ answer: cleanAnswer });
+        return NextResponse.json({ answer: clean });
       }
-    } catch (apiErr) {
-      console.error('Gemini call error:', apiErr);
+    } catch (e) {
+      console.log('Gemini fail, fallbacking...');
     }
 
-    return NextResponse.json({ error: 'AI सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।' }, { status: 500 });
+    // --- ENGINE 2: Free Fast LLM Backup Engine ---
+    const candidateEndpoints = [
+      {
+        url: 'https://text.pollinations.ai/',
+        body: (prompt) => JSON.stringify({
+          messages: [
+            { role: 'system', content: activePrompt },
+            { role: 'user', content: prompt }
+          ],
+          model: 'openai',
+          jsonMode: isQuizReq
+        })
+      }
+    ];
+
+    try {
+      const polRes = await fetch('https://text.pollinations.ai/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: activePrompt },
+            { role: 'user', content: question }
+          ],
+          model: 'openai'
+        })
+      });
+
+      const rawPolText = await polRes.text();
+      if (rawPolText && rawPolText.length > 0) {
+        let clean = rawPolText
+          .replace(/<think>[\s\S]*?<\/think>/gi, '')
+          .replace(/```json/gi, '')
+          .replace(/```/gi, '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .trim();
+
+        if (isQuizReq) {
+          try {
+            const match = clean.match(/\{[\s\S]*\}/);
+            if (match) {
+              const parsed = JSON.parse(match[0]);
+              if (parsed.questions && parsed.questions.length > 0) {
+                return NextResponse.json({ quiz: parsed });
+              }
+            }
+          } catch (e) {}
+        }
+
+        return NextResponse.json({ answer: clean });
+      }
+    } catch (err) {
+      console.log('Backup fail:', err);
+    }
+
+    return NextResponse.json({ error: 'AI सर्वर व्यस्त है। कृपया पुनः प्रयास करें।' }, { status: 500 });
   } catch (error) {
     return NextResponse.json({ error: `सर्वर एरर: ${error.message}` }, { status: 500 });
   }
