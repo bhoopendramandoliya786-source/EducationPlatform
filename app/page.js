@@ -13,7 +13,9 @@ import {
   Sparkles, 
   Zap, 
   Flame,
-  Layers
+  CheckCircle2,
+  TrendingUp,
+  GraduationCap
 } from 'lucide-react';
 
 export const revalidate = 60;
@@ -39,104 +41,123 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-[#050711] text-slate-100 font-sans pb-28">
 
-      {/* Top Clean Navbar */}
+      {/* Top Navbar */}
       <Navbar />
 
-      <main className="max-w-xl mx-auto px-4 pt-4 space-y-6">
+      <main className="max-w-md mx-auto px-4 pt-3 space-y-5">
 
-        {/* Clean Hero & Search Section */}
-        <section className="space-y-3 text-center sm:text-left">
+        {/* 1. Daily Target / Greeting Banner */}
+        <section className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900/80 to-purple-950/50 border border-indigo-500/20 backdrop-blur-md space-y-3">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                नमस्ते, <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">स्मार्ट तैयारी</span> शुरू करें
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+                ● 2026 AI लर्निंग
+              </span>
+              <h1 className="text-lg font-black text-white">
+                नमस्ते, आज का लक्ष्य पूरा करें 🎯
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                50,000+ प्रश्न, नोट्स और 24/7 AI ट्यूटर
-              </p>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold shrink-0">
-              <Flame className="w-4 h-4 fill-amber-400 text-amber-400" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold shrink-0">
+              <Flame className="w-4 h-4 fill-amber-400 text-amber-400 animate-pulse" />
               <span>7 Days</span>
             </div>
           </div>
 
-          {/* Live Search Component */}
-          <div className="pt-1">
-            <SearchBox />
-          </div>
+          {/* Search Box */}
+          <SearchBox />
         </section>
 
-        {/* 4 Core Action Cards (Clean & Modern 2x2 Grid) */}
-        <section className="grid grid-cols-2 gap-3">
+        {/* 2. 4 Core Action Cards (Rich Gradients & Badges) */}
+        <section className="grid grid-cols-2 gap-2.5">
 
           <Link 
             href="/subject" 
-            className="p-4 rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800/90 hover:border-indigo-500/50 transition-all flex flex-col justify-between h-28 group"
+            className="p-3.5 rounded-2xl bg-gradient-to-b from-indigo-950/40 to-slate-900/80 border border-indigo-500/20 hover:border-indigo-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-4 h-4" />
+            <div className="flex items-center justify-between">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-400">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                Notes
+              </span>
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white group-hover:text-indigo-300 transition-colors">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-indigo-300 transition-colors">
                 स्मार्ट नोट्स
               </h3>
-              <p className="text-[11px] text-slate-400">सभी विषयों के सार</p>
+              <p className="text-[10px] text-slate-400">सभी विषयों के सार</p>
             </div>
           </Link>
 
           <Link 
             href="/quiz" 
-            className="p-4 rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800/90 hover:border-emerald-500/50 transition-all flex flex-col justify-between h-28 group"
+            className="p-3.5 rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900/80 border border-emerald-500/20 hover:border-emerald-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
-              <Zap className="w-4 h-4" />
+            <div className="flex items-center justify-between">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+                <Zap className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                Live
+              </span>
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white group-hover:text-emerald-300 transition-colors">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-emerald-300 transition-colors">
                 डेली क्विज़
               </h3>
-              <p className="text-[11px] text-slate-400">50 प्रश्न + लाइव स्कोर</p>
+              <p className="text-[10px] text-slate-400">50 MCQs + टाइमर</p>
             </div>
           </Link>
 
           <Link 
             href="/subject" 
-            className="p-4 rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800/90 hover:border-amber-500/50 transition-all flex flex-col justify-between h-28 group"
+            className="p-3.5 rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-900/80 border border-amber-500/20 hover:border-amber-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
-              <Award className="w-4 h-4" />
+            <div className="flex items-center justify-between">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-400">
+                <Award className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                PYQs
+              </span>
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white group-hover:text-amber-300 transition-colors">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 transition-colors">
                 100+ PYQs
               </h3>
-              <p className="text-[11px] text-slate-400">विगत वर्षों के हल पेपर</p>
+              <p className="text-[10px] text-slate-400">विगत वर्षों के पेपर</p>
             </div>
           </Link>
 
           <Link 
             href="/ai-tutor" 
-            className="p-4 rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800/90 hover:border-purple-500/50 transition-all flex flex-col justify-between h-28 group"
+            className="p-3.5 rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900/80 border border-purple-500/20 hover:border-purple-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4" />
+            <div className="flex items-center justify-between">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                AI 4o
+              </span>
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white group-hover:text-purple-300 transition-colors">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-purple-300 transition-colors">
                 AI ट्यूटर
               </h3>
-              <p className="text-[11px] text-slate-400">24/7 तुरंत डाउट हल</p>
+              <p className="text-[10px] text-slate-400">24/7 लाइव डाउट</p>
             </div>
           </Link>
 
         </section>
 
-        {/* Subjects Section (Clean Single Cards) */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-0.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              विषय (Subjects)
+        {/* 3. Subjects Visual Cards */}
+        <section className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <GraduationCap className="w-4 h-4 text-indigo-400" />
+              <span>प्रमुख विषय (Subjects)</span>
             </h2>
             <Link href="/subject" className="text-xs text-indigo-400 hover:underline font-semibold">
               सभी देखें →
@@ -151,21 +172,33 @@ export default async function HomePage() {
                   <Link
                     key={sub.id}
                     href={`/subject/${sub.id}`}
-                    className="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/90 hover:border-indigo-500/40 rounded-2xl p-4 transition-all flex items-center justify-between gap-3"
+                    className="group p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 to-slate-900/60 border border-slate-800 hover:border-indigo-500/40 transition-all block space-y-2.5 shadow-lg"
                   >
-                    <div className="space-y-1 truncate">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
                           {chapterCount} Chapters
                         </span>
+                        <h3 className="text-base font-bold text-white group-hover:text-indigo-400 transition-colors">
+                          {sub.name}
+                        </h3>
+                        <p className="text-xs text-slate-400 line-clamp-1">
+                          {sub.description || 'इस विषय के सभी थ्योरी नोट्स और पिछले वर्षों के प्रश्न।'}
+                        </p>
                       </div>
-                      <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors truncate">
-                        {sub.name}
-                      </h3>
+                      <div className="w-8 h-8 rounded-xl bg-slate-800/80 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-indigo-600 transition-all shrink-0">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
                     </div>
 
-                    <div className="w-8 h-8 rounded-xl bg-slate-800/60 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-indigo-600 transition-all shrink-0">
-                      <ChevronRight className="w-4 h-4" />
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-emerald-400 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        स्मार्ट नोट्स + MCQs
+                      </span>
+                      <span className="text-indigo-400 font-semibold group-hover:underline">
+                        पढ़ना शुरू करें →
+                      </span>
                     </div>
                   </Link>
                 );
@@ -174,11 +207,12 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Must-Prepare Topics */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-0.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              ट्रेंडिंग टॉपिक्स (Must Read)
+        {/* 4. Must-Prepare Trending Topics */}
+        <section className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-amber-400" />
+              <span>ट्रेंडिंग टॉपिक्स (Must Read)</span>
             </h2>
           </div>
 
@@ -188,23 +222,28 @@ export default async function HomePage() {
                 <Link
                   key={top.id}
                   href={`/topic/${top.id}`}
-                  className="bg-slate-900/50 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 rounded-xl p-3.5 transition-all flex items-center justify-between group"
+                  className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800/90 hover:border-amber-500/30 rounded-xl p-3 transition-all flex items-center justify-between group shadow-sm"
                 >
                   <div className="flex items-center gap-3 truncate">
-                    <span className="w-6 h-6 rounded-lg bg-slate-800 text-xs font-bold text-slate-400 flex items-center justify-center shrink-0">
+                    <span className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700/80 text-xs font-bold text-indigo-300 flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
                     <div className="truncate">
-                      <div className="text-[10px] text-slate-500 uppercase truncate">
-                        {top.chapters?.name}
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider truncate">
+                        {top.chapters?.subjects?.name} › {top.chapters?.name}
                       </div>
-                      <div className="text-xs font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors truncate">
+                      <div className="text-xs sm:text-sm font-bold text-slate-200 group-hover:text-amber-400 transition-colors truncate">
                         {top.name}
                       </div>
                     </div>
                   </div>
 
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      +50 XP
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                  </div>
                 </Link>
               ))
             ) : null}
@@ -213,8 +252,8 @@ export default async function HomePage() {
 
       </main>
 
-      {/* Universal Fixed Bottom Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/90 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2">
+      {/* 5. Fixed Universal Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/95 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <Link href="/" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-indigo-400">
             <span className="text-base">🏠</span>
@@ -227,7 +266,7 @@ export default async function HomePage() {
           </Link>
 
           <Link href="/ai-tutor" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
-            <div className="w-10 h-10 -mt-5 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 text-lg border-2 border-[#050711]">
+            <div className="w-10 h-10 -mt-5 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 text-lg border-2 border-[#050711] animate-pulse">
               ✨
             </div>
             <span className="text-indigo-300 font-bold text-[10px]">AI सुपर</span>
