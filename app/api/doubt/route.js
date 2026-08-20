@@ -4,10 +4,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
-    const { question, image, messagesHistory, mode } = await req.json();
+    const { question, image, pdfText, messagesHistory, mode } = await req.json();
 
-    if ((!question || !question.trim()) && !image) {
-      return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ोटो अपलोड करें' }, { status: 400 });
+    if ((!question || !question.trim()) && !image && !pdfText) {
+      return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ाइल अपलोड करें' }, { status: 400 });
     }
 
     const k1 = "gsk_Cq74Rachwl";
@@ -15,15 +15,14 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // Check if user specifically requested an image generation
+    // 1. Tool: Image Generation
     const isImageGeneration = mode === 'image' || (
       question && (
         question.toLowerCase().includes('photo banao') ||
         question.toLowerCase().includes('image banao') ||
-        question.toLowerCase().includes('tasveer') ||
         question.toLowerCase().includes('फोटो बनाओ') ||
         question.toLowerCase().includes('चित्र बनाओ') ||
-        question.toLowerCase().includes('photo dikhao')
+        question.toLowerCase().includes('tasveer')
       )
     );
 
@@ -31,15 +30,16 @@ export async function POST(req) {
       const cleanPrompt = encodeURIComponent(
         question
           .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao/gi, '')
-          .trim() || 'beautiful scenery photorealistic 8k'
+          .trim() || 'ultra realistic 8k masterpiece'
       );
       const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
       
       return NextResponse.json({
-        answer: `यहाँ आपका तैयार किया गया AI चित्र है:\n\n![${question}](${generatedImageUrl})\n\n💡 आप इसमें कोई बदलाव या नई फोटो भी बनवा सकते हैं!`
+        answer: `यहाँ आपकी बनाई गई HD AI फोटो है:\n\n![${question}](${generatedImageUrl})\n\n💡 आप इसे नीचे दिए गए बटन से सीधे डाउनलोड कर सकते हैं।`
       });
     }
 
+    // 2. Tool: Interactive Quiz
     const isQuizReq = mode === 'quiz' || (question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
@@ -47,14 +47,16 @@ export async function POST(req) {
       question.toLowerCase().includes('क्विज')
     ));
 
-    const baseSystemPrompt = `You are EduAI Super Intelligence (powered by ChatGPT-4o and Google Gemini architecture).
+    // 3. Tool: Deep Research / Canvas / Standard Chat Prompt
+    let baseSystemPrompt = `You are EduAI Super Intelligence (powered by Gemini & ChatGPT Pro architecture).
 
 CORE CAPABILITIES:
-1. Deep Research & Learning: Deliver structured, accurate, and deeply reasoned answers across all subjects (Math, Coding, Science, History, GK, Exams, Creativity).
-2. Clean Presentation: Use clear bold headings, bullet points, and code blocks. Avoid broken table formatting.
-3. Natural Tone: Use friendly Hindi/Hinglish with emojis.
-4. Visual Enhancer: If the user asks for visual aids or step-by-step diagrams, embed images using:
-   ![Visual](https://image.pollinations.ai/prompt/{english_query}?width=800&height=500&nologo=true)`;
+1. Deep Research & Logical Reasoning: Break down any query (Math, Science, History, GK, Code, Exam prep) with clear, authentic, and step-by-step reasoning.
+2. Natural Tone: Use engaging Hindi/Hinglish with relevant emojis (🚀, 💡, 🎯).
+3. Presentation: Format with clear Bold headings and clean bullet points.
+${pdfText ? `\n\nATTACHED DOCUMENT / BOOK CONTENT:\n${pdfText.substring(0, 4000)}\n(Answer the user query strictly using the attached document context wherever applicable)` : ''}
+${mode === 'research' ? '\nMODE: DEEP RESEARCH REPORT (Provide a thorough, comprehensive, multi-section in-depth report with historical/technical facts)' : ''}
+${mode === 'canvas' ? '\nMODE: CANVAS LIVE EDITOR (Provide clean, ready-to-edit essays, code, or structured notes)' : ''}`;
 
     const quizSystemPrompt = `You are an expert exam quiz architect. Output ONLY valid JSON:
 {
@@ -63,10 +65,10 @@ CORE CAPABILITIES:
   "questions": [
     {
       "id": 1,
-      "question": "Question text?",
-      "options": ["A", "B", "C", "D"],
+      "question": "Standard question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctIndex": 0,
-      "explanation": "Clear explanation with facts."
+      "explanation": "Clear explanation of the answer."
     }
   ]
 }`;
@@ -92,7 +94,7 @@ CORE CAPABILITIES:
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: image } },
-          { type: 'text', text: question ? `${question}\n(फ़ोटो को देखकर पूरा समाधान हिंदी में समझाएँ)` : 'कृपया इस फ़ोटो का विस्तृत विश्लेषण और समाधान करें।' }
+          { type: 'text', text: question ? `${question}\n(फोटो को देखकर पूरा समाधान हिंदी में समझाएँ)` : 'कृपया इस फोटो का विस्तृत विश्लेषण और समाधान करें।' }
         ]
       });
     } else {
