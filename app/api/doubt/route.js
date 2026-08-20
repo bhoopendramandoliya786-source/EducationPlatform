@@ -10,7 +10,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ाइल अपलोड करें' }, { status: 400 });
     }
 
-    // 1. Direct Clean Image Generator
+    // 1. Direct Image Generator Mode
     const isImageReq = mode === 'image' || (
       question && (
         question.toLowerCase().includes('photo banao') ||
@@ -25,16 +25,16 @@ export async function POST(req) {
       const cleanPrompt = encodeURIComponent(
         question
           .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao|banao|ka|ki|aur|mera/gi, '')
-          .trim() || 'beautiful scenery ultra detailed 8k'
+          .trim() || 'beautiful 4k scenery wallpaper photorealistic'
       );
       const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
-
+      
       return NextResponse.json({
         answer: `![${question}](${generatedImageUrl})`
       });
     }
 
-    // 2. Interactive Quiz Trigger
+    // 2. Interactive Quiz Mode
     const isQuizReq = mode === 'quiz' || (question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
@@ -73,6 +73,7 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
 
     const activePrompt = isQuizReq ? quizSystemPrompt : baseSystemPrompt;
 
+    // Build Messages Payload
     let messages = [
       { role: 'system', content: activePrompt }
     ];
@@ -106,10 +107,13 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const groqKey = process.env.GROQ_API_KEY || (k1 + k2 + k3);
 
+    // Active Groq Model Pool
     const candidateModels = [
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.6-27b',
       'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant',
-      'mixtral-8x7b-32768'
+      'llama-3.1-8b-instant'
     ];
 
     for (const modelName of candidateModels) {
@@ -156,6 +160,29 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
         }
       } catch (err) {
         console.log(`Model failed: ${modelName}`);
+      }
+    }
+
+    // Direct Gemini REST API Fallback
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `${activePrompt}\n\nUser: ${question}` }] }]
+            })
+          }
+        );
+        const geminiData = await geminiRes.json();
+        const geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (geminiText) {
+          return NextResponse.json({ answer: geminiText.trim() });
+        }
+      } catch (gemErr) {
+        console.error('Gemini fallback failed:', gemErr);
       }
     }
 
