@@ -247,7 +247,6 @@ export default function QuizPlayPage() {
       {/* 2. CENTER CONTENT - SOLID CARDS */}
       <main className="w-full max-w-xl mx-auto px-4 py-3 flex-1 flex flex-col justify-start space-y-4">
         
-        {/* Question Area */}
         <div className="space-y-1">
           <span className="text-xs text-zinc-400 font-semibold block">
             Question {currentIndex + 1}
@@ -275,7 +274,6 @@ export default function QuizPlayPage() {
             const isChosen = currentAnswer === optKey;
             const isAnswered = !!currentAnswer;
 
-            // Solid fallback styling for every card
             let cardBg = '#1c1e26';
             let cardBorder = '#2a2e3b';
             let textColor = '#e2e8f0';
