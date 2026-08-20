@@ -70,7 +70,7 @@ function FormattedMessage({ text }) {
   );
 }
 
-function InteractiveQuizBox({ quizData }) {
+function InteractiveQuizBox({ quizData, onNextSet }) {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const questions = quizData.questions || [];
 
@@ -91,7 +91,7 @@ function InteractiveQuizBox({ quizData }) {
           <h3 className="font-bold text-sm sm:text-base text-blue-200 flex items-center gap-2">
             <span>🎯</span> {quizData.quiz_title || 'इंटरएक्टिव टेस्ट'}
           </h3>
-          <p className="text-xs text-slate-400">विकल्प पर टच करें</p>
+          <p className="text-xs text-slate-400">टच करके सही विकल्प चुनें</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -165,6 +165,18 @@ function InteractiveQuizBox({ quizData }) {
           </div>
         );
       })}
+
+      {answeredCount === questions.length && questions.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between print:hidden">
+          <span className="text-xs text-emerald-300 font-semibold">🎉 सेट पूरा हुआ!</span>
+          <button
+            onClick={() => onNextSet && onNextSet(quizData.quiz_title)}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white rounded-xl text-xs font-semibold shadow transition flex items-center gap-1.5"
+          >
+            <span>⚡</span> अगले 5 प्रश्न लोड करें ➔
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -174,23 +186,18 @@ export default function AiTutorPage() {
     { 
       role: 'ai', 
       type: 'text', 
-      text: 'नमस्ते! ✨ मैं आपका Google Gemini और ChatGPT पावर्ड AI सुपर असिस्टेंट हूँ। नीचे दिए गए **+ बटन** पर क्लिक करके आप इमेज जनरेट 🎨, PDF नोट्स अपलोड 📄, डीप रिसर्च 🔬 या लाइव कैनवास 📝 शुरू कर सकते हैं!' 
+      text: 'नमस्ते! ✨ मैं आपका AI सुपर ट्यूटर हूँ। आप मुझसे पढ़ाई, टच-क्विज़ 🎯, फोटो जनरेशन 🎨, वॉइस 🔊 या कोई भी सवाल पूछ सकते हैं!' 
     }
   ]);
   const [input, setInput] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
-  const [attachedDocName, setAttachedDocName] = useState(null);
-  const [pdfTextContent, setPdfTextContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState(null);
   const [activeTool, setActiveTool] = useState(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
-  const [showCanvas, setShowCanvas] = useState(false);
-  const [canvasContent, setCanvasContent] = useState('# My Study Notes\n\nयहाँ आप अपने नोट्स या निबंध लिख सकते हैं...');
-  
+
   const fileInputRef = useRef(null);
-  const docInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -208,7 +215,6 @@ export default function AiTutorPage() {
     const cleanText = text.replace(/[*#_~]|!\[.*?\]\(.*?\)/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'hi-IN';
-    utterance.rate = 1.0;
     utterance.onend = () => setSpeakingIdx(null);
     utterance.onerror = () => setSpeakingIdx(null);
     setSpeakingIdx(idx);
@@ -217,7 +223,7 @@ export default function AiTutorPage() {
 
   const handleVoiceInput = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('वॉइस इनपुट के लिए क्रोम ब्राउज़र का उपयोग करें।');
+      alert('वॉइस इनपुट के लिए क्रोम का उपयोग करें।');
       return;
     }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -235,7 +241,6 @@ export default function AiTutorPage() {
     recognition.start();
   };
 
-  // Safe Image Compression
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -261,8 +266,7 @@ export default function AiTutorPage() {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        setImagePreview(compressedBase64);
+        setImagePreview(canvas.toDataURL('image/jpeg', 0.7));
         setShowPlusMenu(false);
       };
       img.src = event.target.result;
@@ -270,44 +274,24 @@ export default function AiTutorPage() {
     reader.readAsDataURL(file);
   };
 
-  // Document / PDF / Text file Reader
-  const handleDocSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setAttachedDocName(file.name);
-    setShowPlusMenu(false);
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPdfTextContent(event.target.result);
-    };
-    reader.readAsText(file);
-  };
-
-  const sendMessage = async (customText) => {
+  const sendMessage = async (customText, customMode) => {
     const textToSend = customText || input;
-    if ((!textToSend.trim() && !imagePreview && !pdfTextContent) || loading) return;
+    if ((!textToSend.trim() && !imagePreview) || loading) return;
 
     const currentImg = imagePreview;
-    const currentTool = activeTool;
-    const currentPdfText = pdfTextContent;
-    const docName = attachedDocName;
+    const currentTool = customMode || activeTool;
 
     const userMsg = { 
       role: 'user', 
       type: currentImg ? 'image' : 'text', 
-      text: textToSend || (docName ? `दस्तावेज़ [${docName}] का विश्लेषण करें` : ''), 
-      image: currentImg,
-      docName: docName
+      text: textToSend, 
+      image: currentImg 
     };
 
     const newHistory = [...messages, userMsg];
     setMessages(newHistory);
     setInput('');
     setImagePreview(null);
-    setAttachedDocName(null);
-    setPdfTextContent('');
     setActiveTool(null);
     setLoading(true);
 
@@ -318,7 +302,6 @@ export default function AiTutorPage() {
         body: JSON.stringify({ 
           question: textToSend, 
           image: currentImg,
-          pdfText: currentPdfText,
           messagesHistory: newHistory,
           mode: currentTool
         })
@@ -329,9 +312,6 @@ export default function AiTutorPage() {
         setMessages(prev => [...prev, { role: 'ai', type: 'quiz', quiz: data.quiz }]);
       } else if (data.answer) {
         setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.answer }]);
-        if (currentTool === 'canvas' || showCanvas) {
-          setCanvasContent(prev => prev + '\n\n' + data.answer);
-        }
       } else {
         setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.error || 'उत्तर लोड नहीं हो सका।' }]);
       }
@@ -344,240 +324,151 @@ export default function AiTutorPage() {
 
   const geminiMenuTools = [
     { id: 'image', icon: '🎨', label: 'Create image', desc: 'AI चित्र या 4K फ़ोटो बनाएँ' },
-    { id: 'doc', icon: '📄', label: 'Upload Notes / File', desc: 'किताब व नोट्स से सवाल पूछें' },
-    { id: 'research', icon: '🔬', label: 'Deep Research', desc: 'गहराई से रिसर्च व विस्तृत रिपोर्ट' },
-    { id: 'canvas', icon: '📝', label: 'Canvas Workspace', desc: 'लाइव स्प्लिट स्क्रीन नोट्स' },
     { id: 'quiz', icon: '🎯', label: 'Interactive Quiz', desc: 'टच-क्विज़ और टेस्ट बनाएँ' }
   ];
 
   return (
-    <div className="flex h-[calc(100vh-64px)] max-w-7xl mx-auto p-2 sm:p-4 text-white print:p-0 print:max-w-none print:h-auto gap-4">
-      {/* Main Chat Area */}
-      <div className={`flex flex-col flex-1 h-full transition-all duration-300`}>
-        {/* Header */}
-        <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-2.5 shadow-xl flex items-center justify-between backdrop-blur print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/20">
-              ✨
+    <div className="flex flex-col h-[calc(100vh-64px)] max-w-4xl mx-auto p-2 sm:p-4 text-white print:p-0 print:max-w-none print:h-auto">
+      {/* Header */}
+      <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-2.5 shadow-xl flex items-center justify-between backdrop-blur print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/20">
+            ✨
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                EduAI Super Suite
+              </h1>
+              <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-full border border-indigo-500/30">
+                Gemini & GPT Core
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                  EduAI Super Suite
-                </h1>
-                <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-full border border-indigo-500/30">
-                  Gemini Tools Live
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">+ टूल्स • इमेज क्रिएटर • फ़ाइल रीडर • कैनवास</p>
-            </div>
+            <p className="text-xs text-slate-400">टच-क्विज़ • 4K AI चित्र • आवाज़ में सुनें 🔊 • फ़ोटो सॉल्वर</p>
           </div>
-
-          <button
-            onClick={() => setShowCanvas(!showCanvas)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition flex items-center gap-1.5 ${
-              showCanvas ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            <span>📝</span> {showCanvas ? 'कैनवास छिपाएँ' : 'कैनवास खोलें'}
-          </button>
-        </div>
-
-        {/* Messages Feed */}
-        <div className="flex-1 overflow-y-auto space-y-4 p-3 bg-slate-950/80 border border-slate-800/80 rounded-2xl shadow-inner print:border-none print:bg-white print:p-0 print:space-y-2">
-          {messages.map((m, mIdx) => (
-            <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end print:hidden' : 'justify-start print:block'}`}>
-              <div
-                className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed ${
-                  m.role === 'user'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md text-sm'
-                    : 'bg-slate-900/95 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-lg print:border-none print:bg-white print:p-0 print:text-black'
-                }`}
-              >
-                {m.image && (
-                  <div className="mb-3">
-                    <img src={m.image} alt="Doubt" className="max-h-64 rounded-xl border border-white/20 object-contain" />
-                  </div>
-                )}
-
-                {m.docName && (
-                  <div className="mb-2 p-2 bg-blue-900/40 border border-blue-600/40 rounded-xl text-xs flex items-center gap-2">
-                    <span>📄</span> संलग्न फ़ाइल: <strong>{m.docName}</strong>
-                  </div>
-                )}
-
-                {m.type === 'quiz' ? (
-                  <InteractiveQuizBox quizData={m.quiz} />
-                ) : (
-                  <div>
-                    <FormattedMessage text={m.text} />
-                    
-                    {m.role === 'ai' && m.text && (
-                      <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end print:hidden">
-                        <button
-                          onClick={() => speakText(m.text, mIdx)}
-                          className={`text-xs px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 ${
-                            speakingIdx === mIdx
-                              ? 'bg-red-500/20 border-red-500/50 text-red-300 animate-pulse'
-                              : 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
-                          }`}
-                        >
-                          <span>{speakingIdx === mIdx ? '⏹️ बंद करें' : '🔊 बोलकर सुनाओ'}</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {loading && (
-            <div className="flex justify-start print:hidden">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 flex items-center gap-2 shadow-md">
-                <span className="animate-spin text-blue-400">✨</span> Gemini सुपर इंजन प्रोसेस कर रहा है...
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Attachment Previews */}
-        {imagePreview && (
-          <div className="relative mt-2 p-2 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3 max-w-xs print:hidden">
-            <img src={imagePreview} alt="Preview" className="h-12 w-12 object-cover rounded-lg border border-slate-700" />
-            <span className="text-xs text-slate-300 truncate">फ़ोटो प्रोसेस हो गई</span>
-            <button onClick={() => setImagePreview(null)} className="ml-auto text-xs bg-red-500/20 text-red-400 p-1 px-2 rounded-md">✕</button>
-          </div>
-        )}
-
-        {attachedDocName && (
-          <div className="relative mt-2 p-2 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3 max-w-xs print:hidden">
-            <span className="text-xl">📄</span>
-            <span className="text-xs text-slate-300 truncate">{attachedDocName}</span>
-            <button onClick={() => { setAttachedDocName(null); setPdfTextContent(''); }} className="ml-auto text-xs bg-red-500/20 text-red-400 p-1 px-2 rounded-md">✕</button>
-          </div>
-        )}
-
-        {/* Active Tool Tag */}
-        {activeTool && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-blue-300 px-3 py-1.5 bg-blue-900/30 border border-blue-700/40 rounded-xl">
-            <span>सक्रिय टूल: <strong>{activeTool.toUpperCase()}</strong></span>
-            <button onClick={() => setActiveTool(null)} className="text-red-400 ml-auto font-bold">✕</button>
-          </div>
-        )}
-
-        {/* Plus Tools Popup Menu */}
-        {showPlusMenu && (
-          <div className="mb-2 p-3 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl grid grid-cols-2 sm:grid-cols-3 gap-2 animate-fadeIn">
-            {geminiMenuTools.map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => {
-                  if (tool.id === 'doc') {
-                    docInputRef.current?.click();
-                  } else if (tool.id === 'canvas') {
-                    setShowCanvas(true);
-                    setActiveTool('canvas');
-                    setShowPlusMenu(false);
-                  } else {
-                    setActiveTool(tool.id);
-                    setShowPlusMenu(false);
-                  }
-                }}
-                className="p-3 bg-slate-950/80 hover:bg-indigo-900/30 border border-slate-800 hover:border-indigo-500 rounded-xl text-left transition flex flex-col gap-1"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{tool.icon}</span>
-                  <span className="text-xs font-bold text-slate-100">{tool.label}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 leading-tight">{tool.desc}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Input Bar */}
-        <div className="mt-2 flex items-center gap-2 bg-slate-900/95 border border-slate-800 p-2 rounded-2xl shadow-lg print:hidden relative">
-          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
-          <input type="file" accept=".txt,.pdf,.docx,.doc" ref={docInputRef} onChange={handleDocSelect} className="hidden" />
-
-          {/* Google Plus (+) Button for Tools Menu */}
-          <button
-            type="button"
-            onClick={() => setShowPlusMenu(!showPlusMenu)}
-            className={`p-2.5 rounded-xl transition text-base font-bold shadow ${
-              showPlusMenu ? 'bg-indigo-600 text-white rotate-45' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-            }`}
-            title="Gemini Tools"
-          >
-            ＋
-          </button>
-
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="फ़ोटो भेजें">📷</button>
-          <button type="button" onClick={handleVoiceInput} className={`p-2.5 rounded-xl transition ${isListening ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`} title="बोलकर पूछें">🎤</button>
-          
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder={
-              activeTool === 'image' 
-                ? "किस चीज़ का चित्र बनाना है? जैसे: 'Taj Mahal at sunset 4k'..."
-                : activeTool === 'research'
-                  ? "रिसर्च का विषय लिखें (जैसे: 'राजस्थान एकीकरण का संपूर्ण इतिहास')..."
-                  : "Google Gemini और ChatGPT से कुछ भी पूछें..."
-            }
-            rows={1}
-            className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
-          />
-          <button type="button" onClick={() => sendMessage()} disabled={loading || (!input.trim() && !imagePreview && !pdfTextContent)} className="p-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition">🚀</button>
         </div>
       </div>
 
-      {/* Side-by-Side Canvas Workspace */}
-      {showCanvas && (
-        <div className="w-full sm:w-[420px] bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-2xl animate-fadeIn">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📝</span>
-              <h3 className="font-bold text-sm text-slate-100">Live AI Canvas</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  const blob = new Blob([canvasContent], { type: 'text/plain' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'My-Notes.txt';
-                  a.click();
-                }}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition"
-              >
-                💾 Save
-              </button>
-              <button
-                onClick={() => setShowCanvas(false)}
-                className="p-1 text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 p-3 bg-slate-950/80 border border-slate-800/80 rounded-2xl shadow-inner print:border-none print:bg-white print:p-0 print:space-y-2">
+        {messages.map((m, mIdx) => (
+          <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end print:hidden' : 'justify-start print:block'}`}>
+            <div
+              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed ${
+                m.role === 'user'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md text-sm'
+                  : 'bg-slate-900/95 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-lg print:border-none print:bg-white print:p-0 print:text-black'
+              }`}
+            >
+              {m.image && (
+                <div className="mb-3">
+                  <img src={m.image} alt="Doubt" className="max-h-64 rounded-xl border border-white/20 object-contain" />
+                </div>
+              )}
+
+              {m.type === 'quiz' ? (
+                <InteractiveQuizBox 
+                  quizData={m.quiz} 
+                  onNextSet={(title) => sendMessage(`अगले 5 प्रश्न और बनाओ: ${title}`, 'quiz')} 
+                />
+              ) : (
+                <div>
+                  <FormattedMessage text={m.text} />
+
+                  {m.role === 'ai' && m.text && (
+                    <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end print:hidden">
+                      <button
+                        onClick={() => speakText(m.text, mIdx)}
+                        className={`text-xs px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 ${
+                          speakingIdx === mIdx
+                            ? 'bg-red-500/20 border-red-500/50 text-red-300 animate-pulse'
+                            : 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <span>{speakingIdx === mIdx ? '⏹️ बंद करें' : '🔊 बोलकर सुनाओ'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          <textarea
-            value={canvasContent}
-            onChange={(e) => setCanvasContent(e.target.value)}
-            className="flex-1 w-full bg-slate-950/80 border border-slate-800 p-3 rounded-xl text-slate-200 text-xs sm:text-sm font-mono focus:outline-none resize-none leading-relaxed"
-            placeholder="यहाँ अपने नोट्स या कोड लिखें..."
-          />
+        ))}
+
+        {loading && (
+          <div className="flex justify-start print:hidden">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 flex items-center gap-2 shadow-md">
+              <span className="animate-spin text-blue-400">✨</span> AI उत्तर तैयार कर रहा है...
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="relative mt-2 p-2 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3 max-w-xs print:hidden">
+          <img src={imagePreview} alt="Preview" className="h-12 w-12 object-cover rounded-lg border border-slate-700" />
+          <span className="text-xs text-slate-300 truncate">फ़ोटो प्रोसेस हो गई</span>
+          <button onClick={() => setImagePreview(null)} className="ml-auto text-xs bg-red-500/20 text-red-400 p-1 px-2 rounded-md">✕</button>
         </div>
       )}
+
+      {/* Plus Menu Popup */}
+      {showPlusMenu && (
+        <div className="mb-2 p-3 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex gap-2 animate-fadeIn">
+          {geminiMenuTools.map((tool) => (
+            <button
+              key={tool.id}
+              onClick={() => {
+                setActiveTool(tool.id);
+                setShowPlusMenu(false);
+              }}
+              className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-900/30 border border-slate-800 hover:border-indigo-500 rounded-xl text-left transition flex flex-col gap-1"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-base">{tool.icon}</span>
+                <span className="text-xs font-bold text-slate-100">{tool.label}</span>
+              </div>
+              <span className="text-[10px] text-slate-400">{tool.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input Bar */}
+      <div className="mt-2 flex items-center gap-2 bg-slate-900/95 border border-slate-800 p-2 rounded-2xl shadow-lg print:hidden">
+        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
+
+        <button
+          type="button"
+          onClick={() => setShowPlusMenu(!showPlusMenu)}
+          className={`p-2.5 rounded-xl transition text-base font-bold shadow ${
+            showPlusMenu ? 'bg-indigo-600 text-white rotate-45' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+          }`}
+          title="Tools"
+        >
+          ＋
+        </button>
+
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="फ़ोटो भेजें">📷</button>
+        <button type="button" onClick={handleVoiceInput} className={`p-2.5 rounded-xl transition ${isListening ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`} title="बोलकर पूछें">🎤</button>
+
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          placeholder={activeTool === 'image' ? "किस चीज़ का चित्र बनाना है?..." : "Google Gemini / ChatGPT से पूछें या क्विज़ मांगें..."}
+          rows={1}
+          className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
+        />
+        <button type="button" onClick={() => sendMessage()} disabled={loading || (!input.trim() && !imagePreview)} className="p-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition">🚀</button>
+      </div>
     </div>
   );
 }

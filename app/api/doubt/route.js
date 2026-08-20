@@ -15,7 +15,7 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // 1. Direct Clean Image Generator (No verbose text)
+    // 1. Direct Clean Image Generator
     const isImageReq = mode === 'image' || (
       question && (
         question.toLowerCase().includes('photo banao') ||
@@ -30,7 +30,7 @@ export async function POST(req) {
       const cleanPrompt = encodeURIComponent(
         question
           .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao|banao|ka|ki|aur|mera/gi, '')
-          .trim() || 'taj mahal cinematic 8k ultra detailed photorealistic'
+          .trim() || 'beautiful scenery ultra detailed 8k'
       );
       const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
       
@@ -39,7 +39,7 @@ export async function POST(req) {
       });
     }
 
-    // 2. Interactive Quiz
+    // 2. Interactive Quiz Trigger
     const isQuizReq = mode === 'quiz' || (question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
@@ -48,22 +48,26 @@ export async function POST(req) {
     ));
 
     const baseSystemPrompt = `You are EduAI Super Intelligence (powered by Gemini & ChatGPT Pro).
-Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bullet points. Never output raw broken table characters or broken URLs.`;
+Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bullet points. Never output raw broken table characters or broken URLs.
+${pdfText ? `\n\nATTACHED FILE CONTENT:\n${pdfText.substring(0, 4000)}` : ''}`;
 
-    const quizSystemPrompt = `You are an expert exam quiz creator. Output ONLY pure JSON:
+    const quizSystemPrompt = `You are an expert exam quiz creator.
+IMPORTANT: Generate exactly 5 high quality interactive MCQs (even if user asks for 50, provide 5 best questions per set to avoid payload limits).
+Return ONLY a valid JSON object matching this structure:
 {
   "is_quiz": true,
-  "quiz_title": "Interactive Quiz Title with Emoji",
+  "quiz_title": "Quiz Title with Emoji",
   "questions": [
     {
       "id": 1,
       "question": "Question text?",
       "options": ["A", "B", "C", "D"],
       "correctIndex": 0,
-      "explanation": "Clear explanation."
+      "explanation": "Clear short explanation."
     }
   ]
-}`;
+}
+Do not wrap in markdown quotes. Only valid pure JSON.`;
 
     let messages = [
       { role: 'system', content: isQuizReq ? quizSystemPrompt : baseSystemPrompt }
@@ -86,7 +90,7 @@ Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bull
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: image } },
-          { type: 'text', text: question ? `${question}\n(फोटो को देखकर पूरा समाधान हिंदी में समझाएँ)` : 'कृपया इस फोटो का विस्तृत विश्लेषण और समाधान करें।' }
+          { type: 'text', text: question ? `${question}\n(फोटो देखकर हल समझाएँ)` : 'फोटो का विश्लेषण करें।' }
         ]
       });
     } else {
@@ -112,7 +116,7 @@ Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bull
           body: JSON.stringify({
             model: modelName,
             messages: messages,
-            temperature: 0.5
+            temperature: 0.3
           })
         });
 
@@ -137,12 +141,16 @@ Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bull
                   return NextResponse.json({ quiz: parsed });
                 }
               }
-            } catch (e) {}
+            } catch (e) {
+              console.log('Quiz parse fallback');
+            }
           }
 
           return NextResponse.json({ answer: cleanAnswer });
         }
-      } catch (err) {}
+      } catch (err) {
+        console.log(`Model failed: ${modelName}`);
+      }
     }
 
     return NextResponse.json({ error: 'AI सर्वर व्यस्त है।' }, { status: 500 });
