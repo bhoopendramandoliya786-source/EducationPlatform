@@ -1,24 +1,51 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 
+// Formatter with Real Image Embed & Markdown Support
 function FormattedMessage({ text }) {
   const lines = text.split('\n');
 
   return (
-    <div className="space-y-2 text-sm sm:text-[15px] leading-relaxed text-slate-100 font-sans">
+    <div className="space-y-3 text-sm sm:text-[15px] leading-relaxed text-slate-100 font-sans">
       {lines.map((line, idx) => {
         let trimmed = line.trim();
 
-        if (!trimmed) return <div key={idx} className="h-1" />;
+        if (!trimmed) return <div key={idx} className="h-0.5" />;
         if (trimmed === '---' || trimmed === '***') return <hr key={idx} className="my-3 border-slate-800" />;
 
+        // Markdown Image Embeds: ![alt](url)
+        const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+        if (imgMatch) {
+          const altText = imgMatch[1];
+          const imgSrc = imgMatch[2];
+          return (
+            <div key={idx} className="my-3 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950/80 shadow-lg group">
+              <img 
+                src={imgSrc} 
+                alt={altText} 
+                className="w-full max-h-72 object-cover transition duration-300 group-hover:scale-[1.01]"
+                loading="lazy"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              {altText && (
+                <div className="p-2.5 bg-slate-900/90 text-xs text-blue-300 font-medium flex items-center gap-1.5 border-t border-slate-800">
+                  <span>📸</span> {altText}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Headers
         if (trimmed.startsWith('### ')) return <h3 key={idx} className="text-base font-bold text-blue-400 mt-3 mb-1">{trimmed.replace('### ', '')}</h3>;
         if (trimmed.startsWith('## ')) return <h2 key={idx} className="text-lg font-bold text-indigo-300 mt-4 mb-1.5">{trimmed.replace('## ', '')}</h2>;
         if (trimmed.startsWith('# ')) return <h1 key={idx} className="text-xl font-extrabold text-white mt-4 mb-2">{trimmed.replace('# ', '')}</h1>;
 
+        // Bullets
         const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
         let content = isBullet ? trimmed.substring(2) : trimmed;
 
+        // Bold (**text**)
         const parts = content.split(/(\*\*.*?\*\*)/g);
         const renderedParts = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
@@ -151,7 +178,7 @@ export default function AiTutorPage() {
     { 
       role: 'ai', 
       type: 'text', 
-      text: 'नमस्ते! ✨ मैं आपका ऑल-पावरफुल AI सुपर ट्यूटर हूँ। मुझसे कोई भी सवाल पूछें, बोलकर 🎤 या फ़ोटो 📷 भेजें, या उत्तर को आवाज़ में 🔊 सुनें!' 
+      text: 'नमस्ते! ✨ मैं आपका ऑल-इन-वन विज़ुअल AI ट्यूटर हूँ। मुझसे कोई भी सवाल पूछें, बोलकर 🎤, फ़ोटो 📷 भेजकर, या फोटो के साथ विस्तृत स्टेप्स समझें!' 
     }
   ]);
   const [input, setInput] = useState('');
@@ -166,10 +193,9 @@ export default function AiTutorPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Voice Speaker (Text-to-Speech)
   const speakText = (text, idx) => {
     if (!('speechSynthesis' in window)) {
-      alert('आपका ब्राउज़र आवाज़ सपोर्ट नहीं करता।');
+      alert('ब्राउज़र आवाज़ सपोर्ट नहीं करता।');
       return;
     }
     if (speakingIdx === idx) {
@@ -178,7 +204,7 @@ export default function AiTutorPage() {
       return;
     }
     window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[*#_~]/g, '');
+    const cleanText = text.replace(/[*#_~]|!\[.*?\]\(.*?\)/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'hi-IN';
     utterance.rate = 1.0;
@@ -253,8 +279,7 @@ export default function AiTutorPage() {
         setMessages(prev => [...prev, { 
           role: 'ai', 
           type: 'text', 
-          text: data.answer,
-          hasWebContext: data.hasWebContext 
+          text: data.answer
         }]);
       } else {
         setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.error || 'उत्तर लोड नहीं हो सका।' }]);
@@ -277,23 +302,23 @@ export default function AiTutorPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                EduAI Super Intelligence
+                EduAI Super Visual
               </h1>
-              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold rounded-full border border-emerald-500/30">
-                🌐 Live Web + Voice
+              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-semibold rounded-full border border-blue-500/30">
+                🖼️ HD Image Enabled
               </span>
             </div>
-            <p className="text-xs text-slate-400">वेब सर्च • आवाज़ में सुनें 🔊 • टच-क्विज़ • फ़ोटो सॉल्वर</p>
+            <p className="text-xs text-slate-400">विज़ुअल डायग्राम • आवाज़ में सुनें 🔊 • टच-क्विज़ • फ़ोटो सॉल्वर</p>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages Feed */}
       <div className="flex-1 overflow-y-auto space-y-4 p-3 bg-slate-950/80 border border-slate-800/80 rounded-2xl shadow-inner print:border-none print:bg-white print:p-0 print:space-y-2">
         {messages.map((m, mIdx) => (
           <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end print:hidden' : 'justify-start print:block'}`}>
             <div
-              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed relative group ${
+              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed ${
                 m.role === 'user'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md text-sm'
                   : 'bg-slate-900/95 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-lg print:border-none print:bg-white print:p-0 print:text-black'
@@ -309,14 +334,8 @@ export default function AiTutorPage() {
                 <InteractiveQuizBox quizData={m.quiz} />
               ) : (
                 <div>
-                  {m.hasWebContext && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mb-2.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[11px] font-medium print:hidden">
-                      <span>🌐</span> लाइव वेब परिणाम सम्मिलित
-                    </div>
-                  )}
                   <FormattedMessage text={m.text} />
                   
-                  {/* Voice Speaker Button for AI message */}
                   {m.role === 'ai' && m.text && (
                     <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end print:hidden">
                       <button
@@ -341,7 +360,7 @@ export default function AiTutorPage() {
         {loading && (
           <div className="flex justify-start print:hidden">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 flex items-center gap-2 shadow-md">
-              <span className="animate-spin text-blue-400">✨</span> AI दिमाग और लाइव वेब से उत्तर तैयार कर रहा है...
+              <span className="animate-spin text-blue-400">✨</span> AI फोटो और समाधान तैयार कर रहा है...
             </div>
           </div>
         )}
@@ -371,7 +390,7 @@ export default function AiTutorPage() {
               sendMessage();
             }
           }}
-          placeholder="ChatGPT / Gemini से कुछ भी पूछें..."
+          placeholder="जैसे: 'गाड़ी कैसे बनती है फोटो से समझाओ'..."
           rows={1}
           className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
         />
