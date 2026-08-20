@@ -1,4 +1,3 @@
-cat << 'EOF' > app/ai-tutor/page.js
 'use client';
 import { useState, useRef, useEffect } from 'react';
 
@@ -189,7 +188,7 @@ export default function AiTutorPage() {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
   const [canvasContent, setCanvasContent] = useState('# My Study Notes\n\nयहाँ आप अपने नोट्स या निबंध लिख सकते हैं...');
-
+  
   const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -412,7 +411,7 @@ export default function AiTutorPage() {
                 ) : (
                   <div>
                     <FormattedMessage text={m.text} />
-
+                    
                     {m.role === 'ai' && m.text && (
                       <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end print:hidden">
                         <button
@@ -517,7 +516,7 @@ export default function AiTutorPage() {
 
           <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="फ़ोटो भेजें">📷</button>
           <button type="button" onClick={handleVoiceInput} className={`p-2.5 rounded-xl transition ${isListening ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`} title="बोलकर पूछें">🎤</button>
-
+          
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -582,4 +581,3 @@ export default function AiTutorPage() {
     </div>
   );
 }
-EOF
