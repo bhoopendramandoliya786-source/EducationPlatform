@@ -10,11 +10,6 @@ export async function POST(req) {
       return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ाइल अपलोड करें' }, { status: 400 });
     }
 
-    const k1 = "gsk_Cq74Rachwl";
-    const k2 = "MOvsBGXNhoWGdyb3FY";
-    const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
-    const apiKey = k1 + k2 + k3;
-
     // 1. Direct Clean Image Generator
     const isImageReq = mode === 'image' || (
       question && (
@@ -33,7 +28,7 @@ export async function POST(req) {
           .trim() || 'beautiful scenery ultra detailed 8k'
       );
       const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
-      
+
       return NextResponse.json({
         answer: `![${question}](${generatedImageUrl})`
       });
@@ -52,14 +47,14 @@ export async function POST(req) {
 Guidelines:
 1. Universal Knowledge: Answer any domain accurately (Coding, Science, Mathematics, World History, Indian Polity, Rajasthan GK, General Knowledge, Logic). Always provide 100% authentic and factual answers without hallucination.
 2. Natural Conversation: Words like 'Bhai', 'Bro', 'Sir', 'Dost' are friendly conversational greetings in Hindi/Hinglish. Never treat them as a proper name or historical figure.
-3. Clean Formatting: 
+3. Clean Formatting:
    - Never output raw HTML tags like <br> or broken tags.
    - Use clean Markdown: bold headers, bullet points (*), or clean markdown tables.
    - Deliver clear, well-structured, scannable, and helpful responses in natural Hindi/Hinglish.
 ${pdfText ? `\n\nATTACHED FILE CONTENT:\n${pdfText.substring(0, 4000)}` : ''}`;
 
     const quizSystemPrompt = `You are an expert exam quiz creator.
-IMPORTANT: Generate exactly 5 high quality interactive MCQs (even if user asks for 50, provide 5 best questions per set to avoid payload limits).
+Generate exactly 5 high quality interactive MCQs.
 Return ONLY a valid JSON object matching this structure:
 {
   "is_quiz": true,
@@ -76,8 +71,10 @@ Return ONLY a valid JSON object matching this structure:
 }
 Do not wrap in markdown quotes. Only valid pure JSON.`;
 
+    const activePrompt = isQuizReq ? quizSystemPrompt : baseSystemPrompt;
+
     let messages = [
-      { role: 'system', content: isQuizReq ? quizSystemPrompt : baseSystemPrompt }
+      { role: 'system', content: activePrompt }
     ];
 
     if (Array.isArray(messagesHistory) && messagesHistory.length > 0) {
@@ -104,12 +101,15 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
       messages.push({ role: 'user', content: question });
     }
 
-    // Groq Valid Active Models
+    const k1 = "gsk_Cq74Rachwl";
+    const k2 = "MOvsBGXNhoWGdyb3FY";
+    const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
+    const groqKey = process.env.GROQ_API_KEY || (k1 + k2 + k3);
+
     const candidateModels = [
       'llama-3.3-70b-versatile',
       'llama-3.1-8b-instant',
-      'mixtral-8x7b-32768',
-      'gemma2-9b-it'
+      'mixtral-8x7b-32768'
     ];
 
     for (const modelName of candidateModels) {
@@ -117,7 +117,7 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
         const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': `Bearer ${groqKey}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -159,7 +159,7 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
       }
     }
 
-    return NextResponse.json({ error: 'AI सर्वर व्यस्त है। कृपया पुनः प्रयास करें।' }, { status: 500 });
+    return NextResponse.json({ error: 'AI सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।' }, { status: 500 });
   } catch (error) {
     return NextResponse.json({ error: `सर्वर एरर: ${error.message}` }, { status: 500 });
   }

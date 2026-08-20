@@ -1,223 +1,553 @@
-import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import React, { useState, useRef, useEffect } from 'react';
 
-export async function POST(req) {
-  try {
-    const { question, image, pdfText, messagesHistory, mode } = await req.json();
+// Enhanced Modern Markdown & Image Renderer
+function FormattedMessage({ text }) {
+  if (!text) return null;
+  const lines = text.split('\n');
 
-    if ((!question || !question.trim()) && !image && !pdfText) {
-      return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ाइल अपलोड करें' }, { status: 400 });
-    }
+  return (
+    <div className="space-y-2.5 text-[14px] sm:text-[15px] leading-relaxed text-slate-200 font-sans tracking-wide">
+      {lines.map((line, idx) => {
+        let trimmed = line.trim();
 
-    // 1. Image Generation Mode
-    const isImageReq = mode === 'image' || (
-      question && (
-        question.toLowerCase().includes('photo banao') ||
-        question.toLowerCase().includes('image banao') ||
-        question.toLowerCase().includes('फोटो बनाओ') ||
-        question.toLowerCase().includes('चित्र बनाओ') ||
-        question.toLowerCase().includes('tasveer')
-      )
-    );
+        if (!trimmed) return <div key={idx} className="h-1" />;
+        if (trimmed === '---' || trimmed === '***') {
+          return <hr key={idx} className="my-3 border-slate-800" />;
+        }
 
-    if (isImageReq) {
-      const cleanPrompt = encodeURIComponent(
-        question
-          .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao|banao|ka|ki|aur|mera/gi, '')
-          .trim() || 'beautiful scenery ultra detailed 8k'
-      );
-      const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
+        // Image Embed
+        const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+        if (imgMatch) {
+          const altText = imgMatch[1];
+          const imgSrc = imgMatch[2];
+          return (
+            <div key={idx} className="my-3 rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-900/90 shadow-2xl group transition-all duration-300 hover:border-indigo-500/50">
+              <div className="relative">
+                <img 
+                  src={imgSrc} 
+                  alt={altText} 
+                  className="w-full max-h-96 object-cover transition duration-500 group-hover:scale-[1.02]"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-3 bg-slate-900/95 backdrop-blur flex items-center justify-between border-t border-slate-800">
+                <span className="text-xs font-medium text-slate-300 flex items-center gap-2 truncate">
+                  <span className="p-1 rounded-md bg-indigo-500/20 text-indigo-400">🎨</span> {altText}
+                </span>
+                <a 
+                  href={imgSrc} 
+                  download="EduAI-Image.jpg" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30"
+                >
+                  <span>📥</span> डाउनलोड HD
+                </a>
+              </div>
+            </div>
+          );
+        }
 
-      return NextResponse.json({
-        answer: `![${question}](${generatedImageUrl})`
-      });
-    }
+        // Headings
+        if (trimmed.startsWith('### ')) {
+          return <h3 key={idx} className="text-sm sm:text-base font-bold text-indigo-300 mt-2 mb-1">{trimmed.replace('### ', '')}</h3>;
+        }
+        if (trimmed.startsWith('## ')) {
+          return <h2 key={idx} className="text-base sm:text-lg font-bold text-blue-400 mt-3 mb-1.5">{trimmed.replace('## ', '')}</h2>;
+        }
+        if (trimmed.startsWith('# ')) {
+          return <h1 key={idx} className="text-lg sm:text-xl font-black text-white mt-3 mb-2">{trimmed.replace('# ', '')}</h1>;
+        }
 
-    // 2. Interactive Quiz Mode
-    const isQuizReq = mode === 'quiz' || (question && (
-      question.toLowerCase().includes('quiz') || 
-      question.toLowerCase().includes('mcq') || 
-      question.toLowerCase().includes('टेस्ट') ||
-      question.toLowerCase().includes('क्विज')
-    ));
+        // Bullets
+        const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
+        let content = isBullet ? trimmed.substring(2) : trimmed;
 
-    const baseSystemPrompt = `You are EduAI Super Intelligence — an authentic, highly accurate, and universal AI collaborator (like Gemini & ChatGPT Pro).
+        // Bold
+        const parts = content.split(/(\*\*.*?\*\*)/g);
+        const renderedParts = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <strong key={pIdx} className="font-semibold text-white bg-white/5 px-1 rounded">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          return part;
+        });
 
-Guidelines:
-1. Universal Knowledge: Answer any domain accurately (Coding, Science, Mathematics, World History, Indian Polity, Rajasthan GK, General Knowledge, Logic). Always provide 100% authentic and factual answers without hallucination.
-2. Natural Conversation: Words like 'Bhai', 'Bro', 'Sir', 'Dost' are friendly conversational greetings in Hindi/Hinglish. Never treat them as a proper name or historical figure.
-3. Clean Formatting:
-   - Never output raw HTML tags like <br> or broken tags.
-   - Use clean Markdown: bold headers, bullet points (*), or clean markdown tables.
-   - Deliver clear, well-structured, scannable, and helpful responses in natural Hindi/Hinglish.
-${pdfText ? `\n\nATTACHED FILE CONTENT:\n${pdfText.substring(0, 4000)}` : ''}`;
+        if (isBullet) {
+          return (
+            <div key={idx} className="flex items-start gap-2.5 pl-1 my-0.5">
+              <span className="text-indigo-400 font-bold text-sm mt-0.5">•</span>
+              <div className="flex-1 text-slate-200">{renderedParts}</div>
+            </div>
+          );
+        }
 
-    const quizSystemPrompt = `You are an expert exam quiz creator.
-Generate exactly 5 high quality interactive MCQs.
-Return ONLY a valid JSON object matching this structure:
-{
-  "is_quiz": true,
-  "quiz_title": "Quiz Title with Emoji",
-  "questions": [
-    {
-      "id": 1,
-      "question": "Question text?",
-      "options": ["A", "B", "C", "D"],
-      "correctIndex": 0,
-      "explanation": "Clear short explanation."
-    }
-  ]
+        return <p key={idx} className="my-0.5">{renderedParts}</p>;
+      })}
+    </div>
+  );
 }
-Do not wrap in markdown quotes. Only valid pure JSON.`;
 
-    const activeSystemPrompt = isQuizReq ? quizSystemPrompt : baseSystemPrompt;
+// Modern Interactive Quiz Component
+function InteractiveQuizBox({ quizData, onNextSet }) {
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const questions = quizData?.questions || [];
 
-    // --- STRATEGY 1: GEMINI ENGINE (Official Fast SDK) ---
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-flash',
-          systemInstruction: activeSystemPrompt,
-        });
+  const handleSelect = (qIdx, optIdx) => {
+    if (selectedAnswers[qIdx] !== undefined) return;
+    setSelectedAnswers(prev => ({ ...prev, [qIdx]: optIdx }));
+  };
 
-        const contents = [];
-        if (Array.isArray(messagesHistory) && messagesHistory.length > 0) {
-          const recent = messagesHistory.slice(-4);
-          for (const m of recent) {
-            if (m.text && typeof m.text === 'string') {
-              contents.push({
-                role: m.role === 'user' ? 'user' : 'model',
-                parts: [{ text: m.text }]
-              });
-            }
-          }
-        }
+  const answeredCount = Object.keys(selectedAnswers).length;
+  const correctCount = Object.entries(selectedAnswers).filter(
+    ([qIdx, optIdx]) => optIdx === questions[qIdx]?.correctIndex
+  ).length;
 
-        const currentParts = [];
-        if (image) {
-          const base64Data = image.split(',')[1] || image;
-          currentParts.push({
-            inlineData: {
-              data: base64Data,
-              mimeType: 'image/jpeg',
-            },
-          });
-        }
-        currentParts.push({ text: question || 'Please analyze this.' });
+  return (
+    <div className="space-y-4 w-full">
+      <div className="bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-slate-900/60 border border-indigo-500/30 p-4 rounded-2xl flex items-center justify-between shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-xl">
+            🎯
+          </div>
+          <div>
+            <h3 className="font-bold text-sm sm:text-base text-white">
+              {quizData?.quiz_title || 'इंटरएक्टिव टेस्ट'}
+            </h3>
+            <p className="text-xs text-slate-400">टच करके सही विकल्प चुनें</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>📥</span> PDF
+          </button>
+          <div className="bg-slate-950/80 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-center">
+            <span className="text-xs font-bold text-indigo-400">{correctCount}/{questions.length}</span>
+          </div>
+        </div>
+      </div>
 
-        const result = await model.generateContent({
-          contents: [...contents, { role: 'user', parts: currentParts }],
-        });
+      {questions.map((q, qIdx) => {
+        const userChoice = selectedAnswers[qIdx];
+        const isAnswered = userChoice !== undefined;
 
-        let rawAnswer = result.response.text();
-        let cleanAnswer = rawAnswer
-          .replace(/<think>[\s\S]*?<\/think>/gi, '')
-          .replace(/```json/gi, '')
-          .replace(/```/gi, '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .trim();
+        return (
+          <div key={qIdx} className="bg-slate-900/70 border border-slate-800 p-4 rounded-2xl space-y-3 shadow-lg backdrop-blur-sm transition-all hover:border-slate-700">
+            <div className="flex items-start gap-3">
+              <span className="px-2.5 py-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold rounded-lg mt-0.5">
+                Q{qIdx + 1}
+              </span>
+              <p className="font-semibold text-slate-100 text-sm leading-relaxed">
+                {q.question}
+              </p>
+            </div>
 
-        if (isQuizReq) {
-          try {
-            const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              if (parsed.questions && parsed.questions.length > 0) {
-                return NextResponse.json({ quiz: parsed });
-              }
-            }
-          } catch (e) {
-            console.log('Quiz parse fallback');
-          }
-        }
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {q.options.map((opt, optIdx) => {
+                let btnClasses = "bg-slate-950/60 border-slate-800/80 text-slate-200 hover:bg-slate-800 hover:border-slate-600";
 
-        return NextResponse.json({ answer: cleanAnswer });
-      } catch (geminiErr) {
-        console.error('Gemini attempt failed, switching to Groq fallback:', geminiErr.message);
-      }
-    }
-
-    // --- STRATEGY 2: GROQ ENGINE (Ultra-Fast Backup) ---
-    const k1 = "gsk_Cq74Rachwl";
-    const k2 = "MOvsBGXNhoWGdyb3FY";
-    const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
-    const groqKey = process.env.GROQ_API_KEY || (k1 + k2 + k3);
-
-    let groqMessages = [
-      { role: 'system', content: activeSystemPrompt }
-    ];
-
-    if (Array.isArray(messagesHistory) && messagesHistory.length > 0) {
-      const recent = messagesHistory.slice(-4);
-      for (const m of recent) {
-        if (m.text && typeof m.text === 'string') {
-          groqMessages.push({
-            role: m.role === 'user' ? 'user' : 'assistant',
-            content: m.text
-          });
-        }
-      }
-    }
-    groqMessages.push({ role: 'user', content: question });
-
-    const candidateModels = [
-      'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant',
-      'mixtral-8x7b-32768'
-    ];
-
-    for (const modelName of candidateModels) {
-      try {
-        const chatRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${groqKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: modelName,
-            messages: groqMessages,
-            temperature: 0.3
-          })
-        });
-
-        const data = await chatRes.json();
-
-        if (data?.choices?.[0]?.message?.content) {
-          let rawAnswer = data.choices[0].message.content;
-          let cleanAnswer = rawAnswer
-            .replace(/<think>[\s\S]*?<\/think>/gi, '')
-            .replace(/```json/gi, '')
-            .replace(/```/gi, '')
-            .replace(/<br\s*\/?>/gi, '\n')
-            .trim();
-
-          if (isQuizReq) {
-            try {
-              const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                if (parsed.questions && parsed.questions.length > 0) {
-                  return NextResponse.json({ quiz: parsed });
+                if (isAnswered) {
+                  if (optIdx === q.correctIndex) {
+                    btnClasses = "bg-emerald-950/60 border-emerald-500 text-emerald-300 font-semibold shadow-lg shadow-emerald-900/20";
+                  } else if (userChoice === optIdx) {
+                    btnClasses = "bg-rose-950/60 border-rose-500 text-rose-300 font-semibold";
+                  } else {
+                    btnClasses = "bg-slate-950/20 border-slate-800/40 text-slate-500 opacity-50";
+                  }
                 }
-              }
-            } catch (e) {
-              console.log('Quiz parse fallback');
-            }
-          }
 
-          return NextResponse.json({ answer: cleanAnswer });
-        }
-      } catch (err) {
-        console.log(`Groq model failed: ${modelName}`);
-      }
+                return (
+                  <button
+                    key={optIdx}
+                    onClick={() => handleSelect(qIdx, optIdx)}
+                    disabled={isAnswered}
+                    className={`w-full text-left text-xs sm:text-sm p-3 rounded-xl border transition-all duration-200 flex items-center justify-between cursor-pointer ${btnClasses}`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center bg-white/5 border border-white/10 text-slate-300">
+                        {String.fromCharCode(65 + optIdx)}
+                      </span>
+                      <span>{opt}</span>
+                    </div>
+                    {isAnswered && optIdx === q.correctIndex && (
+                      <span className="text-emerald-400 font-bold text-xs bg-emerald-500/20 px-2 py-0.5 rounded-md">✓ सही</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {isAnswered && (
+              <div className="mt-2 p-3 bg-slate-950/90 border border-indigo-900/30 rounded-xl text-xs text-indigo-200/90 flex items-start gap-2">
+                <span className="text-indigo-400">💡</span>
+                <div><span className="font-bold text-indigo-300">व्याख्या: </span>{q.explanation}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {answeredCount === questions.length && questions.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border border-emerald-500/30 p-4 rounded-2xl flex items-center justify-between shadow-xl">
+          <div>
+            <span className="text-sm font-bold text-emerald-300 block">🎉 टेस्ट पूरा हुआ!</span>
+            <span className="text-xs text-slate-400">कुल स्कोर: {correctCount} / {questions.length}</span>
+          </div>
+          <button
+            onClick={() => onNextSet && onNextSet(quizData?.quiz_title)}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>⚡</span> अगले 5 प्रश्न लोड करें ➔
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ModernAiTutorPage() {
+  const [messages, setMessages] = useState([
+    { 
+      role: 'ai', 
+      type: 'text', 
+      text: 'नमस्ते! ✨ मैं आपका नेक्स्ट-जेन AI सुपर ट्यूटर हूँ। मुझसे किसी भी विषय पर बात करें, क्विज़ 🎯 खेलें, 4K फोटो 🎨 बनवाएँ या आवाज़ 🔊 में समझें!' 
     }
+  ]);
+  const [input, setInput] = useState('');
+  const [imagePreview, setImagePreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState(null);
+  const [activeTool, setActiveTool] = useState(null);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
 
-    return NextResponse.json({ error: 'AI सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।' }, { status: 500 });
-  } catch (error) {
-    return NextResponse.json({ error: `सर्वर एरर: ${error.message}` }, { status: 500 });
-  }
+  const fileInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const speakText = (text, idx) => {
+    if (!('speechSynthesis' in window)) return;
+    if (speakingIdx === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#_~]|!\[.*?\]\(.*?\)/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'hi-IN';
+    utterance.onend = () => setSpeakingIdx(null);
+    utterance.onerror = () => setSpeakingIdx(null);
+    setSpeakingIdx(idx);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleVoiceInput = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('वॉइस इनपुट के लिए क्रोम का उपयोग करें।');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN';
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+      sendMessage(transcript);
+    };
+    recognition.start();
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        setImagePreview(canvas.toDataURL('image/jpeg', 0.7));
+        setShowToolsMenu(false);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const sendMessage = async (customText, customMode) => {
+    const textToSend = customText || input;
+    if ((!textToSend.trim() && !imagePreview) || loading) return;
+
+    const currentImg = imagePreview;
+    const currentTool = customMode || activeTool;
+
+    const userMsg = { 
+      role: 'user', 
+      type: currentImg ? 'image' : 'text', 
+      text: textToSend, 
+      image: currentImg 
+    };
+
+    const newHistory = [...messages, userMsg];
+    setMessages(newHistory);
+    setInput('');
+    setImagePreview(null);
+    setActiveTool(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/doubt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          question: textToSend, 
+          image: currentImg, 
+          messagesHistory: newHistory, 
+          mode: currentTool 
+        })
+      });
+      const data = await res.json();
+
+      if (data.quiz) {
+        setMessages(prev => [...prev, { role: 'ai', type: 'quiz', quiz: data.quiz }]);
+      } else if (data.answer) {
+        setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.answer }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.error || 'उत्तर लोड नहीं हो सका।' }]);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'ai', type: 'text', text: 'नेटवर्क समस्या। पुनः प्रयास करें।' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const modernSuggestions = [
+    { title: '🎯 राजस्थान GK क्विज़', prompt: 'राजस्थान GK के 5 महत्वपूर्ण MCQs क्विज़ बनाओ', mode: 'quiz' },
+    { title: '🎨 ताज महल 4K फोटो', prompt: 'Taj Mahal sunset ultra realistic 8k photorealistic', mode: 'image' },
+    { title: '💡 गणित शॉर्ट ट्रिक्स', prompt: 'प्रतियोगी परीक्षा के लिए समय और कार्य (Time & Work) की शॉर्ट ट्रिक्स समझाओ' },
+    { title: '🚀 1857 की क्रांति नोट्स', prompt: '1857 की क्रांति के मुख्य कारण और परिणाम सरल नोट्स में बताओ' }
+  ];
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-64px)] max-w-5xl mx-auto p-2 sm:p-4 text-slate-100 print:p-0 print:max-w-none">
+
+      {/* Header */}
+      <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-4 rounded-2xl mb-3 shadow-2xl flex items-center justify-between">
+        <div className="flex items-center gap-3.5">
+          <div className="relative">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/25 animate-pulse">
+              ✨
+            </div>
+            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-black bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                EduAI 2026 Core
+              </h1>
+              <span className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold rounded-full">
+                Gemini & GPT-4o
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">अल्ट्रा-फास्ट रीजनिंग • टच-क्विज़ • 4K AI इमेजेस</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setMessages([{ role: 'ai', type: 'text', text: 'नमस्ते! नया सत्र शुरू हो गया है। आप क्या पूछना चाहते हैं?' }])}
+          className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-xs font-semibold rounded-xl text-slate-300 transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+        >
+          <span>🔄</span> न्यू चैट
+        </button>
+      </div>
+
+      {/* Suggestion Chips */}
+      {messages.length === 1 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+          {modernSuggestions.map((item, idx) => (
+            <button
+              key={idx}
+              onClick={() => sendMessage(item.prompt, item.mode)}
+              className="p-3 bg-slate-900/60 hover:bg-indigo-950/40 border border-slate-800/90 hover:border-indigo-500/50 rounded-2xl text-left transition shadow-md group cursor-pointer"
+            >
+              <span className="text-xs font-bold text-slate-200 group-hover:text-indigo-300 block mb-1">
+                {item.title}
+              </span>
+              <span className="text-[11px] text-slate-400 line-clamp-1">
+                {item.prompt}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main Messages Window */}
+      <div className="flex-1 overflow-y-auto space-y-4 p-3 sm:p-4 bg-slate-950/60 border border-slate-900 rounded-3xl shadow-inner backdrop-blur-sm">
+        {messages.map((m, mIdx) => (
+          <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[95%] sm:max-w-[85%] rounded-3xl p-4 sm:p-5 shadow-xl ${
+                m.role === 'user'
+                  ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white rounded-br-none'
+                  : 'bg-slate-900/90 border border-slate-800/90 text-slate-200 rounded-bl-none'
+              }`}
+            >
+              {m.image && (
+                <div className="mb-3">
+                  <img src={m.image} alt="Upload" className="max-h-64 rounded-2xl border border-white/10 object-contain shadow-md" />
+                </div>
+              )}
+
+              {m.type === 'quiz' ? (
+                <InteractiveQuizBox 
+                  quizData={m.quiz} 
+                  onNextSet={(title) => sendMessage(`अगले 5 प्रश्न और बनाओ: ${title}`, 'quiz')} 
+                />
+              ) : (
+                <div>
+                  <FormattedMessage text={m.text} />
+
+                  {m.role === 'ai' && m.text && (
+                    <div className="mt-3 pt-2.5 border-t border-slate-800/70 flex items-center justify-end">
+                      <button
+                        onClick={() => speakText(m.text, mIdx)}
+                        className={`text-xs px-3 py-1 rounded-xl border transition flex items-center gap-1.5 cursor-pointer ${
+                          speakingIdx === mIdx
+                            ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 animate-pulse'
+                            : 'bg-slate-800/80 border-slate-700/80 hover:bg-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <span>{speakingIdx === mIdx ? '⏹️ बंद करें' : '🔊 बोलकर सुनाओ'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-xs sm:text-sm text-slate-300 flex items-center gap-2.5 shadow-xl">
+              <span className="animate-spin text-indigo-400">✨</span> AI प्रोसेस कर रहा है...
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="relative mt-2 p-2 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center gap-3 max-w-xs shadow-lg">
+          <img src={imagePreview} alt="Preview" className="h-12 w-12 object-cover rounded-xl border border-slate-700" />
+          <span className="text-xs text-slate-300 truncate">फ़ोटो अटैच हो गई</span>
+          <button onClick={() => setImagePreview(null)} className="ml-auto text-xs bg-rose-500/20 text-rose-400 p-1 px-2 rounded-lg cursor-pointer">✕</button>
+        </div>
+      )}
+
+      {/* Floating Tools Menu */}
+      {showToolsMenu && (
+        <div className="mb-2 p-3 bg-slate-900/95 border border-slate-800/90 rounded-2xl shadow-2xl backdrop-blur-xl flex gap-2">
+          <button
+            onClick={() => { setActiveTool('image'); setShowToolsMenu(false); }}
+            className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition flex flex-col gap-1 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎨</span>
+              <span className="text-xs font-bold text-white">Create 4K Image</span>
+            </div>
+            <span className="text-[10px] text-slate-400">टेक्स्ट से AI चित्र बनाएँ</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTool('quiz'); setShowToolsMenu(false); }}
+            className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition flex flex-col gap-1 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              <span className="text-xs font-bold text-white">Interactive Quiz</span>
+            </div>
+            <span className="text-[10px] text-slate-400">टच-बटन वाला टेस्ट पेपर</span>
+          </button>
+        </div>
+      )}
+
+      {/* Input Bar */}
+      <div className="mt-2.5 flex items-center gap-2 bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 p-2 rounded-2xl shadow-2xl">
+        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
+
+        <button
+          type="button"
+          onClick={() => setShowToolsMenu(!showToolsMenu)}
+          className={`p-2.5 rounded-xl transition text-base font-bold cursor-pointer ${
+            showToolsMenu ? 'bg-indigo-600 text-white rotate-45' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'
+          }`}
+          title="Tools Menu"
+        >
+          ＋
+        </button>
+
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition cursor-pointer" title="फ़ोटो अपलोड">📷</button>
+        <button type="button" onClick={handleVoiceInput} className={`p-2.5 rounded-xl transition cursor-pointer ${isListening ? 'bg-rose-500 animate-pulse text-white' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'}`} title="बोलकर पूछें">🎤</button>
+
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          placeholder={activeTool === 'image' ? "किस चीज़ का 4K चित्र बनाना है?..." : "ChatGPT / Gemini से कुछ भी पूछें..."}
+          rows={1}
+          className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
+        />
+
+        <button 
+          type="button" 
+          onClick={() => sendMessage()} 
+          disabled={loading || (!input.trim() && !imagePreview)} 
+          className="p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition shadow-lg shadow-indigo-600/25 cursor-pointer"
+        >
+          🚀
+        </button>
+      </div>
+
+    </div>
+  );
 }
