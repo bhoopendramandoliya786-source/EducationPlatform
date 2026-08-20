@@ -22,33 +22,30 @@ export async function POST(req) {
       question.toLowerCase().includes('क्विज')
     );
 
-    let systemPrompt = `आप ChatGPT और Google Gemini स्तर के एक सर्वज्ञानी, अत्यधिक बुद्धिमान और विनम्र AI सहायक व शिक्षक हैं।
-आप दुनिया के किसी भी विषय (भारत व राजस्थान सामान्य ज्ञान, इतिहास, विज्ञान, गणित, राजनीति, कोडिंग, करंट अफेयर्स, सामान्य बातचीत या निबंध) का सर्वोत्तम, तार्किक और सटीक उत्तर देने में सक्षम हैं।
+    const systemPrompt = `You are a world-class AI Assistant & Tutor (just like ChatGPT and Google Gemini).
 
-प्रस्तुति नियम:
-1. उत्तर स्पष्ट, आकर्षक, और बिंदुवार (Bullet points) रखें।
-2. महत्वपूर्ण शब्दों को **बोल्ड** करें।
-3. गणितीय सूत्रों और उदाहरणों को स्पष्ट रूप से समझाएँ।
-4. कभी भी टूटी हुई टेबल सिंबल (| |) या भ्रामक टेक्स्ट न लिखें।
-5. बातचीत की शुरुआत सीधे और आत्मीयता से करें।`;
+COMMUNICATION STYLE:
+- Use a very natural, friendly, engaging, and modern conversational tone (Mix of natural Hindi + English/Hinglish where appropriate).
+- Use relevant Emojis (🎯, 💡, 🚀, 📚, ✨) naturally to make the content visually appealing.
+- Structure your response cleanly with clear Headings, Bullet Points, Key Takeaways, and Examples.
+- Do NOT use broken markdown, repetitive pipes (| |), or forced robotic pure Hindi words when English/Hinglish words are more natural (e.g. use 'Exam', 'Tips', 'Notes', 'Download', 'Practice', 'Tricks').
+- When solving doubts/coding/math/GK, give step-by-step, accurate, and easy-to-understand explanations.`;
 
     if (isQuizReq) {
-      systemPrompt = `आप एक अंतरराष्ट्रीय स्तर के टेस्ट व क्विज़ मेकर हैं।
-उपयोगकर्ता के मांगे गए विषय पर 5 बेहतरीन, प्रामाणिक और सटीक बहुविकल्पीय प्रश्न (MCQs) शुद्ध JSON में दें ताकि इंटरएक्टिव टच बटन बन सकें:
+      const quizSystemPrompt = `You are an expert exam quiz creator. Return ONLY a valid JSON object matching this structure:
 {
   "is_quiz": true,
-  "quiz_title": "विषय का नाम",
+  "quiz_title": "Quiz Title with Emoji",
   "questions": [
     {
       "id": 1,
-      "question": "प्रश्न यहाँ लिखें?",
-      "options": ["विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D"],
+      "question": "Clear and accurate question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctIndex": 0,
-      "explanation": "विस्तृत प्रमाणिक कारण व व्याख्या"
+      "explanation": "Engaging explanation with emojis and key facts"
     }
   ]
-}
-केवल और केवल शुद्ध JSON दें।`;
+}`;
     }
 
     let candidateModels = [
@@ -59,12 +56,12 @@ export async function POST(req) {
       'qwen/qwen3.6-27b'
     ];
 
-    let userContent = question || 'कृपया इस प्रश्न का विस्तृत समाधान दें।';
+    let userContent = question || 'Please answer this query in detail.';
 
     if (image) {
       userContent = [
         { type: 'image_url', image_url: { url: image } },
-        { type: 'text', text: question ? `${question}\n(कृपया इस फ़ोटो का विश्लेषण करके पूरा समाधान समझाएँ)` : 'कृपया इस फ़ोटो को देखकर पूरा समाधान विस्तार से समझाएँ।' }
+        { type: 'text', text: question ? `${question}\n(Explain this image accurately and in detail)` : 'Please analyze and explain this photo in detail.' }
       ];
       candidateModels = ['qwen/qwen3.6-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
     }
@@ -80,10 +77,10 @@ export async function POST(req) {
           body: JSON.stringify({
             model: modelName,
             messages: [
-              { role: 'system', content: systemPrompt },
+              { role: 'system', content: isQuizReq ? `You are a quiz master. Return ONLY a valid JSON: {"is_quiz":true,"quiz_title":"Topic","questions":[{"id":1,"question":"Q?","options":["A","B","C","D"],"correctIndex":0,"explanation":"Why"}]}` : systemPrompt },
               { role: 'user', content: userContent }
             ],
-            temperature: 0.5
+            temperature: 0.6
           })
         });
 
@@ -91,15 +88,11 @@ export async function POST(req) {
 
         if (data && data.choices && data.choices[0]?.message?.content) {
           let rawAnswer = data.choices[0].message.content;
-          let cleanAnswer = rawAnswer
-            .replace(/<think>[\s\S]*?<\/think>/gi, '')
-            .replace(/\|/g, '')
-            .replace(/##+/g, '')
-            .trim();
+          let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
           if (isQuizReq) {
             try {
-              const jsonMatch = rawAnswer.match(/\{[\s\S]*\}/);
+              const jsonMatch = cleanAnswer.match(/\{[\s\S]*\}/);
               if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.questions && parsed.questions.length > 0) {
@@ -107,7 +100,7 @@ export async function POST(req) {
                 }
               }
             } catch (e) {
-              console.log('JSON parse fallback to text');
+              console.log('JSON parse fallback to markdown');
             }
           }
 

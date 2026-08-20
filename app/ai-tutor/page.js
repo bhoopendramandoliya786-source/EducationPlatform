@@ -1,6 +1,67 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 
+// Format Markdown text just like ChatGPT (Bold, Bullets, Headers, Code)
+function FormattedMessage({ text }) {
+  const lines = text.split('\n');
+
+  return (
+    <div className="space-y-2 text-sm sm:text-[15px] leading-relaxed text-slate-100 font-sans">
+      {lines.map((line, idx) => {
+        let trimmed = line.trim();
+
+        if (!trimmed) {
+          return <div key={idx} className="h-1" />;
+        }
+
+        // Horizontal Rule
+        if (trimmed === '---' || trimmed === '***') {
+          return <hr key={idx} className="my-3 border-slate-800" />;
+        }
+
+        // Headers
+        if (trimmed.startsWith('### ')) {
+          return <h3 key={idx} className="text-base font-bold text-blue-400 mt-3 mb-1">{trimmed.replace('### ', '')}</h3>;
+        }
+        if (trimmed.startsWith('## ')) {
+          return <h2 key={idx} className="text-lg font-bold text-indigo-300 mt-4 mb-1.5">{trimmed.replace('## ', '')}</h2>;
+        }
+        if (trimmed.startsWith('# ')) {
+          return <h1 key={idx} className="text-xl font-extrabold text-white mt-4 mb-2">{trimmed.replace('# ', '')}</h1>;
+        }
+
+        // Bullet points
+        const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
+        let content = isBullet ? trimmed.substring(2) : trimmed;
+
+        // Parse Bold (**text**)
+        const parts = content.split(/(\*\*.*?\*\*)/g);
+        const renderedParts = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <strong key={pIdx} className="font-semibold text-white">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          return part;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1">
+              <span className="text-blue-400 text-base leading-tight">•</span>
+              <div className="flex-1">{renderedParts}</div>
+            </div>
+          );
+        }
+
+        return <p key={idx}>{renderedParts}</p>;
+      })}
+    </div>
+  );
+}
+
 function InteractiveQuizBox({ quizData }) {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const questions = quizData.questions || [];
@@ -38,11 +99,6 @@ function InteractiveQuizBox({ quizData }) {
         </div>
       </div>
 
-      <div className="hidden print:block border-b-2 border-black pb-3 mb-4 text-center">
-        <h1 className="text-xl font-bold text-black uppercase">EduAI Super Intelligence Test</h1>
-        <h2 className="text-base font-semibold text-gray-800">{quizData.quiz_title || 'अभ्यास प्रश्न पत्र'}</h2>
-      </div>
-
       {questions.map((q, qIdx) => {
         const userChoice = selectedAnswers[qIdx];
         const isAnswered = userChoice !== undefined;
@@ -50,7 +106,7 @@ function InteractiveQuizBox({ quizData }) {
         return (
           <div 
             key={qIdx} 
-            className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-3 transition shadow-md print:bg-white print:border-b print:border-gray-200 print:text-black"
+            className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl space-y-3 transition shadow-md print:bg-white print:border-b print:border-gray-200 print:text-black"
           >
             <div className="flex items-start gap-2.5">
               <span className="bg-blue-600/30 text-blue-400 text-xs font-bold px-2 py-0.5 rounded-md mt-0.5 print:text-black">
@@ -103,28 +159,9 @@ function InteractiveQuizBox({ quizData }) {
                 💡 <span className="font-semibold text-blue-300">व्याख्या: </span>{q.explanation}
               </div>
             )}
-
-            <div className="hidden print:block text-[11px] text-gray-700 bg-gray-50 p-1.5 rounded border border-gray-200 mt-1">
-              <strong>उत्तर: ({String.fromCharCode(65 + q.correctIndex)})</strong> | <strong>व्याख्या:</strong> {q.explanation}
-            </div>
           </div>
         );
       })}
-
-      {answeredCount === questions.length && questions.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/40 p-4 rounded-2xl text-center space-y-2 print:hidden">
-          <p className="text-base font-bold text-emerald-300">🎉 टेस्ट पूरा हुआ!</p>
-          <p className="text-xs text-slate-300">
-            स्कोर: <span className="font-bold text-emerald-400">{correctCount}</span> / {questions.length}
-          </p>
-          <button
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow transition"
-          >
-            📥 उत्तर कुंजी सहित PDF डाउनलोड करें
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -134,7 +171,7 @@ export default function AiTutorPage() {
     { 
       role: 'ai', 
       type: 'text', 
-      text: 'नमस्ते! मैं आपका ChatGPT और Gemini पावर्ड AI सुपर ट्यूटर हूँ। आप मुझसे दुनिया का कोई भी सवाल पूछ सकते हैं—बोलकर, लिखकर या फ़ोटो खींचकर!' 
+      text: 'नमस्ते! ✨ मैं आपका AI सुपर ट्यूटर हूँ। मुझसे किसी भी विषय, परीक्षा, कोडिंग या सामान्य जिज्ञासा पर बात करें—लिखकर, बोलकर 🎤 या फ़ोटो 📷 खींचकर!' 
     }
   ]);
   const [input, setInput] = useState('');
@@ -217,10 +254,10 @@ export default function AiTutorPage() {
   };
 
   const quickActions = [
-    'राजस्थान भूगोल 5 MCQs',
-    'गणित शॉर्टकट ट्रिक्स',
-    '1857 की क्रांति टेस्ट',
-    'करंट अफेयर्स 2026'
+    'राजस्थान GK 5 MCQs',
+    'मैथ्स शॉर्टकट ट्रिक्स',
+    'Rajasthan Prajamandal Tricks',
+    'Daily Study Time Table'
   ];
 
   return (
@@ -240,7 +277,7 @@ export default function AiTutorPage() {
                 GPT & Gemini Core
               </span>
             </div>
-            <p className="text-xs text-slate-400">हर विषय का असीमित ज्ञान • टच-क्विज़ • फ़ोटो सॉल्वर</p>
+            <p className="text-xs text-slate-400">स्वाभाविक भाषा • Emojis 🚀 • टच-क्विज़ • फ़ोटो सॉल्वर</p>
           </div>
         </div>
       </div>
@@ -258,15 +295,15 @@ export default function AiTutorPage() {
         ))}
       </div>
 
-      {/* Messages View */}
+      {/* Messages Feed */}
       <div className="flex-1 overflow-y-auto space-y-4 p-3 bg-slate-950/80 border border-slate-800/80 rounded-2xl shadow-inner print:border-none print:bg-white print:p-0 print:space-y-2">
         {messages.map((m, mIdx) => (
           <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end print:hidden' : 'justify-start print:block'}`}>
             <div
-              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 text-sm leading-relaxed ${
+              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed ${
                 m.role === 'user'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md'
-                  : 'bg-slate-900/95 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-lg print:border-none print:bg-white print:p-0 print:text-black font-normal'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md text-sm'
+                  : 'bg-slate-900/95 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-lg print:border-none print:bg-white print:p-0 print:text-black'
               }`}
             >
               {m.image && (
@@ -278,9 +315,7 @@ export default function AiTutorPage() {
               {m.type === 'quiz' ? (
                 <InteractiveQuizBox quizData={m.quiz} />
               ) : (
-                <div className="whitespace-pre-wrap leading-relaxed text-slate-100 font-sans tracking-wide">
-                  {m.text}
-                </div>
+                <FormattedMessage text={m.text} />
               )}
             </div>
           </div>
@@ -289,14 +324,14 @@ export default function AiTutorPage() {
         {loading && (
           <div className="flex justify-start print:hidden">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 flex items-center gap-2 shadow-md">
-              <span className="animate-spin text-blue-400">✨</span> AI उत्तर तैयार कर रहा है...
+              <span className="animate-spin text-blue-400">✨</span> AI समाधान तैयार कर रहा है...
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Image Attachment Preview */}
+      {/* Image Preview */}
       {imagePreview && (
         <div className="relative mt-2 p-2 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3 max-w-xs print:hidden">
           <img src={imagePreview} alt="Preview" className="h-12 w-12 object-cover rounded-lg border border-slate-700" />
@@ -305,7 +340,7 @@ export default function AiTutorPage() {
         </div>
       )}
 
-      {/* Input Field */}
+      {/* Input Bar */}
       <div className="mt-2 flex items-center gap-2 bg-slate-900/95 border border-slate-800 p-2 rounded-2xl shadow-lg print:hidden">
         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="फ़ोटो भेजें">📷</button>
