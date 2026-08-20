@@ -1,7 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 
-// Format Markdown text just like ChatGPT (Bold, Bullets, Headers, Code)
 function FormattedMessage({ text }) {
   const lines = text.split('\n');
 
@@ -14,12 +13,10 @@ function FormattedMessage({ text }) {
           return <div key={idx} className="h-1" />;
         }
 
-        // Horizontal Rule
         if (trimmed === '---' || trimmed === '***') {
           return <hr key={idx} className="my-3 border-slate-800" />;
         }
 
-        // Headers
         if (trimmed.startsWith('### ')) {
           return <h3 key={idx} className="text-base font-bold text-blue-400 mt-3 mb-1">{trimmed.replace('### ', '')}</h3>;
         }
@@ -30,11 +27,9 @@ function FormattedMessage({ text }) {
           return <h1 key={idx} className="text-xl font-extrabold text-white mt-4 mb-2">{trimmed.replace('# ', '')}</h1>;
         }
 
-        // Bullet points
         const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
         let content = isBullet ? trimmed.substring(2) : trimmed;
 
-        // Parse Bold (**text**)
         const parts = content.split(/(\*\*.*?\*\*)/g);
         const renderedParts = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
@@ -171,7 +166,7 @@ export default function AiTutorPage() {
     { 
       role: 'ai', 
       type: 'text', 
-      text: 'नमस्ते! ✨ मैं आपका AI सुपर ट्यूटर हूँ। मुझसे किसी भी विषय, परीक्षा, कोडिंग या सामान्य जिज्ञासा पर बात करें—लिखकर, बोलकर 🎤 या फ़ोटो 📷 खींचकर!' 
+      text: 'नमस्ते! ✨ मैं आपका AI सुपर ट्यूटर हूँ। मुझसे दुनिया का कोई भी सवाल पूछें—चाहे पढ़ाई हो, कोडिंग, शायरी या परीक्षा की तैयारी!' 
     }
   ]);
   const [input, setInput] = useState('');
@@ -226,7 +221,8 @@ export default function AiTutorPage() {
       image: currentImg 
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    const newHistory = [...messages, userMsg];
+    setMessages(newHistory);
     setInput('');
     setImagePreview(null);
     setLoading(true);
@@ -235,7 +231,11 @@ export default function AiTutorPage() {
       const res = await fetch('/api/doubt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: textToSend, image: currentImg })
+        body: JSON.stringify({ 
+          question: textToSend, 
+          image: currentImg,
+          messagesHistory: newHistory 
+        })
       });
       const data = await res.json();
 
@@ -253,13 +253,6 @@ export default function AiTutorPage() {
     }
   };
 
-  const quickActions = [
-    'राजस्थान GK 5 MCQs',
-    'मैथ्स शॉर्टकट ट्रिक्स',
-    'Rajasthan Prajamandal Tricks',
-    'Daily Study Time Table'
-  ];
-
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] max-w-4xl mx-auto p-2 sm:p-4 text-white print:p-0 print:max-w-none print:h-auto">
       {/* Top Header */}
@@ -274,28 +267,15 @@ export default function AiTutorPage() {
                 EduAI Super Intelligence
               </h1>
               <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-semibold rounded-full border border-blue-500/30">
-                GPT & Gemini Core
+                GPT & Gemini Engine
               </span>
             </div>
-            <p className="text-xs text-slate-400">स्वाभाविक भाषा • Emojis 🚀 • टच-क्विज़ • फ़ोटो सॉल्वर</p>
+            <p className="text-xs text-slate-400">असीमित ज्ञान • चैट मेमोरी • टच-क्विज़ • फ़ोटो सॉल्वर</p>
           </div>
         </div>
       </div>
 
-      {/* Quick Action Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none print:hidden">
-        {quickActions.map((action, idx) => (
-          <button
-            key={idx}
-            onClick={() => sendMessage(action)}
-            className="text-xs whitespace-nowrap bg-slate-800/90 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-500 px-3.5 py-1.5 rounded-full transition shadow-sm"
-          >
-            ⚡ {action}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages Feed */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 p-3 bg-slate-950/80 border border-slate-800/80 rounded-2xl shadow-inner print:border-none print:bg-white print:p-0 print:space-y-2">
         {messages.map((m, mIdx) => (
           <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end print:hidden' : 'justify-start print:block'}`}>
@@ -324,7 +304,7 @@ export default function AiTutorPage() {
         {loading && (
           <div className="flex justify-start print:hidden">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 flex items-center gap-2 shadow-md">
-              <span className="animate-spin text-blue-400">✨</span> AI समाधान तैयार कर रहा है...
+              <span className="animate-spin text-blue-400">✨</span> AI उत्तर तैयार कर रहा है...
             </div>
           </div>
         )}
@@ -354,7 +334,7 @@ export default function AiTutorPage() {
               sendMessage();
             }
           }}
-          placeholder="ChatGPT / Gemini से कुछ भी पूछें या क्विज़ मांगें..."
+          placeholder="ChatGPT / Gemini से कुछ भी पूछें..."
           rows={1}
           className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
         />

@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
-    const { question, image } = await req.json();
+    const { question, image, messagesHistory } = await req.json();
 
     if ((!question || !question.trim()) && !image) {
       return NextResponse.json({ error: 'कृपया सवाल लिखें या फ़ोटो अपलोड करें' }, { status: 400 });
@@ -15,6 +15,7 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
+    // Check if user specifically requested an interactive quiz
     const isQuizReq = question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
@@ -22,49 +23,68 @@ export async function POST(req) {
       question.toLowerCase().includes('क्विज')
     );
 
-    const systemPrompt = `You are a world-class AI Assistant & Tutor (just like ChatGPT and Google Gemini).
+    // Completely Open & Intelligent System Persona (Zero topic bias)
+    const baseSystemPrompt = `You are a state-of-the-art, highly intelligent, and versatile AI Assistant (powered by the latest reasoning architecture, equivalent to ChatGPT and Google Gemini).
 
-COMMUNICATION STYLE:
-- Use a very natural, friendly, engaging, and modern conversational tone (Mix of natural Hindi + English/Hinglish where appropriate).
-- Use relevant Emojis (🎯, 💡, 🚀, 📚, ✨) naturally to make the content visually appealing.
-- Structure your response cleanly with clear Headings, Bullet Points, Key Takeaways, and Examples.
-- Do NOT use broken markdown, repetitive pipes (| |), or forced robotic pure Hindi words when English/Hinglish words are more natural (e.g. use 'Exam', 'Tips', 'Notes', 'Download', 'Practice', 'Tricks').
-- When solving doubts/coding/math/GK, give step-by-step, accurate, and easy-to-understand explanations.`;
+KEY PRINCIPLES:
+1. Unlimited Scope: Answer ANY query the user asks with deep knowledge, clarity, and precision (Science, Math, Coding, History, GK, Exams, Creative writing, Philosophy, General conversation, etc.).
+2. Natural Communication: Communicate fluently in natural conversational Hindi, English, or Hinglish based on the user's phrasing. Use emojis naturally where appropriate.
+3. Clean Formatting: Use Markdown effectively with bold text for emphasis, bullet points for lists, and clear structure. Avoid raw repetitive pipes or broken formatting.
+4. Accuracy & Depth: Provide step-by-step logical answers for calculations/problems and authentic, factual information for general knowledge.`;
 
-    if (isQuizReq) {
-      const quizSystemPrompt = `You are an expert exam quiz creator. Return ONLY a valid JSON object matching this structure:
+    const quizSystemPrompt = `You are an expert interactive test creator. The user wants a quiz/test. Return ONLY a valid JSON object matching this structure:
 {
   "is_quiz": true,
-  "quiz_title": "Quiz Title with Emoji",
+  "quiz_title": "Quiz Title with relevant Emoji",
   "questions": [
     {
       "id": 1,
-      "question": "Clear and accurate question text?",
+      "question": "Question text?",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctIndex": 0,
-      "explanation": "Engaging explanation with emojis and key facts"
+      "explanation": "Clear explanation of the correct answer."
     }
   ]
-}`;
+}
+Do not include any other text, markdown blocks, or commentary. Only pure JSON.`;
+
+    // Construct conversation payload with chat history for true context memory
+    let messages = [
+      { role: 'system', content: isQuizReq ? quizSystemPrompt : baseSystemPrompt }
+    ];
+
+    if (Array.isArray(messagesHistory) && messagesHistory.length > 0) {
+      const recentHistory = messagesHistory.slice(-6);
+      for (const msg of recentHistory) {
+        if (msg.text && typeof msg.text === 'string') {
+          messages.push({
+            role: msg.role === 'user' ? 'user' : 'assistant',
+            content: msg.text
+          });
+        }
+      }
     }
 
-    let candidateModels = [
+    if (image) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: image } },
+          { type: 'text', text: question ? `${question}\n(Please analyze this image and provide a thorough solution)` : 'Please analyze and explain this photo in detail.' }
+        ]
+      });
+    } else {
+      messages.push({ role: 'user', content: question });
+    }
+
+    // High Intelligence Production Models
+    const candidateModels = [
       'openai/gpt-oss-120b',
       'openai/gpt-oss-20b',
       'qwen/qwen3-32b',
       'meta-llama/llama-4-scout-17b-16e-instruct',
       'qwen/qwen3.6-27b'
     ];
-
-    let userContent = question || 'Please answer this query in detail.';
-
-    if (image) {
-      userContent = [
-        { type: 'image_url', image_url: { url: image } },
-        { type: 'text', text: question ? `${question}\n(Explain this image accurately and in detail)` : 'Please analyze and explain this photo in detail.' }
-      ];
-      candidateModels = ['qwen/qwen3.6-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
-    }
 
     for (const modelName of candidateModels) {
       try {
@@ -76,10 +96,7 @@ COMMUNICATION STYLE:
           },
           body: JSON.stringify({
             model: modelName,
-            messages: [
-              { role: 'system', content: isQuizReq ? `You are a quiz master. Return ONLY a valid JSON: {"is_quiz":true,"quiz_title":"Topic","questions":[{"id":1,"question":"Q?","options":["A","B","C","D"],"correctIndex":0,"explanation":"Why"}]}` : systemPrompt },
-              { role: 'user', content: userContent }
-            ],
+            messages: messages,
             temperature: 0.6
           })
         });
@@ -88,7 +105,11 @@ COMMUNICATION STYLE:
 
         if (data && data.choices && data.choices[0]?.message?.content) {
           let rawAnswer = data.choices[0].message.content;
-          let cleanAnswer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          let cleanAnswer = rawAnswer
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/```json/gi, '')
+            .replace(/```/gi, '')
+            .trim();
 
           if (isQuizReq) {
             try {
@@ -100,14 +121,14 @@ COMMUNICATION STYLE:
                 }
               }
             } catch (e) {
-              console.log('JSON parse fallback to markdown');
+              console.log('Quiz parse fallback to raw text');
             }
           }
 
           return NextResponse.json({ answer: cleanAnswer });
         }
       } catch (err) {
-        console.log(`Failed with ${modelName}`);
+        console.log(`Failed on model: ${modelName}, trying next...`);
       }
     }
 
