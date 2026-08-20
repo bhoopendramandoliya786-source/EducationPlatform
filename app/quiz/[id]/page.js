@@ -99,7 +99,7 @@ export default function QuizPlayPage() {
 
   if (loading) {
     return (
-      <div style={{ backgroundColor: '#0f1015', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center gap-3">
+      <div style={{ backgroundColor: '#18191c', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center gap-3">
         <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         <span className="text-xs text-zinc-400">प्रैक्टिस टेस्ट लोड हो रहा है...</span>
       </div>
@@ -108,11 +108,11 @@ export default function QuizPlayPage() {
 
   if (!questions.length) {
     return (
-      <div style={{ backgroundColor: '#0f1015', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+      <div style={{ backgroundColor: '#18191c', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
         <p className="text-zinc-400 text-sm">इस टॉपिक के लिए अभी कोई प्रश्न उपलब्ध नहीं हैं।</p>
         <button
           onClick={() => router.back()}
-          className="px-6 py-2.5 bg-blue-600 rounded-xl text-xs font-bold text-white"
+          className="px-6 py-2.5 bg-blue-600 rounded-full text-xs font-bold text-white"
         >
           वापस जाएँ
         </button>
@@ -123,8 +123,8 @@ export default function QuizPlayPage() {
   if (quizFinished) {
     const accuracy = Math.round((correctCount / questions.length) * 100) || 0;
     return (
-      <div style={{ backgroundColor: '#0f1015', minHeight: '100dvh' }} className="text-zinc-100 flex flex-col items-center justify-center p-5 font-sans">
-        <div style={{ backgroundColor: '#181a22', borderColor: '#2b2f3d' }} className="w-full max-w-md border rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
+      <div style={{ backgroundColor: '#18191c', minHeight: '100dvh' }} className="text-zinc-100 flex flex-col items-center justify-center p-5 font-sans">
+        <div style={{ backgroundColor: '#22242a', borderColor: '#323642' }} className="w-full max-w-md border rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-3xl">
             <Award className="w-8 h-8" />
           </div>
@@ -135,15 +135,15 @@ export default function QuizPlayPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <div style={{ backgroundColor: 'rgba(6, 78, 59, 0.4)', borderColor: 'rgba(16, 185, 129, 0.3)' }} className="p-3 border rounded-2xl">
+            <div style={{ backgroundColor: '#1b3326', borderColor: '#235e40' }} className="p-3 border rounded-2xl">
               <span className="text-[10px] text-zinc-400 font-semibold block">सही</span>
               <span className="text-xl font-black text-emerald-400">{correctCount}</span>
             </div>
-            <div style={{ backgroundColor: 'rgba(136, 19, 55, 0.4)', borderColor: 'rgba(244, 63, 94, 0.3)' }} className="p-3 border rounded-2xl">
+            <div style={{ backgroundColor: '#3b1d22', borderColor: '#6b2b35' }} className="p-3 border rounded-2xl">
               <span className="text-[10px] text-zinc-400 font-semibold block">गलत</span>
               <span className="text-xl font-black text-rose-400">{wrongCount}</span>
             </div>
-            <div style={{ backgroundColor: 'rgba(49, 46, 129, 0.4)', borderColor: 'rgba(99, 102, 241, 0.3)' }} className="p-3 border rounded-2xl">
+            <div style={{ backgroundColor: '#222538', borderColor: '#3b436b' }} className="p-3 border rounded-2xl">
               <span className="text-[10px] text-zinc-400 font-semibold block">सटीकता</span>
               <span className="text-xl font-black text-indigo-400">{accuracy}%</span>
             </div>
@@ -156,15 +156,15 @@ export default function QuizPlayPage() {
                 setCurrentIndex(0);
                 setQuizFinished(false);
               }}
-              style={{ backgroundColor: '#262936' }}
-              className="flex-1 py-3.5 rounded-xl text-xs font-bold text-zinc-200 transition flex items-center justify-center gap-2 cursor-pointer hover:opacity-90"
+              style={{ backgroundColor: '#2e313b' }}
+              className="flex-1 py-3.5 rounded-full text-xs font-bold text-zinc-200 transition flex items-center justify-center gap-2 cursor-pointer hover:opacity-90"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>पुनः प्रयास करें</span>
             </button>
             <button
               onClick={() => router.push(`/topic/${topicId}`)}
-              className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 cursor-pointer"
+              className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 rounded-full text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 cursor-pointer"
             >
               <span>टॉपिक पर लौटें</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -176,14 +176,14 @@ export default function QuizPlayPage() {
   }
 
   return (
-    <div style={{ backgroundColor: '#0f1015', minHeight: '100dvh' }} className="text-zinc-100 font-sans flex flex-col justify-start selection:bg-blue-500/30">
-
-      {/* 1. TOP HEADER & PROGRESS */}
-      <header className="w-full max-w-xl mx-auto px-4 pt-3 pb-2 shrink-0">
+    <div style={{ backgroundColor: '#18191c', minHeight: '100dvh' }} className="text-zinc-100 font-sans flex flex-col justify-start selection:bg-blue-500/30">
+      
+      {/* 1. TOP HEADER */}
+      <header className="w-full max-w-lg mx-auto px-5 pt-3 pb-2 shrink-0">
         <div className="flex items-center justify-between">
           <button 
             onClick={() => router.back()}
-            className="p-2 -ml-2 text-zinc-400 hover:text-white rounded-xl transition cursor-pointer"
+            className="p-1 -ml-1 text-zinc-400 hover:text-white rounded-xl transition cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -191,7 +191,7 @@ export default function QuizPlayPage() {
           <div className="flex items-center gap-3">
             <button 
               onClick={() => toggleBookmark(currentQ.id)}
-              className={`p-2 rounded-xl transition cursor-pointer ${
+              className={`p-1 transition cursor-pointer ${
                 bookmarks.has(currentQ.id) ? 'text-amber-400' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -203,22 +203,22 @@ export default function QuizPlayPage() {
                   navigator.share({ title: currentQ.question, url: window.location.href });
                 }
               }}
-              className="p-2 text-zinc-400 hover:text-white rounded-xl transition cursor-pointer"
+              className="p-1 text-zinc-400 hover:text-white transition cursor-pointer"
             >
               <Share2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Progress Dashes & Score Badges */}
-        <div className="mt-2.5 flex items-center justify-between gap-3">
+        {/* Dashes + Score Pills */}
+        <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex-1 flex gap-1.5 overflow-hidden py-1">
             {questions.map((q, idx) => {
               const answered = selectedAnswers[q.id];
-              let dashBg = '#222530';
-              if (idx === currentIndex) dashBg = '#9ca3af';
+              let dashBg = '#33353c';
+              if (idx === currentIndex) dashBg = '#8b8e98';
               if (answered) {
-                dashBg = answered === q.answer ? '#10b981' : '#f43f5e';
+                dashBg = answered === q.answer ? '#8ce99a' : '#ffa8a8';
               }
               return (
                 <div
@@ -230,43 +230,43 @@ export default function QuizPlayPage() {
             })}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 text-xs font-bold">
-            <span className="text-zinc-400 mr-1 text-[11px]">
+          <div className="flex items-center gap-2 shrink-0 font-bold">
+            <span className="text-zinc-300 mr-1 text-sm font-semibold">
               {currentIndex + 1}/{questions.length}
             </span>
-            <span style={{ backgroundColor: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fda4af' }} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px]">
-              <X className="w-3 h-3" /> {wrongCount}
+            <span style={{ backgroundColor: '#f28b82', color: '#202124' }} className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-black">
+              ✕ {wrongCount}
             </span>
-            <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#6ee7b7' }} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px]">
-              <Check className="w-3 h-3" /> {correctCount}
+            <span style={{ backgroundColor: '#81c995', color: '#202124' }} className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-black">
+              ✓ {correctCount}
             </span>
           </div>
         </div>
       </header>
 
-      {/* 2. QUESTION & LARGE OPTIONS CONTAINER */}
-      <main className="w-full max-w-xl mx-auto px-4 pt-3 pb-4 space-y-4">
-
-        {/* Question Header & Title */}
+      {/* 2. QUESTION & OPTIONS CONTAINER */}
+      <main className="w-full max-w-lg mx-auto px-5 pt-3 pb-2 space-y-4">
+        
+        {/* Question Header */}
         <div className="space-y-1.5">
-          <span className="text-xs text-zinc-400 font-semibold block">
+          <span className="text-sm text-zinc-400 font-medium block">
             Question {currentIndex + 1}
           </span>
 
           {(currentQ.source || currentQ.year) && (
-            <div className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+            <div className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
               <span>📌</span>
               <span>[परीक्षा: {currentQ.source} {currentQ.year || ''}]</span>
             </div>
           )}
 
-          <h1 className="text-base sm:text-lg font-bold text-white leading-relaxed pt-1">
+          <h1 className="text-[17px] font-semibold text-white leading-snug pt-1">
             {currentQ.question}
           </h1>
         </div>
 
-        {/* 4 Large Touch Option Cards */}
-        <div className="space-y-3.5 pt-1">
+        {/* 4 Large Option Cards */}
+        <div className="space-y-3 pt-2">
           {['A', 'B', 'C', 'D'].map((optKey) => {
             const optText = currentQ[`option_${optKey.toLowerCase()}`];
             if (!optText) return null;
@@ -275,24 +275,17 @@ export default function QuizPlayPage() {
             const isChosen = currentAnswer === optKey;
             const isAnswered = !!currentAnswer;
 
-            // Solid distinct styling for visible cards
-            let cardBg = '#181a22';
-            let cardBorder = '#2a2e3d';
-            let textColor = '#f1f5f9';
+            let cardBg = '#28292d';
+            let textColor = '#e3e3e3';
 
             if (isAnswered) {
               if (isCorrect) {
-                cardBg = '#0b261b';
-                cardBorder = '#059669';
-                textColor = '#6ee7b7';
+                cardBg = '#212a24';
               } else if (isChosen) {
-                cardBg = '#2c1218';
-                cardBorder = '#e11d48';
-                textColor = '#fda4af';
+                cardBg = '#2d2224';
               } else {
-                cardBg = '#13141a';
-                cardBorder = '#1f222b';
-                textColor = '#64748b';
+                cardBg = '#222327';
+                textColor = '#73757d';
               }
             }
 
@@ -302,18 +295,17 @@ export default function QuizPlayPage() {
                 onClick={() => handleSelectOption(optKey)}
                 style={{
                   backgroundColor: cardBg,
-                  borderColor: cardBorder,
                 }}
-                className="rounded-2xl border p-4 sm:p-5 transition-all cursor-pointer space-y-2.5 shadow-md min-h-[58px]"
+                className="rounded-2xl px-5 py-4 transition-all cursor-pointer space-y-2 min-h-[56px] flex flex-col justify-center"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 text-sm sm:text-base font-medium leading-normal">
-                    <span style={{ color: isAnswered && (isCorrect || isChosen) ? textColor : '#94a3b8' }} className="text-sm font-bold shrink-0">
+                  <div className="flex items-center gap-3 text-[15px] font-medium leading-normal">
+                    <span className="text-zinc-400 font-medium">
                       {optKey}.
                     </span>
                     <span style={{ color: textColor }}>{optText}</span>
                     {isAnswered && isChosen && (
-                      <span className="text-xs text-zinc-400 font-normal shrink-0">
+                      <span className="text-xs text-zinc-400 font-normal">
                         (Your answer)
                       </span>
                     )}
@@ -322,23 +314,23 @@ export default function QuizPlayPage() {
                   {isAnswered && (
                     <div className="shrink-0">
                       {isCorrect && (
-                        <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399' }} className="w-6 h-6 rounded-full flex items-center justify-center font-bold">
-                          <Check className="w-4 h-4" />
+                        <div style={{ backgroundColor: 'rgba(52, 168, 83, 0.2)', color: '#81c995' }} className="w-6 h-6 rounded-full flex items-center justify-center">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
                         </div>
                       )}
                       {isChosen && !isCorrect && (
-                        <div style={{ backgroundColor: 'rgba(244, 63, 94, 0.2)', color: '#fb7185' }} className="w-6 h-6 rounded-full flex items-center justify-center font-bold">
-                          <X className="w-4 h-4" />
+                        <div style={{ backgroundColor: 'rgba(234, 67, 53, 0.2)', color: '#f28b82' }} className="w-6 h-6 rounded-full flex items-center justify-center">
+                          <X className="w-3.5 h-3.5 stroke-[3]" />
                         </div>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Option Explanation Reveal */}
+                {/* Inline Explanation */}
                 {isAnswered && (isCorrect || isChosen) && (
-                  <div style={{ borderTopColor: 'rgba(255, 255, 255, 0.08)' }} className="pt-2.5 border-t text-xs leading-relaxed">
-                    <p style={{ color: isCorrect ? '#a7f3d0' : '#fecdd3' }}>
+                  <div className="pt-2 text-xs sm:text-sm leading-relaxed border-t border-white/5">
+                    <p className="text-zinc-300">
                       {isCorrect 
                         ? (currentQ.explanation || 'यह सही उत्तर है।') 
                         : 'यह विकल्प सही नहीं है।'
@@ -351,33 +343,34 @@ export default function QuizPlayPage() {
           })}
         </div>
 
-        {/* AI Tutor Link */}
+        {/* AI Doubt Link */}
         {currentAnswer && (
           <div className="pt-1 flex justify-end">
             <Link
               href={`/ai-tutor?q=${encodeURIComponent(currentQ.question)}`}
-              style={{ backgroundColor: 'rgba(79, 70, 229, 0.15)', borderColor: 'rgba(99, 102, 241, 0.3)' }}
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 font-semibold px-3.5 py-2 rounded-xl border transition"
+              style={{ backgroundColor: 'rgba(66, 133, 244, 0.15)', borderColor: 'rgba(66, 133, 244, 0.3)' }}
+              className="inline-flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 font-medium px-3.5 py-1.5 rounded-full border transition"
             >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
               <span>AI ट्यूटर से विस्तार में समझें</span>
             </Link>
           </div>
         )}
 
-        {/* 3. CENTERED BUTTONS (Right below questions) */}
-        <div className="pt-6 pb-12 flex items-center justify-center gap-4">
+        {/* 3. CENTERED BUTTONS */}
+        <div className="pt-6 pb-8 flex items-center justify-center gap-4">
           <button
             onClick={handleBack}
             disabled={currentIndex === 0}
-            style={{ backgroundColor: '#181a22', borderColor: '#2a2e3d' }}
-            className="px-8 py-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none text-zinc-300 text-xs font-bold transition cursor-pointer hover:bg-zinc-800"
+            style={{ backgroundColor: '#28292d' }}
+            className="px-8 py-3 rounded-full disabled:opacity-30 disabled:pointer-events-none text-zinc-200 text-sm font-medium transition cursor-pointer hover:bg-zinc-700"
           >
             Back
           </button>
           <button
             onClick={handleNext}
-            className="px-9 py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition cursor-pointer flex items-center gap-1.5"
+            style={{ backgroundColor: '#2c6bed' }}
+            className="px-9 py-3 rounded-full hover:bg-blue-500 text-white text-sm font-medium shadow-md transition cursor-pointer"
           >
             <span>{currentIndex === questions.length - 1 ? 'Finish' : 'Next'}</span>
           </button>
