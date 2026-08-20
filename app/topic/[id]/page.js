@@ -21,7 +21,7 @@ import {
 export default function TopicDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const topicId = params.id;
+  const topicId = params?.id;
   const supabase = createClient();
 
   const [activeTab, setActiveTab] = useState('notes'); // 'notes' | 'mcq' | 'pyq' | 'quiz'
@@ -34,6 +34,7 @@ export default function TopicDetailPage() {
 
   useEffect(() => {
     async function loadData() {
+      if (!topicId) return;
       setLoading(true);
       try {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -80,9 +81,7 @@ export default function TopicDetailPage() {
       }
     }
 
-    if (topicId) {
-      loadData();
-    }
+    loadData();
   }, [topicId]);
 
   const handleMarkComplete = async () => {
@@ -267,7 +266,7 @@ export default function TopicDetailPage() {
               </div>
               <Link 
                 href={`/quiz/${topicId}?mode=mcq`}
-                className="px-7 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-600/30 transition-all inline-flex items-center gap-2"
+                className="px-7 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-600/30 transition-all inline-flex items-center gap-2 cursor-pointer"
               >
                 <span>Start MCQ Practice</span>
                 <ChevronRight className="w-4 h-4" />
@@ -289,7 +288,7 @@ export default function TopicDetailPage() {
               </div>
               <Link 
                 href={`/quiz/${topicId}?mode=pyq`}
-                className="px-7 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-amber-600/30 transition-all inline-flex items-center gap-2"
+                className="px-7 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-amber-600/30 transition-all inline-flex items-center gap-2 cursor-pointer"
               >
                 <span>Start PYQ Practice</span>
                 <ChevronRight className="w-4 h-4" />
@@ -311,7 +310,7 @@ export default function TopicDetailPage() {
               </div>
               <Link 
                 href={`/quiz/${topicId}`}
-                className="px-7 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white font-extrabold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all inline-flex items-center gap-2"
+                className="px-7 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white font-extrabold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all inline-flex items-center gap-2 cursor-pointer"
               >
                 <span>Start Live Quiz Now</span>
                 <ChevronRight className="w-4 h-4" />
@@ -322,7 +321,7 @@ export default function TopicDetailPage() {
         </div>
       </main>
 
-      {/* Universal Bottom App Bar */}
+      {/* Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/90 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <Link
@@ -372,4 +371,3 @@ export default function TopicDetailPage() {
     </div>
   );
 }
-EOF

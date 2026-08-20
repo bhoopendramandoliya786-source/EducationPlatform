@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../lib/supabase/client';
 import { 
   ChevronLeft, 
@@ -19,9 +19,7 @@ import {
 export default function QuizPlayPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const topicId = params.id;
-  const mode = searchParams.get('mode'); // 'mcq' | 'pyq' | null
+  const topicId = params?.id;
   const supabase = createClient();
 
   const [questions, setQuestions] = useState([]);
@@ -33,8 +31,12 @@ export default function QuizPlayPage() {
 
   useEffect(() => {
     async function loadQuizData() {
+      if (!topicId) return;
       setLoading(true);
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+
         let query = supabase
           .from('questions')
           .select('*')
@@ -58,8 +60,8 @@ export default function QuizPlayPage() {
       }
     }
 
-    if (topicId) loadQuizData();
-  }, [topicId, mode]);
+    loadQuizData();
+  }, [topicId]);
 
   let correctCount = 0;
   let wrongCount = 0;
@@ -135,7 +137,7 @@ export default function QuizPlayPage() {
       <div style={{ backgroundColor: '#131418', minHeight: '100dvh' }} className="text-zinc-100 flex flex-col items-center justify-center p-5 font-sans">
         <div style={{ backgroundColor: '#22242a', borderColor: '#323642' }} className="w-full max-w-md border rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-3xl">
-            <Award className="w-8 h-8" />
+            <Award className="w-8 h-8"/>
           </div>
 
           <div className="space-y-1">
@@ -168,7 +170,7 @@ export default function QuizPlayPage() {
               style={{ backgroundColor: '#2e313b' }}
               className="flex-1 py-3.5 rounded-full text-xs font-bold text-zinc-200 transition flex items-center justify-center gap-2 cursor-pointer hover:opacity-90"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5"/>
               <span>पुनः प्रयास करें</span>
             </button>
             <button
@@ -176,7 +178,7 @@ export default function QuizPlayPage() {
               className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 rounded-full text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 cursor-pointer"
             >
               <span>टॉपिक पर लौटें</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5"/>
             </button>
           </div>
         </div>
@@ -194,7 +196,7 @@ export default function QuizPlayPage() {
             onClick={() => router.back()}
             className="p-1 -ml-1 text-zinc-400 hover:text-white rounded-xl transition cursor-pointer"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-5 h-5"/>
           </button>
 
           <div className="flex items-center gap-3">
@@ -204,7 +206,7 @@ export default function QuizPlayPage() {
                 bookmarks.has(currentQ.id) ? 'text-amber-400' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <Bookmark className="w-4 h-4 fill-current" />
+              <Bookmark className="w-4 h-4 fill-current"/>
             </button>
             <button 
               onClick={() => {
@@ -214,7 +216,7 @@ export default function QuizPlayPage() {
               }}
               className="p-1 text-zinc-400 hover:text-white transition cursor-pointer"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-4 h-4"/>
             </button>
           </div>
         </div>
@@ -328,12 +330,12 @@ export default function QuizPlayPage() {
                     <div className="shrink-0">
                       {isCorrect && (
                         <div style={{ backgroundColor: 'rgba(52, 168, 83, 0.25)', color: '#81c995' }} className="w-6 h-6 rounded-full flex items-center justify-center">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          <Check className="w-3.5 h-3.5 stroke-[3]"/>
                         </div>
                       )}
                       {isChosen && !isCorrect && (
                         <div style={{ backgroundColor: 'rgba(234, 67, 53, 0.25)', color: '#f28b82' }} className="w-6 h-6 rounded-full flex items-center justify-center">
-                          <X className="w-3.5 h-3.5 stroke-[3]" />
+                          <X className="w-3.5 h-3.5 stroke-[3]"/>
                         </div>
                       )}
                     </div>
@@ -359,12 +361,8 @@ export default function QuizPlayPage() {
         {/* AI Tutor Link */}
         {currentAnswer && (
           <div className="pt-3 flex justify-end">
-            <Link
-              href={`/ai-tutor?q=${encodeURIComponent(currentQ.question)}`}
-              style={{ backgroundColor: 'rgba(66, 133, 244, 0.15)', border: '1px solid rgba(66, 133, 244, 0.3)' }}
-              className="inline-flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 font-medium px-4 py-2 rounded-full transition"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <Link '1px 'rgba(66, 0.15)', 0.3)' 133, 244, backgroundColor: border: className="inline-flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 font-medium px-4 py-2 rounded-full transition" href="{`/ai-tutor?q=${encodeURIComponent(currentQ.question)}`}" rgba(66, solid style="{{" }}>
+              <Sparkles className="w-3.5 h-3.5 text-blue-400"/>
               <span>AI ट्यूटर से विस्तार में समझें</span>
             </Link>
           </div>
