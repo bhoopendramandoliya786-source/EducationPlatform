@@ -17,7 +17,7 @@ function FormattedMessage({ text }) {
           return <hr key={idx} className="my-3 border-slate-800" />;
         }
 
-        // 1. Image Embed: ![alt](url)
+        // Image Embed: ![alt](url)
         const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
         if (imgMatch) {
           const altText = imgMatch[1];
@@ -50,7 +50,7 @@ function FormattedMessage({ text }) {
           );
         }
 
-        // 2. Headings
+        // Headings
         if (trimmed.startsWith('### ')) {
           return <h3 key={idx} className="text-sm sm:text-base font-bold text-indigo-300 mt-2 mb-1">{trimmed.replace('### ', '')}</h3>;
         }
@@ -61,11 +61,11 @@ function FormattedMessage({ text }) {
           return <h1 key={idx} className="text-lg sm:text-xl font-black text-white mt-3 mb-2">{trimmed.replace('# ', '')}</h1>;
         }
 
-        // 3. Bullets
+        // Bullets
         const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
         let content = isBullet ? trimmed.substring(2) : trimmed;
 
-        // Parse Bold Text (**bold**)
+        // Bold
         const parts = content.split(/(\*\*.*?\*\*)/g);
         const renderedParts = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
@@ -96,7 +96,7 @@ function FormattedMessage({ text }) {
 // Modern Interactive Quiz Component
 function InteractiveQuizBox({ quizData, onNextSet }) {
   const [selectedAnswers, setSelectedAnswers] = useState({});
-  const questions = quizData.questions || [];
+  const questions = quizData?.questions || [];
 
   const handleSelect = (qIdx, optIdx) => {
     if (selectedAnswers[qIdx] !== undefined) return;
@@ -118,7 +118,7 @@ function InteractiveQuizBox({ quizData, onNextSet }) {
           </div>
           <div>
             <h3 className="font-bold text-sm sm:text-base text-white">
-              {quizData.quiz_title || 'इंटरएक्टिव टेस्ट'}
+              {quizData?.quiz_title || 'इंटरएक्टिव टेस्ट'}
             </h3>
             <p className="text-xs text-slate-400">टच करके सही विकल्प चुनें</p>
           </div>
@@ -204,7 +204,7 @@ function InteractiveQuizBox({ quizData, onNextSet }) {
             <span className="text-xs text-slate-400">कुल स्कोर: {correctCount} / {questions.length}</span>
           </div>
           <button
-            onClick={() => onNextSet && onNextSet(quizData.quiz_title)}
+            onClick={() => onNextSet && onNextSet(quizData?.quiz_title)}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>⚡</span> अगले 5 प्रश्न लोड करें ➔
@@ -434,11 +434,13 @@ export default function ModernAiTutorPage() {
               )}
 
               {m.type === 'quiz' ? (
-                <InteractiveQuizBox onNextSet="{(title)" quizData="{m.quiz}"> sendMessage(`अगले 5 प्रश्न और बनाओ: ${title}`, 'quiz')} 
+                <InteractiveQuizBox 
+                  quizData={m.quiz} 
+                  onNextSet={(title) => sendMessage(`अगले 5 प्रश्न और बनाओ: ${title}`, 'quiz')} 
                 />
               ) : (
                 <div>
-                  <FormattedMessage text="{m.text}"/>
+                  <FormattedMessage text={m.text} />
 
                   {m.role === 'ai' && m.text && (
                     <div className="mt-3 pt-2.5 border-t border-slate-800/70 flex items-center justify-end">
