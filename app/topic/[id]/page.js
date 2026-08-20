@@ -12,14 +12,10 @@ import {
   Award, 
   HelpCircle, 
   Zap, 
-  Check, 
-  X, 
   ChevronRight,
   Sparkles,
   Layers,
-  Share2,
-  Bookmark,
-  Volume2
+  Bot
 } from 'lucide-react';
 
 export default function TopicDetailPage() {
@@ -35,7 +31,7 @@ export default function TopicDetailPage() {
   const [user, setUser] = useState(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   // Interactive Answer State: { [questionId]: 'A' | 'B' | 'C' | 'D' }
   const [selectedAnswers, setSelectedAnswers] = useState({});
 
@@ -43,18 +39,15 @@ export default function TopicDetailPage() {
     async function loadData() {
       setLoading(true);
       try {
-        // 1. Get Auth User
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
 
-        // 2. Fetch Topic with Chapter & Subject
         const { data: topic } = await supabase
           .from('topics')
           .select('*, chapters(id, name, subjects(id, name))')
           .eq('id', topicId)
           .single();
 
-        // 3. Fetch Notes
         const { data: notesData } = await supabase
           .from('notes')
           .select('*')
@@ -62,7 +55,6 @@ export default function TopicDetailPage() {
           .eq('is_published', true)
           .order('sort_order', { ascending: true });
 
-        // 4. Fetch Questions (MCQ + PYQ)
         const { data: questionsData } = await supabase
           .from('questions')
           .select('*')
@@ -70,7 +62,6 @@ export default function TopicDetailPage() {
           .eq('is_active', true)
           .order('id', { ascending: true });
 
-        // 5. Fetch User Progress
         if (currentUser) {
           const { data: prog } = await supabase
             .from('progress')
@@ -97,7 +88,6 @@ export default function TopicDetailPage() {
     }
   }, [topicId]);
 
-  // Mark as Complete Toggle
   const handleMarkComplete = async () => {
     if (!user) {
       router.push('/login');
@@ -115,10 +105,19 @@ export default function TopicDetailPage() {
     }, { onConflict: 'user_id,topic_id' });
   };
 
-  // Option Click Handler
   const handleOptionSelect = (qId, optionKey) => {
-    if (selectedAnswers[qId]) return; // Freeze once selected
+    if (selectedAnswers[qId]) return;
     setSelectedAnswers(prev => ({ ...prev, [qId]: optionKey }));
+  };
+
+  // Helper to format PYQ badge cleanly without duplicate years
+  const formatPyqBadge = (source, year) => {
+    const src = source ? String(source).trim() : 'PYQ';
+    const yr = year ? String(year).trim() : '';
+    if (yr && !src.includes(yr)) {
+      return `${src} ${yr}`;
+    }
+    return src;
   };
 
   const mcqList = questions.filter(q => !q.is_pyq);
@@ -138,7 +137,7 @@ export default function TopicDetailPage() {
       <Navbar />
 
       <main className="max-w-4xl mx-auto px-4 pt-4 space-y-5">
-        
+
         {/* Navigation Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Link 
@@ -157,7 +156,7 @@ export default function TopicDetailPage() {
         {/* 2026 VIP Topic Header Card */}
         <section className="relative overflow-hidden bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-xl space-y-4">
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="relative z-10 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
@@ -174,14 +173,14 @@ export default function TopicDetailPage() {
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-              {topicData?.description || 'इस टॉपिक के सभी थ्योरी नोट्स, 4K डायग्राम्स, प्रैक्टिस MCQs और पिछले वर्षों के प्रश्न नीचे उपलब्ध हैं।'}
+              {topicData?.description || 'इस टॉपिक के सभी थ्योरी नोट्स, प्रैक्टिस MCQs और पिछले वर्षों के प्रश्न नीचे उपलब्ध हैं।'}
             </p>
           </div>
 
           <div className="relative z-10 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
             <button
               onClick={handleMarkComplete}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg cursor-pointer ${
                 isCompleted 
                   ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
                   : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white shadow-indigo-600/25'
@@ -210,7 +209,7 @@ export default function TopicDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   active 
                     ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -228,7 +227,7 @@ export default function TopicDetailPage() {
 
         {/* Tab Contents */}
         <div className="space-y-4">
-          
+
           {/* NOTES TAB */}
           {activeTab === 'notes' && (
             <div className="space-y-4">
@@ -253,7 +252,6 @@ export default function TopicDetailPage() {
                       {note.content}
                     </div>
 
-                    {/* Integrated AI Assistant Strip */}
                     <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
                       <span className="text-[11px] text-slate-400 flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
@@ -263,7 +261,8 @@ export default function TopicDetailPage() {
                         href="/ai-tutor"
                         className="px-3 py-1.5 bg-slate-800 hover:bg-indigo-950/60 border border-slate-700 hover:border-indigo-500/40 text-indigo-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
                       >
-                        <span>✨</span> AI से समझें
+                        <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>AI से समझें</span>
                       </Link>
                     </div>
                   </article>
@@ -272,7 +271,7 @@ export default function TopicDetailPage() {
             </div>
           )}
 
-          {/* MCQs & PYQs TAB (Interactive 1-Touch Reveal) */}
+          {/* MCQs & PYQs TAB */}
           {(activeTab === 'mcq' || activeTab === 'pyq') && (
             <div className="space-y-4">
               {(activeTab === 'mcq' ? mcqList : pyqList).length === 0 ? (
@@ -286,17 +285,17 @@ export default function TopicDetailPage() {
 
                   return (
                     <div key={q.id} className="bg-slate-900/60 border border-slate-800/90 rounded-2xl p-5 shadow-xl space-y-4 backdrop-blur-sm">
-                      
+
                       <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm sm:text-base font-bold text-slate-100 leading-snug">
-                          <span className="text-indigo-400 font-black mr-2 bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20">
-                            Q{idx + 1}
+                        <h3 className="text-sm sm:text-base font-bold text-slate-100 leading-snug flex items-start gap-2">
+                          <span className="shrink-0 text-indigo-400 font-black bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20 text-xs">
+                            Q{idx + 1}.
                           </span> 
-                          {q.question}
+                          <span>{q.question}</span>
                         </h3>
                         {q.is_pyq && (
                           <span className="shrink-0 px-2.5 py-1 text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg">
-                            {q.source || 'PYQ'} {q.year || ''}
+                            {formatPyqBadge(q.source, q.year)}
                           </span>
                         )}
                       </div>
@@ -311,7 +310,7 @@ export default function TopicDetailPage() {
                           const isChosen = userSelected === optKey;
 
                           let style = "bg-slate-950/60 border-slate-800/80 text-slate-300 hover:bg-slate-800/80 hover:border-slate-700";
-                          
+
                           if (isAnswered) {
                             if (isCorrect) {
                               style = "bg-emerald-950/60 border-emerald-500 text-emerald-300 font-bold shadow-lg shadow-emerald-900/20";
@@ -327,16 +326,16 @@ export default function TopicDetailPage() {
                               key={optKey}
                               onClick={() => handleOptionSelect(q.id, optKey)}
                               disabled={isAnswered}
-                              className={`flex items-center justify-between p-3.5 rounded-xl border text-xs sm:text-sm font-medium transition-all text-left ${style}`}
+                              className={`flex items-center justify-between p-3.5 rounded-xl border text-xs sm:text-sm font-medium transition-all text-left cursor-pointer ${style}`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 border border-white/10 text-slate-300">
+                                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 border border-white/10 text-slate-300 shrink-0">
                                   {optKey}
                                 </span>
                                 <span>{optText}</span>
                               </div>
-                              {isAnswered && isCorrect && <span className="text-emerald-400 font-bold text-xs bg-emerald-500/20 px-2 py-0.5 rounded-md">✓ सही</span>}
-                              {isAnswered && isChosen && !isCorrect && <span className="text-rose-400 font-bold text-xs bg-rose-500/20 px-2 py-0.5 rounded-md">✕ गलत</span>}
+                              {isAnswered && isCorrect && <span className="text-emerald-400 font-bold text-xs bg-emerald-500/20 px-2 py-0.5 rounded-md shrink-0">✓ सही</span>}
+                              {isAnswered && isChosen && !isCorrect && <span className="text-rose-400 font-bold text-xs bg-rose-500/20 px-2 py-0.5 rounded-md shrink-0">✕ गलत</span>}
                             </button>
                           );
                         })}
@@ -344,11 +343,20 @@ export default function TopicDetailPage() {
 
                       {/* Explanation Reveal */}
                       {isAnswered && (
-                        <div className="p-4 bg-slate-950/90 border border-indigo-900/40 rounded-xl space-y-1.5 text-xs">
-                          <div className="font-bold text-indigo-300 flex items-center gap-1.5">
-                            <span>💡</span> व्याख्या (Explanation)
+                        <div className="p-4 bg-slate-950/90 border border-indigo-900/40 rounded-xl space-y-2 text-xs">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <div className="font-bold text-indigo-300 flex items-center gap-1.5">
+                              <span>💡</span> व्याख्या (Explanation)
+                            </div>
+                            <Link
+                              href={`/ai-tutor?q=${encodeURIComponent(q.question)}`}
+                              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1"
+                            >
+                              <Sparkles className="w-3 h-3 text-indigo-400" />
+                              <span>AI से गहराई में समझें ›</span>
+                            </Link>
                           </div>
-                          <p className="text-slate-300 leading-relaxed">
+                          <p className="text-slate-300 leading-relaxed pt-1">
                             {q.explanation || `सही उत्तर विकल्प (${q.answer}) है।`}
                           </p>
                         </div>
