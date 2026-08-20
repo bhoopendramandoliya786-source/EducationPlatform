@@ -15,8 +15,8 @@ export async function POST(req) {
     const k3 = "jupqa8ZwPG8FRtfdSwkuAQ0h";
     const apiKey = k1 + k2 + k3;
 
-    // 1. Tool: Image Generation
-    const isImageGeneration = mode === 'image' || (
+    // 1. Direct Clean Image Generator (No verbose text)
+    const isImageReq = mode === 'image' || (
       question && (
         question.toLowerCase().includes('photo banao') ||
         question.toLowerCase().includes('image banao') ||
@@ -26,20 +26,20 @@ export async function POST(req) {
       )
     );
 
-    if (isImageGeneration) {
+    if (isImageReq) {
       const cleanPrompt = encodeURIComponent(
         question
-          .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao/gi, '')
-          .trim() || 'ultra realistic 8k masterpiece'
+          .replace(/photo banao|image banao|tasveer|फोटो बनाओ|चित्र बनाओ|dikhao|banao|ka|ki|aur|mera/gi, '')
+          .trim() || 'taj mahal cinematic 8k ultra detailed photorealistic'
       );
       const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20ultra%20detailed%20hd%20photorealistic?width=1024&height=768&nologo=true`;
       
       return NextResponse.json({
-        answer: `यहाँ आपकी बनाई गई HD AI फोटो है:\n\n![${question}](${generatedImageUrl})\n\n💡 आप इसे नीचे दिए गए बटन से सीधे डाउनलोड कर सकते हैं।`
+        answer: `![${question}](${generatedImageUrl})`
       });
     }
 
-    // 2. Tool: Interactive Quiz
+    // 2. Interactive Quiz
     const isQuizReq = mode === 'quiz' || (question && (
       question.toLowerCase().includes('quiz') || 
       question.toLowerCase().includes('mcq') || 
@@ -47,28 +47,20 @@ export async function POST(req) {
       question.toLowerCase().includes('क्विज')
     ));
 
-    // 3. Tool: Deep Research / Canvas / Standard Chat Prompt
-    let baseSystemPrompt = `You are EduAI Super Intelligence (powered by Gemini & ChatGPT Pro architecture).
+    const baseSystemPrompt = `You are EduAI Super Intelligence (powered by Gemini & ChatGPT Pro).
+Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bullet points. Never output raw broken table characters or broken URLs.`;
 
-CORE CAPABILITIES:
-1. Deep Research & Logical Reasoning: Break down any query (Math, Science, History, GK, Code, Exam prep) with clear, authentic, and step-by-step reasoning.
-2. Natural Tone: Use engaging Hindi/Hinglish with relevant emojis (🚀, 💡, 🎯).
-3. Presentation: Format with clear Bold headings and clean bullet points.
-${pdfText ? `\n\nATTACHED DOCUMENT / BOOK CONTENT:\n${pdfText.substring(0, 4000)}\n(Answer the user query strictly using the attached document context wherever applicable)` : ''}
-${mode === 'research' ? '\nMODE: DEEP RESEARCH REPORT (Provide a thorough, comprehensive, multi-section in-depth report with historical/technical facts)' : ''}
-${mode === 'canvas' ? '\nMODE: CANVAS LIVE EDITOR (Provide clean, ready-to-edit essays, code, or structured notes)' : ''}`;
-
-    const quizSystemPrompt = `You are an expert exam quiz architect. Output ONLY valid JSON:
+    const quizSystemPrompt = `You are an expert exam quiz creator. Output ONLY pure JSON:
 {
   "is_quiz": true,
   "quiz_title": "Interactive Quiz Title with Emoji",
   "questions": [
     {
       "id": 1,
-      "question": "Standard question text?",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "question": "Question text?",
+      "options": ["A", "B", "C", "D"],
       "correctIndex": 0,
-      "explanation": "Clear explanation of the answer."
+      "explanation": "Clear explanation."
     }
   ]
 }`;
@@ -145,16 +137,12 @@ ${mode === 'canvas' ? '\nMODE: CANVAS LIVE EDITOR (Provide clean, ready-to-edit 
                   return NextResponse.json({ quiz: parsed });
                 }
               }
-            } catch (e) {
-              console.log('Quiz parse fallback');
-            }
+            } catch (e) {}
           }
 
           return NextResponse.json({ answer: cleanAnswer });
         }
-      } catch (err) {
-        console.log(`Failed on ${modelName}`);
-      }
+      } catch (err) {}
     }
 
     return NextResponse.json({ error: 'AI सर्वर व्यस्त है।' }, { status: 500 });
