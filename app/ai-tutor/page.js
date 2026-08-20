@@ -9,23 +9,12 @@ function FormattedMessage({ text }) {
       {lines.map((line, idx) => {
         let trimmed = line.trim();
 
-        if (!trimmed) {
-          return <div key={idx} className="h-1" />;
-        }
+        if (!trimmed) return <div key={idx} className="h-1" />;
+        if (trimmed === '---' || trimmed === '***') return <hr key={idx} className="my-3 border-slate-800" />;
 
-        if (trimmed === '---' || trimmed === '***') {
-          return <hr key={idx} className="my-3 border-slate-800" />;
-        }
-
-        if (trimmed.startsWith('### ')) {
-          return <h3 key={idx} className="text-base font-bold text-blue-400 mt-3 mb-1">{trimmed.replace('### ', '')}</h3>;
-        }
-        if (trimmed.startsWith('## ')) {
-          return <h2 key={idx} className="text-lg font-bold text-indigo-300 mt-4 mb-1.5">{trimmed.replace('## ', '')}</h2>;
-        }
-        if (trimmed.startsWith('# ')) {
-          return <h1 key={idx} className="text-xl font-extrabold text-white mt-4 mb-2">{trimmed.replace('# ', '')}</h1>;
-        }
+        if (trimmed.startsWith('### ')) return <h3 key={idx} className="text-base font-bold text-blue-400 mt-3 mb-1">{trimmed.replace('### ', '')}</h3>;
+        if (trimmed.startsWith('## ')) return <h2 key={idx} className="text-lg font-bold text-indigo-300 mt-4 mb-1.5">{trimmed.replace('## ', '')}</h2>;
+        if (trimmed.startsWith('# ')) return <h1 key={idx} className="text-xl font-extrabold text-white mt-4 mb-2">{trimmed.replace('# ', '')}</h1>;
 
         const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
         let content = isBullet ? trimmed.substring(2) : trimmed;
@@ -33,11 +22,7 @@ function FormattedMessage({ text }) {
         const parts = content.split(/(\*\*.*?\*\*)/g);
         const renderedParts = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
-            return (
-              <strong key={pIdx} className="font-semibold text-white">
-                {part.slice(2, -2)}
-              </strong>
-            );
+            return <strong key={pIdx} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
           }
           return part;
         });
@@ -78,7 +63,7 @@ function InteractiveQuizBox({ quizData }) {
           <h3 className="font-bold text-sm sm:text-base text-blue-200 flex items-center gap-2">
             <span>🎯</span> {quizData.quiz_title || 'इंटरएक्टिव टेस्ट'}
           </h3>
-          <p className="text-xs text-slate-400">टच करके सही विकल्प चुनें</p>
+          <p className="text-xs text-slate-400">विकल्प पर टच करें</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -166,19 +151,42 @@ export default function AiTutorPage() {
     { 
       role: 'ai', 
       type: 'text', 
-      text: 'नमस्ते! ✨ मैं आपका AI सुपर ट्यूटर हूँ। मुझसे दुनिया का कोई भी सवाल पूछें—चाहे पढ़ाई हो, कोडिंग, शायरी या परीक्षा की तैयारी!' 
+      text: 'नमस्ते! ✨ मैं आपका ऑल-पावरफुल AI सुपर ट्यूटर हूँ। मुझसे कोई भी सवाल पूछें, बोलकर 🎤 या फ़ोटो 📷 भेजें, या उत्तर को आवाज़ में 🔊 सुनें!' 
     }
   ]);
   const [input, setInput] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Voice Speaker (Text-to-Speech)
+  const speakText = (text, idx) => {
+    if (!('speechSynthesis' in window)) {
+      alert('आपका ब्राउज़र आवाज़ सपोर्ट नहीं करता।');
+      return;
+    }
+    if (speakingIdx === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#_~]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'hi-IN';
+    utterance.rate = 1.0;
+    utterance.onend = () => setSpeakingIdx(null);
+    utterance.onerror = () => setSpeakingIdx(null);
+    setSpeakingIdx(idx);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleVoiceInput = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -242,7 +250,12 @@ export default function AiTutorPage() {
       if (data.quiz) {
         setMessages(prev => [...prev, { role: 'ai', type: 'quiz', quiz: data.quiz }]);
       } else if (data.answer) {
-        setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.answer }]);
+        setMessages(prev => [...prev, { 
+          role: 'ai', 
+          type: 'text', 
+          text: data.answer,
+          hasWebContext: data.hasWebContext 
+        }]);
       } else {
         setMessages(prev => [...prev, { role: 'ai', type: 'text', text: data.error || 'उत्तर लोड नहीं हो सका।' }]);
       }
@@ -266,11 +279,11 @@ export default function AiTutorPage() {
               <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 EduAI Super Intelligence
               </h1>
-              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-semibold rounded-full border border-blue-500/30">
-                GPT & Gemini Engine
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold rounded-full border border-emerald-500/30">
+                🌐 Live Web + Voice
               </span>
             </div>
-            <p className="text-xs text-slate-400">असीमित ज्ञान • चैट मेमोरी • टच-क्विज़ • फ़ोटो सॉल्वर</p>
+            <p className="text-xs text-slate-400">वेब सर्च • आवाज़ में सुनें 🔊 • टच-क्विज़ • फ़ोटो सॉल्वर</p>
           </div>
         </div>
       </div>
@@ -280,7 +293,7 @@ export default function AiTutorPage() {
         {messages.map((m, mIdx) => (
           <div key={mIdx} className={`flex ${m.role === 'user' ? 'justify-end print:hidden' : 'justify-start print:block'}`}>
             <div
-              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed ${
+              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl p-4 leading-relaxed relative group ${
                 m.role === 'user'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md text-sm'
                   : 'bg-slate-900/95 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-lg print:border-none print:bg-white print:p-0 print:text-black'
@@ -295,7 +308,31 @@ export default function AiTutorPage() {
               {m.type === 'quiz' ? (
                 <InteractiveQuizBox quizData={m.quiz} />
               ) : (
-                <FormattedMessage text={m.text} />
+                <div>
+                  {m.hasWebContext && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mb-2.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[11px] font-medium print:hidden">
+                      <span>🌐</span> लाइव वेब परिणाम सम्मिलित
+                    </div>
+                  )}
+                  <FormattedMessage text={m.text} />
+                  
+                  {/* Voice Speaker Button for AI message */}
+                  {m.role === 'ai' && m.text && (
+                    <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end print:hidden">
+                      <button
+                        onClick={() => speakText(m.text, mIdx)}
+                        className={`text-xs px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 ${
+                          speakingIdx === mIdx
+                            ? 'bg-red-500/20 border-red-500/50 text-red-300 animate-pulse'
+                            : 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
+                        }`}
+                        title="आवाज़ में सुनें"
+                      >
+                        <span>{speakingIdx === mIdx ? '⏹️ बंद करें' : '🔊 बोलकर सुनाओ'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -304,7 +341,7 @@ export default function AiTutorPage() {
         {loading && (
           <div className="flex justify-start print:hidden">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 flex items-center gap-2 shadow-md">
-              <span className="animate-spin text-blue-400">✨</span> AI उत्तर तैयार कर रहा है...
+              <span className="animate-spin text-blue-400">✨</span> AI दिमाग और लाइव वेब से उत्तर तैयार कर रहा है...
             </div>
           </div>
         )}
