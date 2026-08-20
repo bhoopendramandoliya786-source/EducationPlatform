@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../../../lib/supabase/client';
 import { 
   ChevronLeft, 
@@ -19,7 +19,9 @@ import {
 export default function QuizPlayPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const topicId = params.id;
+  const mode = searchParams.get('mode'); // 'mcq' | 'pyq' | null
   const supabase = createClient();
 
   const [questions, setQuestions] = useState([]);
@@ -33,12 +35,19 @@ export default function QuizPlayPage() {
     async function loadQuizData() {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('questions')
           .select('*')
           .eq('topic_id', topicId)
-          .eq('is_active', true)
-          .order('id', { ascending: true });
+          .eq('is_active', true);
+
+        if (mode === 'mcq') {
+          query = query.eq('is_pyq', false);
+        } else if (mode === 'pyq') {
+          query = query.eq('is_pyq', true);
+        }
+
+        const { data, error } = await query.order('id', { ascending: true });
 
         if (error) throw error;
         setQuestions(data || []);
@@ -50,7 +59,7 @@ export default function QuizPlayPage() {
     }
 
     if (topicId) loadQuizData();
-  }, [topicId]);
+  }, [topicId, mode]);
 
   let correctCount = 0;
   let wrongCount = 0;
@@ -101,7 +110,7 @@ export default function QuizPlayPage() {
     return (
       <div style={{ backgroundColor: '#131418', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center gap-3">
         <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        <span className="text-xs text-zinc-400">प्रैक्टिस टेस्ट लोड हो रहा है...</span>
+        <span className="text-xs text-zinc-400">प्रश्नावली लोड हो रही है...</span>
       </div>
     );
   }
@@ -109,10 +118,10 @@ export default function QuizPlayPage() {
   if (!questions.length) {
     return (
       <div style={{ backgroundColor: '#131418', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
-        <p className="text-zinc-400 text-sm">इस टॉपिक के लिए अभी कोई प्रश्न उपलब्ध नहीं हैं।</p>
+        <p className="text-zinc-400 text-sm">इस कैटेगरी में अभी कोई प्रश्न उपलब्ध नहीं हैं।</p>
         <button
           onClick={() => router.back()}
-          className="px-6 py-2.5 bg-blue-600 rounded-full text-xs font-bold text-white"
+          className="px-6 py-2.5 bg-blue-600 rounded-full text-xs font-bold text-white cursor-pointer"
         >
           वापस जाएँ
         </button>
@@ -247,7 +256,6 @@ export default function QuizPlayPage() {
       {/* 2. QUESTION & OPTIONS CONTAINER */}
       <main className="w-full max-w-lg mx-auto px-5 pt-3 pb-6 flex-1 flex flex-col justify-start">
         
-        {/* Question Info */}
         <div className="space-y-1.5 mb-5">
           <span className="text-sm text-zinc-400 font-medium block">
             Question {currentIndex + 1}
@@ -265,7 +273,7 @@ export default function QuizPlayPage() {
           </h1>
         </div>
 
-        {/* Option Cards with Direct Margins to Prevent Overlapping */}
+        {/* Option Cards */}
         <div className="flex flex-col gap-3.5 w-full">
           {['A', 'B', 'C', 'D'].map((optKey) => {
             const optText = currentQ[`option_${optKey.toLowerCase()}`];

@@ -32,9 +32,6 @@ export default function TopicDetailPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Interactive Answer State: { [questionId]: 'A' | 'B' | 'C' | 'D' }
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -105,21 +102,6 @@ export default function TopicDetailPage() {
     }, { onConflict: 'user_id,topic_id' });
   };
 
-  const handleOptionSelect = (qId, optionKey) => {
-    if (selectedAnswers[qId]) return;
-    setSelectedAnswers(prev => ({ ...prev, [qId]: optionKey }));
-  };
-
-  // Helper to format PYQ badge cleanly without duplicate years
-  const formatPyqBadge = (source, year) => {
-    const src = source ? String(source).trim() : 'PYQ';
-    const yr = year ? String(year).trim() : '';
-    if (yr && !src.includes(yr)) {
-      return `${src} ${yr}`;
-    }
-    return src;
-  };
-
   const mcqList = questions.filter(q => !q.is_pyq);
   const pyqList = questions.filter(q => q.is_pyq);
 
@@ -153,7 +135,7 @@ export default function TopicDetailPage() {
           </span>
         </div>
 
-        {/* 2026 VIP Topic Header Card */}
+        {/* Topic Header Card */}
         <section className="relative overflow-hidden bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-xl space-y-4">
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -195,7 +177,7 @@ export default function TopicDetailPage() {
           </div>
         </section>
 
-        {/* 4 Tabs Bar (Glassmorphic Slider) */}
+        {/* 4 Tabs Bar */}
         <nav className="grid grid-cols-4 gap-1.5 p-1.5 bg-slate-900/80 border border-slate-800/90 rounded-2xl sticky top-16 z-20 backdrop-blur-xl shadow-xl">
           {[
             { id: 'notes', label: 'Notes', icon: BookOpen, count: notes.length },
@@ -228,7 +210,7 @@ export default function TopicDetailPage() {
         {/* Tab Contents */}
         <div className="space-y-4">
 
-          {/* NOTES TAB */}
+          {/* 1. NOTES TAB */}
           {activeTab === 'notes' && (
             <div className="space-y-4">
               {notes.length === 0 ? (
@@ -271,105 +253,51 @@ export default function TopicDetailPage() {
             </div>
           )}
 
-          {/* MCQs & PYQs TAB */}
-          {(activeTab === 'mcq' || activeTab === 'pyq') && (
-            <div className="space-y-4">
-              {(activeTab === 'mcq' ? mcqList : pyqList).length === 0 ? (
-                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-xs">
-                  कोई प्रश्न उपलब्ध नहीं हैं।
-                </div>
-              ) : (
-                (activeTab === 'mcq' ? mcqList : pyqList).map((q, idx) => {
-                  const userSelected = selectedAnswers[q.id];
-                  const isAnswered = !!userSelected;
-
-                  return (
-                    <div key={q.id} className="bg-slate-900/60 border border-slate-800/90 rounded-2xl p-5 shadow-xl space-y-4 backdrop-blur-sm">
-
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm sm:text-base font-bold text-slate-100 leading-snug flex items-start gap-2">
-                          <span className="shrink-0 text-indigo-400 font-black bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20 text-xs">
-                            Q{idx + 1}.
-                          </span> 
-                          <span>{q.question}</span>
-                        </h3>
-                        {q.is_pyq && (
-                          <span className="shrink-0 px-2.5 py-1 text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg">
-                            {formatPyqBadge(q.source, q.year)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 4 Options Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {['A', 'B', 'C', 'D'].map(optKey => {
-                          const optText = q[`option_${optKey.toLowerCase()}`];
-                          if (!optText) return null;
-
-                          const isCorrect = q.answer === optKey;
-                          const isChosen = userSelected === optKey;
-
-                          let style = "bg-slate-950/60 border-slate-800/80 text-slate-300 hover:bg-slate-800/80 hover:border-slate-700";
-
-                          if (isAnswered) {
-                            if (isCorrect) {
-                              style = "bg-emerald-950/60 border-emerald-500 text-emerald-300 font-bold shadow-lg shadow-emerald-900/20";
-                            } else if (isChosen) {
-                              style = "bg-rose-950/60 border-rose-500 text-rose-300 font-bold";
-                            } else {
-                              style = "bg-slate-950/30 border-slate-900 text-slate-600 opacity-40";
-                            }
-                          }
-
-                          return (
-                            <button
-                              key={optKey}
-                              onClick={() => handleOptionSelect(q.id, optKey)}
-                              disabled={isAnswered}
-                              className={`flex items-center justify-between p-3.5 rounded-xl border text-xs sm:text-sm font-medium transition-all text-left cursor-pointer ${style}`}
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 border border-white/10 text-slate-300 shrink-0">
-                                  {optKey}
-                                </span>
-                                <span>{optText}</span>
-                              </div>
-                              {isAnswered && isCorrect && <span className="text-emerald-400 font-bold text-xs bg-emerald-500/20 px-2 py-0.5 rounded-md shrink-0">✓ सही</span>}
-                              {isAnswered && isChosen && !isCorrect && <span className="text-rose-400 font-bold text-xs bg-rose-500/20 px-2 py-0.5 rounded-md shrink-0">✕ गलत</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Explanation Reveal */}
-                      {isAnswered && (
-                        <div className="p-4 bg-slate-950/90 border border-indigo-900/40 rounded-xl space-y-2 text-xs">
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                            <div className="font-bold text-indigo-300 flex items-center gap-1.5">
-                              <span>💡</span> व्याख्या (Explanation)
-                            </div>
-                            <Link
-                              href={`/ai-tutor?q=${encodeURIComponent(q.question)}`}
-                              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1"
-                            >
-                              <Sparkles className="w-3 h-3 text-indigo-400" />
-                              <span>AI से गहराई में समझें ›</span>
-                            </Link>
-                          </div>
-                          <p className="text-slate-300 leading-relaxed pt-1">
-                            {q.explanation || `सही उत्तर विकल्प (${q.answer}) है।`}
-                          </p>
-                        </div>
-                      )}
-
-                    </div>
-                  );
-                })
-              )}
+          {/* 2. MCQs TAB */}
+          {activeTab === 'mcq' && (
+            <div className="bg-gradient-to-r from-blue-950/50 via-slate-900 to-indigo-950/40 border border-blue-500/30 rounded-3xl p-8 text-center space-y-4 shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto border border-blue-500/30 text-2xl shadow-lg">
+                💡
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-white">टॉपिक प्रैक्टिस MCQs ({mcqList.length} प्रश्न)</h3>
+                <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
+                  बिना समय सीमा के आराम से 1-by-1 प्रश्नों का अभ्यास करें और अपनी समझ मजबूत करें।
+                </p>
+              </div>
+              <Link 
+                href={`/quiz/${topicId}?mode=mcq`}
+                className="px-7 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-600/30 transition-all inline-flex items-center gap-2"
+              >
+                <span>Start MCQ Practice</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
           )}
 
-          {/* QUIZ TAB */}
+          {/* 3. PYQ TAB */}
+          {activeTab === 'pyq' && (
+            <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-orange-950/30 border border-amber-500/30 rounded-3xl p-8 text-center space-y-4 shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-amber-600/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30 text-2xl shadow-lg">
+                🏆
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-white">पिछले वर्षों के प्रश्न - PYQs ({pyqList.length} प्रश्न)</h3>
+                <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
+                  REET, RAS, SI और अन्य प्रतियोगी परीक्षाओं में आए प्रश्नों को 1-by-1 हल करें।
+                </p>
+              </div>
+              <Link 
+                href={`/quiz/${topicId}?mode=pyq`}
+                className="px-7 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-amber-600/30 transition-all inline-flex items-center gap-2"
+              >
+                <span>Start PYQ Practice</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+
+          {/* 4. QUIZ TAB */}
           {activeTab === 'quiz' && (
             <div className="bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/30 rounded-3xl p-8 text-center space-y-4 shadow-2xl backdrop-blur-xl">
               <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 text-indigo-300 flex items-center justify-center mx-auto border border-indigo-500/30 text-2xl shadow-lg">
@@ -383,7 +311,7 @@ export default function TopicDetailPage() {
               </div>
               <Link 
                 href={`/quiz/${topicId}`}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white font-extrabold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all inline-flex items-center gap-2"
+                className="px-7 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white font-extrabold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all inline-flex items-center gap-2"
               >
                 <span>Start Live Quiz Now</span>
                 <ChevronRight className="w-4 h-4" />
@@ -394,7 +322,7 @@ export default function TopicDetailPage() {
         </div>
       </main>
 
-      {/* 2026 VIP Universal Bottom App Bar */}
+      {/* Universal Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/90 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <Link
@@ -413,7 +341,6 @@ export default function TopicDetailPage() {
             <span>नोट्स</span>
           </Link>
 
-          {/* Floating AI Super Button */}
           <Link
             href="/ai-tutor"
             className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200 transition"
@@ -445,3 +372,4 @@ export default function TopicDetailPage() {
     </div>
   );
 }
+EOF
