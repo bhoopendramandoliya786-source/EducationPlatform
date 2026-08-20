@@ -1,386 +1,320 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../lib/supabase/client';
-import Navbar from '../../components/Navbar';
 import { 
-  Timer, 
   ArrowLeft, 
-  ArrowRight, 
-  RotateCcw, 
+  Clock, 
   Trophy, 
-  Check, 
-  AlertCircle 
+  CheckCircle2, 
+  XCircle, 
+  RotateCcw,
+  Sparkles,
+  ChevronRight,
+  Flame
 } from 'lucide-react';
 
-export default function QuizEnginePage({ params }) {
-  const resolvedParams = use(params);
-  const quizOrTopicId = resolvedParams?.id;
+export default function QuizEnginePage() {
+  const params = useParams();
   const router = useRouter();
+  const topicId = params.id;
   const supabase = createClient();
 
   const [questions, setQuestions] = useState([]);
+  const [topic, setTopic] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(300);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    async function loadQuiz() {
+    async function init() {
       setLoading(true);
       try {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
 
-        // 1. Check if ID is for a specific Topic or Quiz
-        let { data, error } = await supabase
+        // Fetch Topic Details
+        const { data: tData } = await supabase
+          .from('topics')
+          .select('*, chapters(name, subjects(name))')
+          .eq('id', topicId)
+          .single();
+        setTopic(tData);
+
+        // Fetch Questions for this Topic
+        const { data: qData } = await supabase
           .from('questions')
           .select('*')
-          .eq('topic_id', quizOrTopicId)
+          .eq('topic_id', topicId)
           .eq('is_active', true)
           .limit(20);
 
-        // 2. If no questions found by topic_id, fetch via quiz_questions table
-        if (!data || data.length === 0) {
-          const { data: quizQues } = await supabase
-            .from('quiz_questions')
-            .select('questions(*)')
-            .eq('quiz_id', quizOrTopicId);
-
-          if (quizQues && quizQues.length > 0) {
-            data = quizQues.map(item => item.questions).filter(Boolean);
-          }
-        }
-
-        // 3. Fallback: General active questions
-        if (!data || data.length === 0) {
-          const { data: generalQ } = await supabase
-            .from('questions')
-            .select('*')
-            .eq('is_active', true)
-            .limit(10);
-          data = generalQ || [];
-        }
-
-        setQuestions(data || []);
-        if (data && data.length > 0) {
-          setTimeLeft(data.length * 60);
-        }
+        setQuestions(qData || []);
       } catch (err) {
-        console.error('Error loading quiz questions:', err);
+        console.error('Quiz load error:', err);
       } finally {
         setLoading(false);
       }
     }
+    if (topicId) init();
+  }, [topicId]);
 
-    if (quizOrTopicId) {
-      loadQuiz();
-    }
-  }, [quizOrTopicId]);
-
-  // Timer Effect
+  // Timer Countdown
   useEffect(() => {
-    if (loading || isSubmitted || timeLeft <= 0) return;
+    if (isSubmitted || loading || questions.length === 0) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmitQuiz();
+          handleSubmit();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [loading, isSubmitted, timeLeft]);
+  }, [isSubmitted, loading, questions]);
 
-  const handleSelectOption = (optionKey) => {
-    if (isSubmitted || questions.length === 0) return;
-    const currentQ = questions[currentIndex];
-    setSelectedAnswers(prev => ({
-      ...prev,
-      [currentQ.id]: optionKey
-    }));
+  const handleSelectOption = (optKey) => {
+    if (isSubmitted) return;
+    const qId = questions[currentIndex].id;
+    setSelectedAnswers(prev => ({ ...prev, [qId]: optKey }));
   };
 
-  const handleSubmitQuiz = async () => {
+  const calculateScore = () => {
+    let correct = 0;
+    questions.forEach(q => {
+      if (selectedAnswers[q.id] === q.answer) correct++;
+    });
+    return {
+      correct,
+      wrong: Object.keys(selectedAnswers).length - correct,
+      total: questions.length,
+      score: correct * 10
+    };
+  };
+
+  const handleSubmit = async () => {
     setIsSubmitted(true);
+    const { correct, wrong, total, score } = calculateScore();
 
-    if (user && questions.length > 0) {
-      let correct = 0;
-      let wrong = 0;
-
-      questions.forEach(q => {
-        if (selectedAnswers[q.id] === q.answer) correct++;
-        else if (selectedAnswers[q.id]) wrong++;
-      });
-
-      const score = correct * 2;
-
+    if (user) {
       try {
-        const { data: attempt } = await supabase.from('attempts').insert({
+        // Record Attempt in Supabase
+        await supabase.from('attempts').insert({
           user_id: user.id,
-          total_questions: questions.length,
+          total_questions: total,
           correct_answers: correct,
           wrong_answers: wrong,
           score: score,
           completed_at: new Date().toISOString()
-        }).select().single();
+        });
 
-        if (attempt) {
-          const answersToInsert = questions.map(q => ({
-            attempt_id: attempt.id,
-            question_id: q.id,
-            selected_answer: selectedAnswers[q.id] || null,
-            correct_answer: q.answer,
-            is_correct: selectedAnswers[q.id] === q.answer
-          }));
-
-          await supabase.from('attempt_answers').insert(answersToInsert);
-        }
-      } catch (e) {
-        console.error('Error saving attempt:', e);
+        // Update Topic Progress
+        await supabase.from('progress').upsert({
+          user_id: user.id,
+          topic_id: topicId,
+          completed: correct >= Math.floor(total * 0.6),
+          questions_attempted: total,
+          questions_correct: correct,
+          score: score,
+          last_studied_at: new Date().toISOString()
+        }, { onConflict: 'user_id,topic_id' });
+      } catch (err) {
+        console.error('Progress sync error:', err);
       }
     }
   };
 
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#090D16] text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-amber-500"></div>
+      <div className="min-h-screen bg-[#050711] text-white flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+        <span className="text-xs text-slate-400">क्विज़ तैयार हो रही है...</span>
       </div>
     );
   }
 
   if (questions.length === 0) {
     return (
-      <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col items-center justify-center p-4 space-y-4 font-sans">
-        <AlertCircle className="w-12 h-12 text-slate-500" />
-        <h2 className="text-lg font-bold">इस टॉपिक/क्विज़ के लिए प्रश्न उपलब्ध नहीं हैं</h2>
-        <button 
-          onClick={() => router.back()} 
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl text-white"
-        >
-          वापस जाएँ
-        </button>
+      <div className="min-h-screen bg-[#050711] text-white p-6 flex flex-col items-center justify-center text-center space-y-4">
+        <p className="text-sm text-slate-400">इस टॉपिक के लिए अभी कोई प्रश्न उपलब्ध नहीं हैं।</p>
+        <Link href={`/topic/${topicId}`} className="px-4 py-2 bg-indigo-600 rounded-xl text-xs font-bold">
+          वापस टॉपिक पर जाएँ
+        </Link>
       </div>
     );
   }
 
   const currentQ = questions[currentIndex];
-  const answeredCount = Object.keys(selectedAnswers).length;
-  const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
+  const currentSelected = selectedAnswers[currentQ?.id];
+  const { correct, wrong, total, score } = calculateScore();
 
-  let correctCount = 0;
-  let wrongCount = 0;
-  if (isSubmitted) {
-    questions.forEach(q => {
-      if (selectedAnswers[q.id] === q.answer) correctCount++;
-      else if (selectedAnswers[q.id]) wrongCount++;
-    });
-  }
+  const formatTime = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${mins}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 font-sans pb-24 selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#050711] text-slate-100 font-sans pb-28">
 
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-[#090D16]/95 backdrop-blur-md border-b border-slate-800 px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <button 
-            onClick={() => router.back()} 
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+      <header className="sticky top-0 z-40 bg-[#050711]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <Link 
+            href={`/topic/${topicId}`}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Quit</span>
-          </button>
+            <ArrowLeft className="w-4 h-4 text-indigo-400" />
+            <span className="font-semibold">Exit</span>
+          </Link>
 
-          {!isSubmitted && (
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold border ${
-              timeLeft < 60 
-                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 animate-pulse' 
-                : 'bg-slate-900 text-amber-400 border-slate-800'
-            }`}>
-              <Timer className="w-3.5 h-3.5" />
-              <span>{formatTime(timeLeft)}</span>
-            </div>
-          )}
-
-          <div className="text-xs text-slate-400 font-medium">
-            उत्तर दिए: <span className="text-emerald-400 font-bold">{answeredCount}</span>/{questions.length}
+          <div className="flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-xs font-mono font-bold text-amber-400">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{formatTime(timeLeft)}</span>
           </div>
+
+          <span className="text-xs font-bold text-indigo-400">
+            {currentIndex + 1} / {questions.length}
+          </span>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 pt-4 space-y-4">
+      <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
 
-        {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-          <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-amber-500 transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-
-        {/* Question Palette */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
-          {questions.map((q, idx) => {
-            const isAnswered = !!selectedAnswers[q.id];
-            const isCurrent = idx === currentIndex;
-
-            let badgeStyle = "bg-slate-900 border-slate-800 text-slate-400";
-            if (isCurrent) badgeStyle = "bg-amber-500 border-amber-400 text-slate-950 font-bold scale-105 shadow-md shadow-amber-500/20";
-            else if (isAnswered) badgeStyle = "bg-blue-600/20 border-blue-500/40 text-blue-400 font-semibold";
-
-            return (
-              <button
-                key={q.id}
-                onClick={() => setCurrentIndex(idx)}
-                className={`w-8 h-8 rounded-xl shrink-0 text-xs border flex items-center justify-center transition-all ${badgeStyle}`}
-              >
-                {idx + 1}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* RESULT SCORECARD */}
+        {/* RESULT VIEW */}
         {isSubmitted ? (
-          <div className="bg-gradient-to-br from-slate-900 via-[#111726] to-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
-              <Trophy className="w-8 h-8" />
+          <section className="p-6 rounded-3xl bg-gradient-to-b from-indigo-950/70 to-slate-900 border border-indigo-500/30 text-center space-y-5 shadow-2xl">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center mx-auto text-3xl shadow-xl shadow-indigo-600/40">
+              🏆
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-2xl font-black text-white">क्विज़ परिणाम</h2>
-              <p className="text-xs text-slate-400">आपने टेस्ट सफलतापूर्वक पूरा कर लिया है!</p>
+              <h2 className="text-xl font-black text-white">क्विज़ परिणाम</h2>
+              <p className="text-xs text-slate-400">{topic?.name}</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 max-w-sm mx-auto">
-              <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
-                <div className="text-xl font-bold text-emerald-400">{correctCount}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">सही उत्तर</div>
+            <div className="grid grid-cols-3 gap-2 pt-2">
+              <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-2xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold">स्कोर</span>
+                <p className="text-lg font-black text-indigo-400">+{score} XP</p>
               </div>
-              <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
-                <div className="text-xl font-bold text-rose-400">{wrongCount}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">गलत उत्तर</div>
+              <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl">
+                <span className="text-[10px] text-emerald-400 uppercase font-bold">सही</span>
+                <p className="text-lg font-black text-emerald-400">{correct}</p>
               </div>
-              <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
-                <div className="text-xl font-bold text-amber-400">{questions.length - (correctCount + wrongCount)}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">छोड़े गए</div>
+              <div className="p-3 bg-rose-950/40 border border-rose-500/30 rounded-2xl">
+                <span className="text-[10px] text-rose-400 uppercase font-bold">गलत</span>
+                <p className="text-lg font-black text-rose-400">{wrong}</p>
               </div>
             </div>
 
-            <div className="flex gap-2 justify-center pt-2">
+            <div className="pt-2 flex flex-col gap-2.5">
               <button
                 onClick={() => {
-                  setSelectedAnswers({});
                   setIsSubmitted(false);
+                  setSelectedAnswers({});
                   setCurrentIndex(0);
-                  setTimeLeft(questions.length * 60);
+                  setTimeLeft(600);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-all flex items-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>पुनः प्रयास करें</span>
+                <span>पुनः प्रयास करें (Retake)</span>
               </button>
+
               <Link
-                href="/"
-                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all"
+                href={`/topic/${topicId}`}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl text-xs font-bold transition text-center"
               >
-                होम पर जाएँ
+                नोट्स व व्याख्या देखें
               </Link>
             </div>
-          </div>
+          </section>
         ) : (
-          /* ACTIVE QUESTION CARD */
-          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5">
-            <div className="flex items-start justify-between gap-3">
-              <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[11px] font-mono font-bold">
-                प्रश्न {currentIndex + 1} of {questions.length}
-              </span>
-              {currentQ?.is_pyq && (
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold">
-                  {currentQ.source || 'PYQ'}
+          /* ACTIVE QUESTION VIEW */
+          <div className="space-y-4">
+
+            {/* Question Card */}
+            <div className="p-5 rounded-3xl bg-slate-900/70 border border-slate-800/90 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  Question {currentIndex + 1}
                 </span>
-              )}
+                {currentQ.is_pyq && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    PYQ
+                  </span>
+                )}
+              </div>
+
+              <h3 className="text-base font-bold text-white leading-relaxed">
+                {currentQ.question}
+              </h3>
             </div>
 
-            <h3 className="text-base sm:text-lg font-bold text-white leading-relaxed">
-              {currentQ?.question}
-            </h3>
-
             {/* Options */}
-            <div className="grid grid-cols-1 gap-2.5">
+            <div className="space-y-2.5">
               {['A', 'B', 'C', 'D'].map(optKey => {
-                const optText = currentQ?.[`option_${optKey.toLowerCase()}`];
+                const optText = currentQ[`option_${optKey.toLowerCase()}`];
                 if (!optText) return null;
-
-                const isSelected = selectedAnswers[currentQ.id] === optKey;
+                const isSelected = currentSelected === optKey;
 
                 return (
                   <button
                     key={optKey}
                     onClick={() => handleSelectOption(optKey)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium transition-all text-left ${
+                    className={`w-full p-4 rounded-2xl border text-xs sm:text-sm font-medium transition-all text-left flex items-center gap-3 ${
                       isSelected
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-md shadow-blue-500/10'
-                        : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:border-slate-600'
+                        ? 'bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/10'
+                        : 'bg-slate-900/50 border-slate-800 text-slate-300 hover:bg-slate-900 hover:border-slate-700'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold border ${
-                        isSelected 
-                          ? 'bg-blue-600 text-white border-blue-500' 
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}>
-                        {optKey}
-                      </span>
-                      <span>{optText}</span>
-                    </div>
-                    {isSelected && <Check className="w-4 h-4 text-blue-400" />}
+                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                      isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }`}>
+                      {optKey}
+                    </span>
+                    <span>{optText}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Bottom Actions */}
-            <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-2">
+            {/* Bottom Controls */}
+            <div className="pt-2 flex items-center justify-between gap-3">
               <button
                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 disabled:opacity-30 hover:bg-slate-700 transition-all flex items-center gap-1"
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 disabled:opacity-30"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>पिछला</span>
+                पिछला
               </button>
 
-              {currentIndex === questions.length - 1 ? (
+              {currentIndex < questions.length - 1 ? (
                 <button
-                  onClick={handleSubmitQuiz}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/20 transition-all"
+                  onClick={() => setCurrentIndex(prev => prev + 1)}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5"
                 >
-                  सबमिट करें
+                  <span>अगला प्रश्न</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button
-                  onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md transition-all flex items-center gap-1"
+                  onClick={handleSubmit}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
                 >
-                  <span>अगला</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  क्विज़ सबमिट करें ✓
                 </button>
               )}
             </div>
+
           </div>
         )}
 
