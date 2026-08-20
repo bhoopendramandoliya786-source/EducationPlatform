@@ -108,6 +108,15 @@ export default function QuizPlayPage() {
     }
   };
 
+  // परीक्षा नाम को डबल होने से रोकने वाला फंक्शन
+  const getExamLabel = () => {
+    if (!currentQ?.source && !currentQ?.year) return null;
+    const src = currentQ.source || '';
+    const yr = currentQ.year ? String(currentQ.year) : '';
+    if (src.includes(yr)) return src;
+    return `${src} ${yr}`.trim();
+  };
+
   if (loading) {
     return (
       <div style={{ backgroundColor: '#131418', minHeight: '100dvh' }} className="text-white flex flex-col items-center justify-center gap-3">
@@ -186,6 +195,8 @@ export default function QuizPlayPage() {
     );
   }
 
+  const examTag = getExamLabel();
+
   return (
     <div style={{ backgroundColor: '#131418', minHeight: '100dvh' }} className="text-zinc-100 font-sans flex flex-col justify-start selection:bg-blue-500/30">
 
@@ -263,10 +274,10 @@ export default function QuizPlayPage() {
             Question {currentIndex + 1}
           </span>
 
-          {(currentQ.source || currentQ.year) && (
+          {examTag && (
             <div className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
               <span>📌</span>
-              <span>[परीक्षा: {currentQ.source} {currentQ.year || ''}]</span>
+              <span>[परीक्षा: {examTag}]</span>
             </div>
           )}
 
