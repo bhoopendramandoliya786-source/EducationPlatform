@@ -1,25 +1,29 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
 
-// Modern Markdown & Image Renderer
+import React, { useState, useRef, useEffect } from 'react';
+
+// Enhanced Modern Markdown & Image Renderer
 function FormattedMessage({ text }) {
+  if (!text) return null;
   const lines = text.split('\n');
 
   return (
-    <div className="space-y-3 text-[14px] sm:text-[15px] leading-relaxed text-slate-200 font-sans tracking-wide">
+    <div className="space-y-2.5 text-[14px] sm:text-[15px] leading-relaxed text-slate-200 font-sans tracking-wide">
       {lines.map((line, idx) => {
         let trimmed = line.trim();
 
         if (!trimmed) return <div key={idx} className="h-1" />;
-        if (trimmed === '---' || trimmed === '***') return <hr key={idx} className="my-4 border-slate-800" />;
+        if (trimmed === '---' || trimmed === '***') {
+          return <hr key={idx} className="my-3 border-slate-800" />;
+        }
 
-        // Image Embed: ![alt](url)
+        // 1. Image Embed: ![alt](url)
         const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
         if (imgMatch) {
           const altText = imgMatch[1];
           const imgSrc = imgMatch[2];
           return (
-            <div key={idx} className="my-4 rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-900/90 shadow-2xl group transition-all duration-300 hover:border-indigo-500/50">
+            <div key={idx} className="my-3 rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-900/90 shadow-2xl group transition-all duration-300 hover:border-indigo-500/50">
               <div className="relative">
                 <img 
                   src={imgSrc} 
@@ -28,13 +32,13 @@ function FormattedMessage({ text }) {
                   loading="lazy"
                 />
               </div>
-              <div className="p-3.5 bg-slate-900/95 backdrop-blur flex items-center justify-between border-t border-slate-800">
+              <div className="p-3 bg-slate-900/95 backdrop-blur flex items-center justify-between border-t border-slate-800">
                 <span className="text-xs font-medium text-slate-300 flex items-center gap-2 truncate">
                   <span className="p-1 rounded-md bg-indigo-500/20 text-indigo-400">🎨</span> {altText}
                 </span>
                 <a 
                   href={imgSrc} 
-                  download="EduAI-Image.jpg"
+                  download="EduAI-Image.jpg" 
                   target="_blank" 
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30"
@@ -46,34 +50,44 @@ function FormattedMessage({ text }) {
           );
         }
 
-        // Headers
-        if (trimmed.startsWith('### ')) return <h3 key={idx} className="text-base font-bold text-indigo-300 mt-3 mb-1">{trimmed.replace('### ', '')}</h3>;
-        if (trimmed.startsWith('## ')) return <h2 key={idx} className="text-lg font-extrabold text-blue-400 mt-4 mb-2">{trimmed.replace('## ', '')}</h2>;
-        if (trimmed.startsWith('# ')) return <h1 key={idx} className="text-xl font-black text-white mt-4 mb-2 tracking-tight">{trimmed.replace('# ', '')}</h1>;
+        // 2. Headings
+        if (trimmed.startsWith('### ')) {
+          return <h3 key={idx} className="text-sm sm:text-base font-bold text-indigo-300 mt-2 mb-1">{trimmed.replace('### ', '')}</h3>;
+        }
+        if (trimmed.startsWith('## ')) {
+          return <h2 key={idx} className="text-base sm:text-lg font-bold text-blue-400 mt-3 mb-1.5">{trimmed.replace('## ', '')}</h2>;
+        }
+        if (trimmed.startsWith('# ')) {
+          return <h1 key={idx} className="text-lg sm:text-xl font-black text-white mt-3 mb-2">{trimmed.replace('# ', '')}</h1>;
+        }
 
-        // Bullets
+        // 3. Bullets
         const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
         let content = isBullet ? trimmed.substring(2) : trimmed;
 
-        // Bold
+        // Parse Bold Text (**bold**)
         const parts = content.split(/(\*\*.*?\*\*)/g);
         const renderedParts = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={pIdx} className="font-semibold text-white bg-white/5 px-1 rounded">{part.slice(2, -2)}</strong>;
+            return (
+              <strong key={pIdx} className="font-semibold text-white bg-white/5 px-1 rounded">
+                {part.slice(2, -2)}
+              </strong>
+            );
           }
           return part;
         });
 
         if (isBullet) {
           return (
-            <div key={idx} className="flex items-start gap-2.5 pl-1">
+            <div key={idx} className="flex items-start gap-2.5 pl-1 my-0.5">
               <span className="text-indigo-400 font-bold text-sm mt-0.5">•</span>
               <div className="flex-1 text-slate-200">{renderedParts}</div>
             </div>
           );
         }
 
-        return <p key={idx}>{renderedParts}</p>;
+        return <p key={idx} className="my-0.5">{renderedParts}</p>;
       })}
     </div>
   );
@@ -96,7 +110,7 @@ function InteractiveQuizBox({ quizData, onNextSet }) {
 
   return (
     <div className="space-y-4 w-full">
-      {/* Quiz Top Glass Banner */}
+      {/* Quiz Top Banner */}
       <div className="bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-slate-900/60 border border-indigo-500/30 p-4 rounded-2xl flex items-center justify-between shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-xl">
@@ -321,9 +335,9 @@ export default function ModernAiTutorPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           question: textToSend, 
-          image: currentImg,
-          messagesHistory: newHistory,
-          mode: currentTool
+          image: currentImg, 
+          messagesHistory: newHistory, 
+          mode: currentTool 
         })
       });
       const data = await res.json();
@@ -352,7 +366,7 @@ export default function ModernAiTutorPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] max-w-5xl mx-auto p-2 sm:p-4 text-slate-100 print:p-0 print:max-w-none">
 
-      {/* 2026 Ultra-Header */}
+      {/* Header */}
       <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-4 rounded-2xl mb-3 shadow-2xl flex items-center justify-between">
         <div className="flex items-center gap-3.5">
           <div className="relative">
@@ -376,20 +390,20 @@ export default function ModernAiTutorPage() {
 
         <button
           onClick={() => setMessages([{ role: 'ai', type: 'text', text: 'नमस्ते! नया सत्र शुरू हो गया है। आप क्या पूछना चाहते हैं?' }])}
-          className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-xs font-semibold rounded-xl text-slate-300 transition flex items-center gap-1.5 shadow-sm"
+          className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-xs font-semibold rounded-xl text-slate-300 transition flex items-center gap-1.5 shadow-sm cursor-pointer"
         >
           <span>🔄</span> न्यू चैट
         </button>
       </div>
 
-      {/* Suggestion Chips (Hero Section on First Load) */}
+      {/* Suggestion Chips */}
       {messages.length === 1 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 animate-fadeIn">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           {modernSuggestions.map((item, idx) => (
             <button
               key={idx}
               onClick={() => sendMessage(item.prompt, item.mode)}
-              className="p-3 bg-slate-900/60 hover:bg-indigo-950/40 border border-slate-800/90 hover:border-indigo-500/50 rounded-2xl text-left transition shadow-md group"
+              className="p-3 bg-slate-900/60 hover:bg-indigo-950/40 border border-slate-800/90 hover:border-indigo-500/50 rounded-2xl text-left transition shadow-md group cursor-pointer"
             >
               <span className="text-xs font-bold text-slate-200 group-hover:text-indigo-300 block mb-1">
                 {item.title}
@@ -432,7 +446,7 @@ export default function ModernAiTutorPage() {
                     <div className="mt-3 pt-2.5 border-t border-slate-800/70 flex items-center justify-end">
                       <button
                         onClick={() => speakText(m.text, mIdx)}
-                        className={`text-xs px-3 py-1 rounded-xl border transition flex items-center gap-1.5 ${
+                        className={`text-xs px-3 py-1 rounded-xl border transition flex items-center gap-1.5 cursor-pointer ${
                           speakingIdx === mIdx
                             ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 animate-pulse'
                             : 'bg-slate-800/80 border-slate-700/80 hover:bg-slate-700 text-slate-300'
@@ -451,91 +465,5 @@ export default function ModernAiTutorPage() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-xs sm:text-sm text-slate-300 flex items-center gap-2.5 shadow-xl">
-              <span className="animate-spin text-indigo-400">✨</span> AI सुपर दिमाग प्रोसेस कर रहा है...
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Image Preview if selected */}
-      {imagePreview && (
-        <div className="relative mt-2 p-2 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center gap-3 max-w-xs shadow-lg">
-          <img src={imagePreview} alt="Preview" className="h-12 w-12 object-cover rounded-xl border border-slate-700" />
-          <span className="text-xs text-slate-300 truncate">फ़ोटो अटैच हो गई</span>
-          <button onClick={() => setImagePreview(null)} className="ml-auto text-xs bg-rose-500/20 text-rose-400 p-1 px-2 rounded-lg">✕</button>
-        </div>
-      )}
-
-      {/* Floating Tools Sheet */}
-      {showToolsMenu && (
-        <div className="mb-2 p-3 bg-slate-900/95 border border-slate-800/90 rounded-2xl shadow-2xl backdrop-blur-xl flex gap-2 animate-fadeIn">
-          <button
-            onClick={() => { setActiveTool('image'); setShowToolsMenu(false); }}
-            className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition flex flex-col gap-1"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎨</span>
-              <span className="text-xs font-bold text-white">Create 4K Image</span>
-            </div>
-            <span className="text-[10px] text-slate-400">टेक्स्ट से सुंदर AI चित्र बनाएँ</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTool('quiz'); setShowToolsMenu(false); }}
-            className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition flex flex-col gap-1"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎯</span>
-              <span className="text-xs font-bold text-white">Interactive Quiz</span>
-            </div>
-            <span className="text-[10px] text-slate-400">टच-बटन वाला टेस्ट पेपर</span>
-          </button>
-        </div>
-      )}
-
-      {/* Ultra-Modern Floating Input Bar */}
-      <div className="mt-2.5 flex items-center gap-2 bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 p-2 rounded-2xl shadow-2xl">
-        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
-
-        <button
-          type="button"
-          onClick={() => setShowToolsMenu(!showToolsMenu)}
-          className={`p-2.5 rounded-xl transition text-base font-bold ${
-            showToolsMenu ? 'bg-indigo-600 text-white rotate-45' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'
-          }`}
-          title="Tools Menu"
-        >
-          ＋
-        </button>
-
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition" title="फ़ोटो अपलोड">📷</button>
-        <button type="button" onClick={handleVoiceInput} className={`p-2.5 rounded-xl transition ${isListening ? 'bg-rose-500 animate-pulse text-white' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'}`} title="बोलकर पूछें">🎤</button>
-
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          placeholder={activeTool === 'image' ? "किस चीज़ का 4K चित्र बनाना है?..." : "ChatGPT / Gemini से कुछ भी पूछें..."}
-          rows={1}
-          className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
-        />
-
-        <button 
-          type="button" 
-          onClick={() => sendMessage()} 
-          disabled={loading || (!input.trim() && !imagePreview)} 
-          className="p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition shadow-lg shadow-indigo-600/25"
-        >
-          🚀
-        </button>
-      </div>
-
-    </div>
-  );
+              <span
 }

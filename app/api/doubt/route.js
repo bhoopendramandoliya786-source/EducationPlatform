@@ -47,8 +47,15 @@ export async function POST(req) {
       question.toLowerCase().includes('क्विज')
     ));
 
-    const baseSystemPrompt = `You are EduAI Super Intelligence (powered by Gemini & ChatGPT Pro).
-Answer clearly in natural Hindi/Hinglish with emojis. Use Bold headings and bullet points. Never output raw broken table characters or broken URLs.
+    const baseSystemPrompt = `You are EduAI Super Intelligence — an authentic, highly accurate, and universal AI collaborator (like Gemini & ChatGPT Pro).
+
+Guidelines:
+1. Universal Knowledge: Answer any domain accurately (Coding, Science, Mathematics, World History, Indian Polity, Rajasthan GK, General Knowledge, Logic). Always provide 100% authentic and factual answers without hallucination.
+2. Natural Conversation: Words like 'Bhai', 'Bro', 'Sir', 'Dost' are friendly conversational greetings in Hindi/Hinglish. Never treat them as a proper name or historical figure.
+3. Clean Formatting: 
+   - Never output raw HTML tags like <br> or broken tags.
+   - Use clean Markdown: bold headers, bullet points (*), or clean markdown tables.
+   - Deliver clear, well-structured, scannable, and helpful responses in natural Hindi/Hinglish.
 ${pdfText ? `\n\nATTACHED FILE CONTENT:\n${pdfText.substring(0, 4000)}` : ''}`;
 
     const quizSystemPrompt = `You are an expert exam quiz creator.
@@ -97,12 +104,12 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
       messages.push({ role: 'user', content: question });
     }
 
+    // Groq Valid Active Models
     const candidateModels = [
-      'openai/gpt-oss-120b',
-      'openai/gpt-oss-20b',
-      'qwen/qwen3-32b',
-      'meta-llama/llama-4-scout-17b-16e-instruct',
-      'qwen/qwen3.6-27b'
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'mixtral-8x7b-32768',
+      'gemma2-9b-it'
     ];
 
     for (const modelName of candidateModels) {
@@ -128,8 +135,7 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
             .replace(/<think>[\s\S]*?<\/think>/gi, '')
             .replace(/```json/gi, '')
             .replace(/```/gi, '')
-            .replace(/\|\s*---\s*\|/g, '')
-            .replace(/\|/g, '')
+            .replace(/<br\s*\/?>/gi, '\n')
             .trim();
 
           if (isQuizReq) {
@@ -153,7 +159,7 @@ Do not wrap in markdown quotes. Only valid pure JSON.`;
       }
     }
 
-    return NextResponse.json({ error: 'AI सर्वर व्यस्त है।' }, { status: 500 });
+    return NextResponse.json({ error: 'AI सर्वर व्यस्त है। कृपया पुनः प्रयास करें।' }, { status: 500 });
   } catch (error) {
     return NextResponse.json({ error: `सर्वर एरर: ${error.message}` }, { status: 500 });
   }
