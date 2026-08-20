@@ -1,551 +1,474 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { supabase } from "../../../lib/supabase";
+import { createClient } from "../../../lib/supabase/client";
 
-const BATCH_SIZE = 500;
+const BATCH_SIZE = 100;
 
 export default function JsonImport() {
+  const supabase = createClient();
   const fileInputRef = useRef(null);
 
   const [jsonText, setJsonText] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
-  const [imported, setImported] = useState(0);
-  const [failed, setFailed] = useState(0);
+  const [stats, setStats] = useState({
+    topicsCreated: 0,
+    notesImported: 0,
+    questionsImported: 0,
+    skippedDuplicates: 0,
+    failed: 0,
+  });
 
-  function normalizeQuestion(q) {
-    if (!q || typeof q !== "object") {
-      throw new Error("Invalid question object");
-    }
+  // Helper: Normalize & validate single question
+  function normalizeQuestion(q, targetTopicId) {
+    if (!q || typeof q !== "object") throw new Error("Invalid question object");
+    if (!q.question?.toString().trim()) throw new Error("Question text missing");
 
-    if (!q.question?.toString().trim()) {
-      throw new Error("Question text missing");
-    }
-
-    if (
-      q.topic_id !== null &&
-      q.topic_id !== undefined &&
-      q.topic_id !== "" &&
-      !Number.isFinite(Number(q.topic_id))
-    ) {
-      throw new Error(
-        `Invalid topic_id: ${q.topic_id}`
-      );
-    }
-
-    const answer = String(
-      q.answer || "A"
-    ).toUpperCase();
-
+    const answer = String(q.answer || "A").toUpperCase().trim();
     if (!["A", "B", "C", "D"].includes(answer)) {
-      throw new Error(
-        `Invalid answer: ${answer}`
-      );
+      throw new Error(`Invalid answer choice: ${answer}`);
     }
 
     return {
-      topic_id:
-        q.topic_id !== null &&
-        q.topic_id !== undefined &&
-        q.topic_id !== ""
-          ? Number(q.topic_id)
-          : null,
-
+      topic_id: targetTopicId || (q.topic_id ? Number(q.topic_id) : null),
       question: String(q.question).trim(),
-
       option_a: String(q.option_a || "").trim(),
       option_b: String(q.option_b || "").trim(),
       option_c: String(q.option_c || "").trim(),
       option_d: String(q.option_d || "").trim(),
-
       answer,
-
-      explanation:
-        q.explanation !== undefined &&
-        q.explanation !== null
-          ? String(q.explanation)
-          : "",
-
-      type: ["mcq", "true_false", "multiple"].includes(
-        q.type
-      )
-        ? q.type
-        : "mcq",
-
-      year:
-        q.year !== null &&
-        q.year !== undefined &&
-        q.year !== ""
-          ? Number(q.year)
-          : null,
-
-      difficulty: [
-        "easy",
-        "medium",
-        "hard",
-      ].includes(q.difficulty)
-        ? q.difficulty
-        : "medium",
-
-      source:
-        q.source !== undefined &&
-        q.source !== null
-          ? String(q.source)
-          : "",
-
+      explanation: q.explanation ? String(q.explanation).trim() : "",
+      type: ["mcq", "true_false", "multiple"].includes(q.type) ? q.type : "mcq",
+      year: q.year ? Number(q.year) : null,
+      difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
+      source: q.source ? String(q.source).trim() : (q.is_pyq ? "PYQ" : null),
       is_pyq: Boolean(q.is_pyq),
-
-      tags: Array.isArray(q.tags)
-        ? q.tags.map(String)
-        : [],
+      tags: Array.isArray(q.tags) ? q.tags.map(String) : [],
+      is_active: true,
     };
   }
 
-  async function importQuestions(data) {
-    setMessage("");
-    setImported(0);
-    setFailed(0);
-    setProgress(0);
+  // 1. Process Master Universal JSON (Complete Topic Bundle)
+  async function processMasterTopic(data) {
+    let tCreated = 0;
+    let nImported = 0;
+    let qImported = 0;
+    let dupCount = 0;
+    let failCount = 0;
 
-    if (!Array.isArray(data)) {
-      setMessage(
-        "❌ JSON का root एक Array होना चाहिए।"
-      );
-      return;
+    // Step A: Find or Create Subject
+    let subjectId = data.subject_id;
+    if (!subjectId && data.subject_name) {
+      const { data: existingSub } = await supabase
+        .from("subjects")
+        .select("id")
+        .ilike("name", data.subject_name.trim())
+        .maybeSingle();
+
+      if (existingSub) {
+        subjectId = existingSub.id;
+      } else {
+        const { data: newSub, error: subErr } = await supabase
+          .from("subjects")
+          .insert({ name: data.subject_name.trim(), is_active: true })
+          .select("id")
+          .single();
+        if (subErr) throw subErr;
+        subjectId = newSub.id;
+      }
     }
 
-    if (data.length === 0) {
-      setMessage(
-        "❌ JSON में कोई question नहीं है।"
-      );
-      return;
+    // Step B: Find or Create Chapter
+    let chapterId = data.chapter_id;
+    if (!chapterId && data.chapter_name && subjectId) {
+      const { data: existingChap } = await supabase
+        .from("chapters")
+        .select("id")
+        .eq("subject_id", subjectId)
+        .ilike("name", data.chapter_name.trim())
+        .maybeSingle();
+
+      if (existingChap) {
+        chapterId = existingChap.id;
+      } else {
+        const { data: newChap, error: chapErr } = await supabase
+          .from("chapters")
+          .insert({
+            subject_id: subjectId,
+            name: data.chapter_name.trim(),
+            description: data.chapter_description || null,
+            is_active: true,
+          })
+          .select("id")
+          .single();
+        if (chapErr) throw chapErr;
+        chapterId = newChap.id;
+      }
     }
 
+    // Step C: Find or Create Topic
+    let targetTopicId = data.topic_id;
+    if (!targetTopicId && data.topic_name && chapterId) {
+      const { data: existingTopic } = await supabase
+        .from("topics")
+        .select("id")
+        .eq("chapter_id", chapterId)
+        .ilike("name", data.topic_name.trim())
+        .maybeSingle();
+
+      if (existingTopic) {
+        targetTopicId = existingTopic.id;
+      } else {
+        const { data: newTopic, error: topErr } = await supabase
+          .from("topics")
+          .insert({
+            chapter_id: chapterId,
+            name: data.topic_name.trim(),
+            description: data.topic_description || null,
+            is_active: true,
+          })
+          .select("id")
+          .single();
+        if (topErr) throw topErr;
+        targetTopicId = newTopic.id;
+        tCreated++;
+      }
+    }
+
+    if (!targetTopicId) {
+      throw new Error("टारगेट Topic ID नहीं मिला या नया टॉपिक नहीं बन सका।");
+    }
+
+    // Step D: Insert Theory / Revision Notes (Duplicate Checking Included)
+    if (Array.isArray(data.notes) && data.notes.length > 0) {
+      const { data: existingNotes } = await supabase
+        .from("notes")
+        .select("title")
+        .eq("topic_id", targetTopicId);
+
+      const existingTitles = new Set((existingNotes || []).map((n) => n.title.trim().toLowerCase()));
+
+      const notesToInsert = [];
+      for (const n of data.notes) {
+        if (!n.title || !n.content) continue;
+        if (existingTitles.has(n.title.trim().toLowerCase())) {
+          dupCount++;
+          continue;
+        }
+        notesToInsert.push({
+          topic_id: targetTopicId,
+          title: String(n.title).trim(),
+          content: String(n.content).trim(),
+          note_type: ["study", "short", "revision"].includes(n.note_type) ? n.note_type : "study",
+          sort_order: n.sort_order || 0,
+          is_published: true,
+        });
+      }
+
+      if (notesToInsert.length > 0) {
+        const { error: noteErr } = await supabase.from("notes").insert(notesToInsert);
+        if (noteErr) {
+          console.error("Notes insert error:", noteErr);
+          failCount += notesToInsert.length;
+        } else {
+          nImported += notesToInsert.length;
+        }
+      }
+    }
+
+    // Step E: Combine & Insert MCQs + PYQs (Duplicate Checking Included)
+    const rawQuestions = [
+      ...(Array.isArray(data.questions) ? data.questions : []),
+      ...(Array.isArray(data.mcqs) ? data.mcqs.map((q) => ({ ...q, is_pyq: false })) : []),
+      ...(Array.isArray(data.pyqs) ? data.pyqs.map((q) => ({ ...q, is_pyq: true })) : []),
+    ];
+
+    if (rawQuestions.length > 0) {
+      const { data: existingQs } = await supabase
+        .from("questions")
+        .select("question")
+        .eq("topic_id", targetTopicId);
+
+      const existingTextSet = new Set((existingQs || []).map((q) => q.question.trim().toLowerCase()));
+
+      const validQuestions = [];
+      for (const q of rawQuestions) {
+        try {
+          const formatted = normalizeQuestion(q, targetTopicId);
+          if (existingTextSet.has(formatted.question.toLowerCase())) {
+            dupCount++;
+            continue;
+          }
+          validQuestions.push(formatted);
+        } catch (e) {
+          failCount++;
+        }
+      }
+
+      // Batch Insert Questions in Chunks of 100
+      for (let i = 0; i < validQuestions.length; i += BATCH_SIZE) {
+        const batch = validQuestions.slice(i, i + BATCH_SIZE);
+        const { error: qErr } = await supabase.from("questions").insert(batch);
+        if (qErr) {
+          console.error("Questions batch error:", qErr);
+          failCount += batch.length;
+        } else {
+          qImported += batch.length;
+        }
+        setProgress(Math.round(((i + batch.length) / validQuestions.length) * 100));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    setStats({
+      topicsCreated: tCreated,
+      notesImported: nImported,
+      questionsImported: qImported,
+      skippedDuplicates: dupCount,
+      failed: failCount,
+    });
+
+    setMessage("✅ Master Topic Data सफलतापूर्वक डेटाबेस में सिंक हो गया!");
+  }
+
+  // 2. Process Raw Questions Array (Backward compatible with legacy JSON)
+  async function processQuestionsArray(data) {
+    let qImported = 0;
+    let failCount = 0;
+    const formatted = [];
+
+    for (let i = 0; i < data.length; i++) {
+      try {
+        formatted.push(normalizeQuestion(data[i], data[i].topic_id));
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    if (formatted.length === 0) {
+      throw new Error("कोई मान्य प्रश्न नहीं मिला।");
+    }
+
+    for (let i = 0; i < formatted.length; i += BATCH_SIZE) {
+      const batch = formatted.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from("questions").insert(batch);
+      if (error) {
+        failCount += batch.length;
+      } else {
+        qImported += batch.length;
+      }
+      setProgress(Math.round(((i + batch.length) / formatted.length) * 100));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    setStats({
+      topicsCreated: 0,
+      notesImported: 0,
+      questionsImported: qImported,
+      skippedDuplicates: 0,
+      failed: failCount,
+    });
+
+    setMessage(`✅ ${qImported} प्रश्न सफलतापूर्वक इम्पोर्ट हो गए!`);
+  }
+
+  // Master Controller
+  async function runImport(parsedJson) {
     setLoading(true);
-
-    let successCount = 0;
-    let failedCount = 0;
+    setMessage("");
+    setProgress(0);
+    setStats({ topicsCreated: 0, notesImported: 0, questionsImported: 0, skippedDuplicates: 0, failed: 0 });
 
     try {
-      const formatted = [];
-
-      /*
-       * पहले पूरा JSON validate/normalize करेंगे।
-       * इससे बीच import में गलत structure मिलने की
-       * संभावना कम होगी।
-       */
-      for (let i = 0; i < data.length; i++) {
-        try {
-          formatted.push(
-            normalizeQuestion(data[i])
-          );
-        } catch (error) {
-          failedCount++;
-
-          console.error(
-            `Question ${i + 1} error:`,
-            error
-          );
-        }
-      }
-
-      if (formatted.length === 0) {
-        throw new Error(
-          "कोई valid question नहीं मिला।"
-        );
-      }
-
-      setFailed(failedCount);
-
-      const totalBatches = Math.ceil(
-        formatted.length / BATCH_SIZE
-      );
-
-      /*
-       * Large import को छोटे batches में insert करते हैं।
-       * इससे एक बहुत बड़ा request भेजने से बचते हैं।
-       */
-      for (
-        let i = 0;
-        i < formatted.length;
-        i += BATCH_SIZE
-      ) {
-        const batch = formatted.slice(
-          i,
-          i + BATCH_SIZE
-        );
-
-        const { error } = await supabase
-          .from("questions")
-          .insert(batch);
-
-        if (error) {
-          console.error(
-            "Batch insert error:",
-            error
-          );
-
-          /*
-           * पूरा import silently fail नहीं होगा।
-           * User को पता चलेगा कि कौन सा batch समस्या वाला था।
-           */
-          failedCount += batch.length;
-        } else {
-          successCount += batch.length;
-        }
-
-        const completedBatches =
-          Math.floor(i / BATCH_SIZE) + 1;
-
-        const percent = Math.min(
-          100,
-          Math.round(
-            (completedBatches / totalBatches) *
-              100
-          )
-        );
-
-        setImported(successCount);
-        setFailed(failedCount);
-        setProgress(percent);
-
-        /*
-         * Browser को बड़े imports में UI update
-         * करने का मौका।
-         */
-        await new Promise((resolve) =>
-          setTimeout(resolve, 0)
-        );
-      }
-
-      if (failedCount === 0) {
-        setMessage(
-          `✅ ${successCount.toLocaleString()} Questions successfully imported`
-        );
+      if (Array.isArray(parsedJson)) {
+        await processQuestionsArray(parsedJson);
+      } else if (typeof parsedJson === "object" && parsedJson !== null) {
+        await processMasterTopic(parsedJson);
       } else {
-        setMessage(
-          `⚠️ Import complete: ${successCount.toLocaleString()} successful, ${failedCount.toLocaleString()} failed`
-        );
+        throw new Error("JSON structure अमान्य है। रूट Array या Object होना चाहिए।");
       }
-
       setJsonText("");
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } catch (error) {
-      console.error("JSON import error:", error);
-
-      setMessage(
-        "❌ Import Error: " +
-          (error?.message || "Unknown error")
-      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      console.error("Import error:", err);
+      setMessage(`❌ Import Error: ${err.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
   }
 
-  function handleJsonTextImport() {
+  function handlePasteImport() {
     if (!jsonText.trim()) {
-      setMessage(
-        "❌ पहले JSON paste करें।"
-      );
+      setMessage("❌ पहले JSON टेक्स्ट पेस्ट करें।");
       return;
     }
-
     try {
-      const data = JSON.parse(jsonText);
-
-      importQuestions(data);
-    } catch (error) {
-      setMessage(
-        "❌ JSON format गलत है।"
-      );
+      const parsed = JSON.parse(jsonText);
+      runImport(parsed);
+    } catch (e) {
+      setMessage("❌ JSON Syntax गलत है। कृपया कोट्स और ब्रैकेट्स चेक करें।");
     }
   }
 
-  function handleFile(event) {
-    const file = event.target.files?.[0];
-
+  function handleFileUpload(e) {
+    const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.name.toLowerCase().endsWith(".json")) {
-      setMessage(
-        "❌ केवल .json file upload करें।"
-      );
+      setMessage("❌ केवल .json फ़ाइल ही अपलोड करें।");
       return;
     }
-
-    setMessage("");
-    setProgress(0);
-
     const reader = new FileReader();
-
-    reader.onload = (event) => {
+    reader.onload = (evt) => {
       try {
-        const text =
-          event.target?.result;
-
-        const data = JSON.parse(text);
-
-        importQuestions(data);
-      } catch (error) {
-        console.error(error);
-
-        setMessage(
-          "❌ JSON file valid नहीं है।"
-        );
+        const parsed = JSON.parse(evt.target?.result);
+        runImport(parsed);
+      } catch (err) {
+        setMessage("❌ फ़ाइल में मौजूद JSON डेटा मान्य नहीं है।");
       }
     };
-
-    reader.onerror = () => {
-      setMessage(
-        "❌ File पढ़ने में समस्या हुई।"
-      );
-    };
-
+    reader.onerror = () => setMessage("❌ फ़ाइल पढ़ने में समस्या हुई।");
     reader.readAsText(file);
   }
 
   return (
-    <section
-      style={{
-        background: "#111827",
-        color: "#fff",
-        padding: "20px",
-        borderRadius: "16px",
-        marginTop: "20px",
-      }}
-    >
-      <h2>
-        📦 JSON Question Import
-      </h2>
+    <section className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-7 space-y-4 text-slate-100 shadow-2xl backdrop-blur-xl">
+      
+      {/* Header */}
+      <div className="space-y-1">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+          <span>📦</span> JSON Question & Notes Import
+        </h2>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          एक ही JSON फ़ाइल से पूरे टॉपिक के थ्योरी नोट्स, 50 MCQs और 100 PYQs बिना डुप्लीकेट के डेटाबेस में सिंक करें।
+        </p>
+      </div>
 
-      <p
-        style={{
-          color: "#94a3b8",
-          fontSize: "13px",
-          lineHeight: "1.6",
-        }}
-      >
-        Bulk MCQ/PYQ questions को JSON से
-        questions table में import करें।
+      {/* File Upload Control */}
+      <div className="pt-1">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleFileUpload}
+          disabled={loading}
+          className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+        />
+      </div>
+
+      <p className="text-xs text-slate-400 font-semibold pt-1">
+        या JSON नीचे पेस्ट करें:
       </p>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json,application/json"
-        onChange={handleFile}
-        disabled={loading}
-        style={{
-          width: "100%",
-          marginTop: "10px",
-        }}
-      />
-
-      <p
-        style={{
-          color: "#94a3b8",
-          marginTop: "18px",
-        }}
-      >
-        या JSON नीचे paste करें
-      </p>
-
+      {/* JSON Code Input Area */}
       <textarea
-        rows={12}
+        rows={10}
         value={jsonText}
-        onChange={(e) =>
-          setJsonText(e.target.value)
-        }
+        onChange={(e) => setJsonText(e.target.value)}
         disabled={loading}
-        placeholder={`[
-  {
-    "topic_id": 1,
-    "question": "भारत की राजधानी क्या है?",
-    "option_a": "जयपुर",
-    "option_b": "नई दिल्ली",
-    "option_c": "मुंबई",
-    "option_d": "भोपाल",
-    "answer": "B",
-    "explanation": "भारत की राजधानी नई दिल्ली है।",
-    "type": "mcq",
-    "difficulty": "easy",
-    "year": 2025,
-    "source": "PYQ",
-    "is_pyq": true,
-    "tags": ["India GK", "Polity"]
-  }
-]`}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "12px",
-          marginTop: "5px",
-          background: "#020617",
-          color: "#fff",
-          border: "1px solid #334155",
-          borderRadius: "10px",
-          fontFamily: "monospace",
-          resize: "vertical",
-        }}
+        placeholder={`{
+  "subject_name": "Rajasthan GK",
+  "chapter_name": "Rajasthan History",
+  "topic_name": "1857 Ki Kranti",
+  "topic_description": "1857 की क्रांति के प्रमुख केंद्र व क्रांतिकारी",
+  "notes": [
+    {
+      "title": "क्रांति की शुरुआत",
+      "content": "नसीराबाद छावनी से 28 मई 1857 को 15वीं बंगाल नेटिव इन्फैंट्री द्वारा शुरुआत हुई।",
+      "note_type": "study"
+    }
+  ],
+  "mcqs": [
+    {
+      "question": "राजस्थान में 1857 की क्रांति का प्रारंभ किस छावनी से हुआ?",
+      "option_a": "नीमच",
+      "option_b": "नसीराबाद",
+      "option_c": "एरिनपुरा",
+      "option_d": "ब्यावर",
+      "answer": "B",
+      "explanation": "28 मई 1857 को नसीराबाद छावनी से क्रांति शुरू हुई।"
+    }
+  ],
+  "pyqs": [
+    {
+      "question": "आउवा के किस ठाकुर ने क्रांति का नेतृत्व किया?",
+      "option_a": "कुशाल सिंह",
+      "option_b": "केसरी सिंह",
+      "option_c": "जोरावर सिंह",
+      "option_d": "राव गोपाल सिंह",
+      "answer": "A",
+      "source": "RAS Pre 2021",
+      "year": 2021,
+      "explanation": "आउवा के ठाकुर कुशाल सिंह चंपावत ने क्रांतिकारियों का नेतृत्व किया।"
+    }
+  ]
+}`}
+        className="w-full bg-[#020617] border border-slate-800 rounded-2xl p-3.5 text-xs text-indigo-200 font-mono focus:border-indigo-500 outline-none leading-relaxed resize-y"
       />
 
+      {/* Upload Action Button */}
       <button
         type="button"
-        onClick={handleJsonTextImport}
+        onClick={handlePasteImport}
         disabled={loading}
-        style={{
-          marginTop: "12px",
-          background: loading
-            ? "#64748b"
-            : "#3b82f6",
-          color: "#fff",
-          padding: "12px 20px",
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "bold",
-          cursor: loading
-            ? "not-allowed"
-            : "pointer",
-        }}
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 disabled:opacity-40 text-white text-xs font-bold shadow-lg shadow-blue-600/20 transition cursor-pointer"
       >
-        {loading
-          ? "Uploading..."
-          : "Upload JSON"}
+        {loading ? `डेटा सिंक हो रहा है... (${progress}%)` : "Upload JSON"}
       </button>
 
+      {/* Progress Bar */}
       {loading && (
-        <div
-          style={{
-            marginTop: "18px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              fontSize: "12px",
-              color: "#cbd5e1",
-              marginBottom: "7px",
-            }}
-          >
-            <span>
-              Import Progress
-            </span>
-
-            <span>
-              {progress}%
-            </span>
+        <div className="space-y-1.5 pt-1">
+          <div className="flex justify-between text-xs text-slate-400">
+            <span>Import Progress</span>
+            <span>{progress}%</span>
           </div>
-
-          <div
-            style={{
-              width: "100%",
-              height: "10px",
-              background: "#1e293b",
-              borderRadius: "10px",
-              overflow: "hidden",
-            }}
-          >
+          <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
             <div
-              style={{
-                width: `${progress}%`,
-                height: "100%",
-                background: "#3b82f6",
-                transition:
-                  "width 0.2s ease",
-              }}
+              className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-200"
+              style={{ width: `${progress}%` }}
             />
           </div>
         </div>
       )}
 
-      {(imported > 0 || failed > 0) && (
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            flexWrap: "wrap",
-            marginTop: "15px",
-          }}
-        >
-          <div
-            style={{
-              background: "#064e3b",
-              padding: "8px 12px",
-              borderRadius: "8px",
-              fontSize: "12px",
-            }}
-          >
-            ✅ Imported:{" "}
-            {imported.toLocaleString()}
+      {/* Dynamic Summary Cards */}
+      {(stats.questionsImported > 0 || stats.notesImported > 0 || stats.skippedDuplicates > 0 || stats.failed > 0) && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          <div className="p-2.5 rounded-xl bg-indigo-950/60 border border-indigo-500/30 text-center">
+            <span className="text-[10px] text-slate-400 font-bold block">Notes</span>
+            <span className="text-sm font-black text-indigo-300">+{stats.notesImported}</span>
           </div>
-
-          {failed > 0 && (
-            <div
-              style={{
-                background: "#7f1d1d",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-            >
-              ❌ Failed:{" "}
-              {failed.toLocaleString()}
-            </div>
-          )}
+          <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-center">
+            <span className="text-[10px] text-slate-400 font-bold block">Questions</span>
+            <span className="text-sm font-black text-emerald-300">+{stats.questionsImported}</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-amber-950/60 border border-amber-500/30 text-center">
+            <span className="text-[10px] text-slate-400 font-bold block">Duplicates</span>
+            <span className="text-sm font-black text-amber-300">{stats.skippedDuplicates} Skipped</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/30 text-center">
+            <span className="text-[10px] text-slate-400 font-bold block">Failed</span>
+            <span className="text-sm font-black text-rose-300">{stats.failed}</span>
+          </div>
         </div>
       )}
 
+      {/* Message Output Box */}
       {message && (
-        <div
-          role="status"
-          style={{
-            marginTop: "15px",
-            padding: "10px",
-            background: "#1e293b",
-            borderRadius: "8px",
-            color: "#e2e8f0",
-            fontSize: "13px",
-          }}
-        >
+        <div className="p-3.5 rounded-xl bg-[#020617] border border-slate-800 text-xs font-semibold text-slate-200">
           {message}
         </div>
       )}
 
-      <div
-        style={{
-          marginTop: "18px",
-          padding: "12px",
-          background: "#020617",
-          border: "1px solid #1e293b",
-          borderRadius: "10px",
-          color: "#94a3b8",
-          fontSize: "12px",
-          lineHeight: "1.6",
-        }}
-      >
-        <b style={{ color: "#cbd5e1" }}>
-          Import format:
-        </b>
-        <br />
-        JSON root array होना चाहिए।
-        <br />
-        हर question में कम से कम
-        <b style={{ color: "#fff" }}>
-          {" "}
-          question + options A/B/C/D + answer
-        </b>{" "}
-        होना चाहिए।
-        <br />
-        Large imports छोटे batches में process
-        होंगे।
+      {/* Information Box */}
+      <div className="p-3.5 bg-[#020617] border border-slate-800/80 rounded-2xl text-slate-400 text-xs leading-relaxed space-y-1">
+        <b className="text-slate-200">Import format जानकारी:</b>
+        <p>• आप पूरा टॉपिक बंडल (Object) या केवल प्रश्नों की लिस्ट (Array) दोनों अपलोड कर सकते हैं।</p>
+        <p>• यदि कोई प्रश्न पहले से मौजूद है, तो सिस्टम उसे अपने-आप पहचान कर स्किप कर देगा ताकि डुप्लीकेट न बने।</p>
       </div>
+
     </section>
   );
 }
