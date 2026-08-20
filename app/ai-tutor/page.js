@@ -126,7 +126,7 @@ function InteractiveQuizBox({ quizData, onNextSet }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => window.print()}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>📥</span> PDF
           </button>
@@ -171,7 +171,7 @@ function InteractiveQuizBox({ quizData, onNextSet }) {
                     key={optIdx}
                     onClick={() => handleSelect(qIdx, optIdx)}
                     disabled={isAnswered}
-                    className={`w-full text-left text-xs sm:text-sm p-3 rounded-xl border transition-all duration-200 flex items-center justify-between ${btnClasses}`}
+                    className={`w-full text-left text-xs sm:text-sm p-3 rounded-xl border transition-all duration-200 flex items-center justify-between cursor-pointer ${btnClasses}`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center bg-white/5 border border-white/10 text-slate-300">
@@ -205,7 +205,7 @@ function InteractiveQuizBox({ quizData, onNextSet }) {
           </div>
           <button
             onClick={() => onNextSet && onNextSet(quizData.quiz_title)}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5"
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>⚡</span> अगले 5 प्रश्न लोड करें ➔
           </button>
@@ -434,13 +434,11 @@ export default function ModernAiTutorPage() {
               )}
 
               {m.type === 'quiz' ? (
-                <InteractiveQuizBox 
-                  quizData={m.quiz} 
-                  onNextSet={(title) => sendMessage(`अगले 5 प्रश्न और बनाओ: ${title}`, 'quiz')} 
+                <InteractiveQuizBox onNextSet="{(title)" quizData="{m.quiz}"> sendMessage(`अगले 5 प्रश्न और बनाओ: ${title}`, 'quiz')} 
                 />
               ) : (
                 <div>
-                  <FormattedMessage text={m.text} />
+                  <FormattedMessage text="{m.text}"/>
 
                   {m.role === 'ai' && m.text && (
                     <div className="mt-3 pt-2.5 border-t border-slate-800/70 flex items-center justify-end">
@@ -465,5 +463,91 @@ export default function ModernAiTutorPage() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-xs sm:text-sm text-slate-300 flex items-center gap-2.5 shadow-xl">
-              <span
+              <span className="animate-spin text-indigo-400">✨</span> AI प्रोसेस कर रहा है...
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="relative mt-2 p-2 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center gap-3 max-w-xs shadow-lg">
+          <img src={imagePreview} alt="Preview" className="h-12 w-12 object-cover rounded-xl border border-slate-700" />
+          <span className="text-xs text-slate-300 truncate">फ़ोटो अटैच हो गई</span>
+          <button onClick={() => setImagePreview(null)} className="ml-auto text-xs bg-rose-500/20 text-rose-400 p-1 px-2 rounded-lg cursor-pointer">✕</button>
+        </div>
+      )}
+
+      {/* Floating Tools Menu */}
+      {showToolsMenu && (
+        <div className="mb-2 p-3 bg-slate-900/95 border border-slate-800/90 rounded-2xl shadow-2xl backdrop-blur-xl flex gap-2">
+          <button
+            onClick={() => { setActiveTool('image'); setShowToolsMenu(false); }}
+            className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition flex flex-col gap-1 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎨</span>
+              <span className="text-xs font-bold text-white">Create 4K Image</span>
+            </div>
+            <span className="text-[10px] text-slate-400">टेक्स्ट से AI चित्र बनाएँ</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTool('quiz'); setShowToolsMenu(false); }}
+            className="flex-1 p-2.5 bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition flex flex-col gap-1 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              <span className="text-xs font-bold text-white">Interactive Quiz</span>
+            </div>
+            <span className="text-[10px] text-slate-400">टच-बटन वाला टेस्ट पेपर</span>
+          </button>
+        </div>
+      )}
+
+      {/* Input Bar */}
+      <div className="mt-2.5 flex items-center gap-2 bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 p-2 rounded-2xl shadow-2xl">
+        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
+
+        <button
+          type="button"
+          onClick={() => setShowToolsMenu(!showToolsMenu)}
+          className={`p-2.5 rounded-xl transition text-base font-bold cursor-pointer ${
+            showToolsMenu ? 'bg-indigo-600 text-white rotate-45' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'
+          }`}
+          title="Tools Menu"
+        >
+          ＋
+        </button>
+
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition cursor-pointer" title="फ़ोटो अपलोड">📷</button>
+        <button type="button" onClick={handleVoiceInput} className={`p-2.5 rounded-xl transition cursor-pointer ${isListening ? 'bg-rose-500 animate-pulse text-white' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'}`} title="बोलकर पूछें">🎤</button>
+
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          placeholder={activeTool === 'image' ? "किस चीज़ का 4K चित्र बनाना है?..." : "ChatGPT / Gemini से कुछ भी पूछें..."}
+          rows={1}
+          className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none resize-none px-2 py-1.5 font-sans"
+        />
+
+        <button 
+          type="button" 
+          onClick={() => sendMessage()} 
+          disabled={loading || (!input.trim() && !imagePreview)} 
+          className="p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition shadow-lg shadow-indigo-600/25 cursor-pointer"
+        >
+          🚀
+        </button>
+      </div>
+
+    </div>
+  );
 }
