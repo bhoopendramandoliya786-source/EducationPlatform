@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabase";
 import AdminLogin from "./components/AdminLogin";
 import DashboardHeader from "./components/DashboardHeader";
 
+import ExamManager from "./components/ExamManager";
 import SubjectManager from "./components/SubjectManager";
 import ChapterManager from "./components/ChapterManager";
 import TopicManager from "./components/TopicManager";
@@ -23,12 +24,6 @@ export default function AdminPage() {
    * ---------------------------------------------------------
    * VERIFY ADMIN
    * ---------------------------------------------------------
-   *
-   * Authentication + profiles.role दोनों check होंगे।
-   *
-   * IMPORTANT:
-   * यह UI-level protection है।
-   * Real database security RLS policies से enforce होगी।
    */
 
   const verifyAdminSession = useCallback(async () => {
@@ -65,21 +60,16 @@ export default function AdminPage() {
 
       if (!profile || profile.role !== "admin") {
         console.warn("Non-admin attempted admin access.");
-
         await supabase.auth.signOut();
-
         setSession(null);
         return false;
       }
 
       setSession(currentSession);
-
       return true;
     } catch (error) {
       console.error("Admin verification error:", error);
-
       setSession(null);
-
       return false;
     } finally {
       setCheckingAdmin(false);
@@ -89,7 +79,7 @@ export default function AdminPage() {
 
   /*
    * ---------------------------------------------------------
-   * INITIAL SESSION CHECK
+   * INITIAL SESSION CHECK & AUTH LISTENER
    * ---------------------------------------------------------
    */
 
@@ -98,23 +88,10 @@ export default function AdminPage() {
 
     async function initialize() {
       if (!mounted) return;
-
       await verifyAdminSession();
     }
 
     initialize();
-
-    /*
-     * -------------------------------------------------------
-     * AUTH STATE LISTENER
-     * -------------------------------------------------------
-     *
-     * Supabase auth callback के अंदर दूसरी Supabase request
-     * सीधे await नहीं करेंगे।
-     *
-     * पहले auth event handle होगा,
-     * फिर verification अलग task में चलेगी।
-     */
 
     const {
       data: { subscription },
@@ -128,14 +105,8 @@ export default function AdminPage() {
         return;
       }
 
-      /*
-       * Auth callback के अंदर profile query avoid करने के लिए
-       * verification को अगले task में भेज रहे हैं।
-       */
-
       setTimeout(() => {
         if (!mounted) return;
-
         verifyAdminSession();
       }, 0);
     });
@@ -155,7 +126,6 @@ export default function AdminPage() {
   const handleLogout = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut();
-
       if (error) {
         console.error("Logout error:", error);
       }
@@ -198,32 +168,9 @@ export default function AdminPage() {
             textAlign: "center",
           }}
         >
-          <div
-            style={{
-              fontSize: "38px",
-              marginBottom: "10px",
-            }}
-          >
-            🔐
-          </div>
-
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "22px",
-            }}
-          >
-            Admin Panel
-          </h2>
-
-          <p
-            style={{
-              color: "#94a3b8",
-              marginTop: "10px",
-              marginBottom: 0,
-              fontSize: "14px",
-            }}
-          >
+          <div style={{ fontSize: "38px", marginBottom: "10px" }}>🔐</div>
+          <h2 style={{ margin: 0, fontSize: "22px" }}>Admin Panel</h2>
+          <p style={{ color: "#94a3b8", marginTop: "10px", marginBottom: 0, fontSize: "14px" }}>
             Admin access verify किया जा रहा है...
           </p>
         </div>
@@ -238,11 +185,7 @@ export default function AdminPage() {
    */
 
   if (!session) {
-    return (
-      <AdminLogin
-        onSuccess={verifyAdminSession}
-      />
-    );
+    return <AdminLogin onSuccess={verifyAdminSession} />;
   }
 
   /*
@@ -264,13 +207,9 @@ export default function AdminPage() {
       }}
     >
       {/* HEADER */}
-
-      <DashboardHeader
-        onLogout={handleLogout}
-      />
+      <DashboardHeader onLogout={handleLogout} />
 
       {/* ADMIN INFORMATION */}
-
       <section
         style={{
           marginTop: "20px",
@@ -280,26 +219,12 @@ export default function AdminPage() {
           padding: "18px",
         }}
       >
-        <h1
-          style={{
-            margin: 0,
-            marginBottom: "6px",
-            fontSize: "24px",
-          }}
-        >
+        <h1 style={{ margin: 0, marginBottom: "6px", fontSize: "24px" }}>
           ⚙️ EducationPlatform Admin
         </h1>
-
-        <p
-          style={{
-            color: "#94a3b8",
-            margin: 0,
-            fontSize: "14px",
-          }}
-        >
+        <p style={{ color: "#94a3b8", margin: 0, fontSize: "14px" }}>
           Content Management System
         </p>
-
         <div
           style={{
             marginTop: "12px",
@@ -312,62 +237,49 @@ export default function AdminPage() {
         </div>
       </section>
 
-      {/* CONTENT MANAGEMENT */}
+      {/* EXAM & SYLLABUS MANAGER */}
+      <section style={{ marginTop: "30px" }}>
+        <h2 style={{ marginBottom: "6px", color: "#f59e0b" }}>
+          🏆 Target Exams & Syllabus Mapping
+        </h2>
+        <p style={{ color: "#94a3b8", fontSize: "14px", marginTop: 0 }}>
+          परीक्षाएं जोड़ें और प्रत्येक परीक्षा में शामिल विषय (Subjects) मैप करें
+        </p>
+        <ExamManager />
+      </section>
 
-      <section
-        style={{
-          marginTop: "20px",
-        }}
-      >
-        <h2
-          style={{
-            marginBottom: "6px",
-          }}
-        >
+      {/* CONTENT MANAGEMENT */}
+      <section style={{ marginTop: "40px" }}>
+        <h2 style={{ marginBottom: "6px" }}>
           📚 Content Management
         </h2>
-
-        <p
-          style={{
-            color: "#64748b",
-            fontSize: "14px",
-            marginTop: 0,
-          }}
-        >
+        <p style={{ color: "#64748b", fontSize: "14px", marginTop: 0 }}>
           Subjects → Chapters → Topics → Notes / Questions / Quizzes
         </p>
       </section>
 
       {/* SUBJECT */}
-
       <SubjectManager />
 
       {/* CHAPTER */}
-
       <ChapterManager />
 
       {/* TOPIC */}
-
       <TopicManager />
 
       {/* QUESTIONS */}
-
       <QuestionManager />
 
       {/* NOTES */}
-
       <NotesManager />
 
       {/* QUIZZES */}
-
       <QuizManager />
 
       {/* JSON IMPORT */}
-
       <JsonImport />
 
       {/* FOOTER */}
-
       <footer
         style={{
           marginTop: "40px",
