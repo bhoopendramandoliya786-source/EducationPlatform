@@ -24,7 +24,7 @@ export default function TopicDetailPage() {
   const topicId = params?.id;
   const supabase = createClient();
 
-  const [activeTab, setActiveTab] = useState('notes'); // 'notes' | 'mcq' | 'pyq' | 'quiz'
+  const [activeTab, setActiveTab] = useState('notes');
   const [topicData, setTopicData] = useState(null);
   const [notes, setNotes] = useState([]);
   const [questions, setQuestions] = useState([]);
@@ -176,10 +176,10 @@ export default function TopicDetailPage() {
           </div>
         </section>
 
-        {/* 4 Tabs Bar */}
+        {/* Clean Tabs Bar */}
         <nav className="grid grid-cols-4 gap-1.5 p-1.5 bg-slate-900/80 border border-slate-800/90 rounded-2xl sticky top-16 z-20 backdrop-blur-xl shadow-xl">
           {[
-            { id: 'notes', label: 'Notes', icon: BookOpen, count: notes.length },
+            { id: 'notes', label: 'Notes', icon: BookOpen, count: null },
             { id: 'mcq', label: 'MCQs', icon: HelpCircle, count: mcqList.length },
             { id: 'pyq', label: 'PYQ', icon: Award, count: pyqList.length },
             { id: 'quiz', label: 'Quiz', icon: Zap, count: 'Live' },
@@ -198,9 +198,11 @@ export default function TopicDetailPage() {
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                  {tab.count}
-                </span>
+                {tab.count !== null && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -236,7 +238,7 @@ export default function TopicDetailPage() {
                     <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
                       <span className="text-[11px] text-slate-400 flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                        AI एनहैंस्ड नोट्स
+                        स्मार्ट नोट्स
                       </span>
                       <Link
                         href="/ai-tutor"
@@ -283,7 +285,7 @@ export default function TopicDetailPage() {
               <div className="space-y-1">
                 <h3 className="text-lg font-bold text-white">पिछले वर्षों के प्रश्न - PYQs ({pyqList.length} प्रश्न)</h3>
                 <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                  REET, RAS, SI और अन्य प्रतियोगी परीक्षाओं में आए प्रश्नों को 1-by-1 हल करें।
+                  विगत प्रतियोगी परीक्षाओं में आए प्रश्नों को 1-by-1 हल करें।
                 </p>
               </div>
               <Link 
@@ -359,7 +361,7 @@ export default function TopicDetailPage() {
           </Link>
 
           <Link
-            href="/subject"
+            href="/student"
             className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200 transition"
           >
             <span className="text-lg">👤</span>
