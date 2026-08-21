@@ -7,12 +7,11 @@ import {
   ArrowLeft, 
   ChevronRight, 
   CheckCircle2, 
-  Layers, 
-  Sparkles,
-  HelpCircle
+  GraduationCap
 } from 'lucide-react';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function SubjectsDirectoryPage() {
   const supabase = await createClient();
@@ -41,13 +40,13 @@ export default async function SubjectsDirectoryPage() {
         {/* Header Banner */}
         <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 space-y-2 shadow-xl">
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 uppercase">
-            All Study Modules
+            Study Modules
           </span>
           <h1 className="text-xl font-black text-white">
             सभी अध्ययन विषय (Subjects)
           </h1>
           <p className="text-xs text-slate-300">
-            चैप्टर-वार नोट्स, 50,000+ MCQs और विगत वर्षों के प्रश्नों का संपूर्ण संकलन।
+            चैप्टर-वार स्मार्ट नोट्स, MCQs और पिछले वर्षों के महत्वपूर्ण प्रश्न।
           </p>
         </section>
 
@@ -78,7 +77,7 @@ export default async function SubjectsDirectoryPage() {
                         {sub.name}
                       </h2>
                       <p className="text-xs text-slate-400 line-clamp-2">
-                        {sub.description || 'सभी महत्वपूर्ण चैप्टर्स और पिछले वर्षों के प्रश्न।'}
+                        {sub.description || 'सभी महत्वपूर्ण चैप्टर्स और विगत वर्षों के प्रश्न।'}
                       </p>
                     </div>
 
@@ -93,7 +92,7 @@ export default async function SubjectsDirectoryPage() {
                       स्मार्ट नोट्स + MCQs
                     </span>
                     <span className="text-indigo-400 font-bold group-hover:underline">
-                      शुरू करें →
+                      पढ़ना शुरू करें →
                     </span>
                   </div>
                 </Link>
@@ -133,7 +132,7 @@ export default async function SubjectsDirectoryPage() {
             <span>क्विज़</span>
           </Link>
 
-          <Link href="/dashboard" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
+          <Link href="/student" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
             <span className="text-base">👤</span>
             <span>प्रोफ़ाइल</span>
           </Link>

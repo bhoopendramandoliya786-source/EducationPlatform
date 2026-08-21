@@ -6,14 +6,14 @@ import Navbar from '../../components/Navbar';
 import { 
   ArrowLeft, 
   BookOpen, 
-  Layers, 
   ChevronRight, 
   CheckCircle2, 
-  GraduationCap,
-  Sparkles
+  GraduationCap, 
+  Sparkles 
 } from 'lucide-react';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function SubjectDetailPage({ params }) {
   const { id } = await params;
@@ -45,17 +45,17 @@ export default async function SubjectDetailPage({ params }) {
       <Navbar />
 
       <main className="max-w-md mx-auto px-4 pt-3 space-y-4">
-        
+
         {/* Back Link */}
         <Link 
-          href="/"
+          href="/subject"
           className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800"
         >
           <ArrowLeft className="w-3.5 h-3.5 text-indigo-400" />
-          <span>होम पर वापस जाएँ</span>
+          <span>सभी विषयों पर वापस जाएँ</span>
         </Link>
 
-        {/* 2026 VIP Subject Header Banner */}
+        {/* VIP Subject Header Banner */}
         <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 space-y-3 shadow-xl backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold uppercase tracking-wider">
@@ -72,7 +72,7 @@ export default async function SubjectDetailPage({ params }) {
               {subject.name}
             </h1>
             <p className="text-xs text-slate-300 leading-relaxed">
-              {subject.description || 'इस विषय के सभी महत्वपूर्ण चैप्टर्स, थ्योरी नोट्स, और विगत वर्षों के प्रश्नों का संपूर्ण संकलन।'}
+              {subject.description || 'इस विषय के सभी महत्वपूर्ण चैप्टर्स, स्मार्ट नोट्स और पिछले वर्षों के प्रश्नों का संपूर्ण संकलन।'}
             </p>
           </div>
 
@@ -122,7 +122,7 @@ export default async function SubjectDetailPage({ params }) {
                           {chapter.name}
                         </h3>
                         <p className="text-[11px] text-slate-400 line-clamp-1">
-                          {chapter.description || `${topicCount} टॉपिक उपलब्ध हैं • हाई यील्ड`}
+                          {chapter.description || `${topicCount} टॉपिक उपलब्ध हैं`}
                         </p>
                       </div>
                     </div>
@@ -167,7 +167,6 @@ export default async function SubjectDetailPage({ params }) {
             <span>नोट्स</span>
           </Link>
 
-          {/* Floating AI Super Button */}
           <Link
             href="/ai-tutor"
             className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200"
@@ -187,7 +186,7 @@ export default async function SubjectDetailPage({ params }) {
           </Link>
 
           <Link
-            href="/dashboard"
+            href="/student"
             className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200"
           >
             <span className="text-base">👤</span>

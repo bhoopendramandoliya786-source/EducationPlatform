@@ -9,8 +9,8 @@ import {
   BookOpen, 
   CheckCircle2, 
   ChevronRight, 
-  GraduationCap, 
-  Sparkles, 
+  Download, 
+  FileText, 
   Zap 
 } from 'lucide-react';
 
@@ -78,7 +78,7 @@ export default async function ExamSyllabusPage({ params }) {
         </Link>
 
         {/* Exam Hero Banner */}
-        <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 space-y-3 shadow-xl backdrop-blur-xl">
+        <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 space-y-3.5 shadow-xl backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
               <Award className="w-3 h-3 text-amber-400" />
@@ -98,6 +98,19 @@ export default async function ExamSyllabusPage({ params }) {
             </p>
           </div>
 
+          {/* PDF Download Button (If Available) */}
+          {exam.syllabus_pdf_url && (
+            <a
+              href={exam.syllabus_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-amber-500/20 to-amber-600/10 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
+            >
+              <Download className="w-4 h-4 text-amber-400" />
+              <span>डाउनलोड करें: आधिकारिक सिलेबस (Official PDF)</span>
+            </a>
+          )}
+
           <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
             <span className="flex items-center gap-1 text-emerald-400 font-semibold text-[11px]">
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -112,6 +125,19 @@ export default async function ExamSyllabusPage({ params }) {
             </Link>
           </div>
         </section>
+
+        {/* Detailed Syllabus Text / Breakdown (If Available) */}
+        {exam.syllabus_text && (
+          <section className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" />
+              <span>परीक्षा पैटर्न एवं महत्वपूर्ण निर्देश</span>
+            </h2>
+            <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-line bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/80 font-sans">
+              {exam.syllabus_text}
+            </div>
+          </section>
+        )}
 
         {/* Exam Syllabus (Subjects & Chapters) */}
         <section className="space-y-2.5">
