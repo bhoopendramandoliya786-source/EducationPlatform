@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { createClient } from '../lib/supabase/server';
+import { redirect } from 'next/navigation';
 import Navbar from './components/Navbar';
 import SearchBox from './components/SearchBox';
 import { 
@@ -9,19 +10,25 @@ import {
   Award, 
   Bot, 
   ArrowRight, 
-  ChevronRight,
+  ChevronRight, 
   Sparkles, 
   Zap, 
-  Flame,
-  CheckCircle2,
-  TrendingUp,
-  GraduationCap
+  Flame, 
+  CheckCircle2, 
+  TrendingUp, 
+  GraduationCap 
 } from 'lucide-react';
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export default async function HomePage() {
   const supabase = await createClient();
+
+  // 0. Auto-check: अगर छात्र लॉगिन है तो सीधे Student Dashboard पर भेजें
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    redirect('/student');
+  }
 
   // 1. Fetch Subjects with Chapter Counts
   const { data: subjects } = await supabase
@@ -67,7 +74,7 @@ export default async function HomePage() {
           <SearchBox />
         </section>
 
-        {/* 2. 4 Core Action Cards (Rich Gradients & Badges) */}
+        {/* 2. 4 Core Action Cards */}
         <section className="grid grid-cols-2 gap-2.5">
 
           <Link 
@@ -252,7 +259,7 @@ export default async function HomePage() {
 
       </main>
 
-      {/* 5. Fixed Universal Bottom Nav */}
+      {/* 5. Universal Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/95 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <Link href="/" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-indigo-400">
@@ -277,7 +284,7 @@ export default async function HomePage() {
             <span>क्विज़</span>
           </Link>
 
-          <Link href="/dashboard" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
+          <Link href="/student" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
             <span className="text-base">👤</span>
             <span>प्रोफ़ाइल</span>
           </Link>

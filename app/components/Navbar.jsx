@@ -39,12 +39,12 @@ export default function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    router.push('/login');
+    router.push('/');
     router.refresh();
   };
 
   const navLinks = [
-    { name: 'Home', href: '/', icon: Sparkles },
+    { name: 'Home', href: user ? '/student' : '/', icon: Sparkles },
     { name: 'Subjects', href: '/subject', icon: BookOpen },
     { name: 'Quiz', href: '/quiz', icon: Trophy },
     { name: 'AI Tutor', href: '/ai-tutor', icon: Bot },
@@ -53,9 +53,9 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-[#050711]/90 backdrop-blur-xl border-b border-slate-800/80">
       <div className="max-w-6xl mx-auto px-4 h-15 sm:h-16 flex items-center justify-between">
-        
+
         {/* Modern Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href={user ? '/student' : '/'} className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
             <span className="text-white font-black text-lg tracking-tighter">E</span>
           </div>
@@ -91,8 +91,8 @@ export default function Navbar() {
 
         {/* Right Action Area */}
         <div className="flex items-center gap-2 sm:gap-3">
-          
-          {/* Quick Streak Badge (Both Mobile & Desktop) */}
+
+          {/* Quick Streak Badge */}
           <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] font-bold text-amber-300 shadow-sm">
             <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
             <span className="hidden sm:inline">7-Day</span>
@@ -101,14 +101,14 @@ export default function Navbar() {
           {user ? (
             <div className="flex items-center gap-2">
               <Link
-                href="/dashboard"
+                href="/student"
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-xs font-semibold text-slate-200 transition-all shadow-sm"
               >
                 <div className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[10px] font-bold">
                   {user.email?.charAt(0).toUpperCase()}
                 </div>
                 <span className="max-w-[80px] sm:max-w-[120px] truncate hidden xs:inline">
-                  {user.user_metadata?.full_name || 'My App'}
+                  {user.user_metadata?.full_name || 'Student'}
                 </span>
               </Link>
 
