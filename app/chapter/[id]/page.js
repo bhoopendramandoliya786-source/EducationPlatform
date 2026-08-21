@@ -9,14 +9,12 @@ import {
   HelpCircle, 
   ChevronRight, 
   Layers, 
-  FileText, 
   Sparkles,
-  Zap,
-  CheckCircle2,
-  TrendingUp
+  CheckCircle2
 } from 'lucide-react';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ChapterPage({ params }) {
   const { id } = await params;
@@ -36,7 +34,7 @@ export default async function ChapterPage({ params }) {
   // 2. Fetch Topics inside this chapter
   const { data: topics } = await supabase
     .from('topics')
-    .select('*, questions(count), notes(count)')
+    .select('*, questions(count)')
     .eq('chapter_id', id)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
@@ -48,7 +46,7 @@ export default async function ChapterPage({ params }) {
       <Navbar />
 
       <main className="max-w-4xl mx-auto px-4 pt-4 space-y-6">
-        
+
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Link 
@@ -64,10 +62,10 @@ export default async function ChapterPage({ params }) {
           </span>
         </div>
 
-        {/* 2026 VIP Chapter Overview Banner */}
+        {/* Chapter Overview Banner */}
         <section className="relative overflow-hidden bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-xl space-y-4">
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="relative z-10 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
@@ -84,7 +82,7 @@ export default async function ChapterPage({ params }) {
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-              {chapter.description || 'इस अध्याय के सभी विषयों का सिलसिलेवार अध्ययन करें, स्मार्ट नोट्स पढ़ें और लाइव MCQs हल करें।'}
+              {chapter.description || 'इस अध्याय के सभी विषयों का सिलसिलेवार अध्ययन करें, स्मार्ट नोट्स पढ़ें और अभ्यास प्रश्न हल करें।'}
             </p>
           </div>
 
@@ -126,7 +124,6 @@ export default async function ChapterPage({ params }) {
             {topics && topics.length > 0 ? (
               topics.map((topic, index) => {
                 const questionCount = topic.questions?.[0]?.count || 0;
-                const noteCount = topic.notes?.[0]?.count || 0;
 
                 return (
                   <Link
@@ -144,7 +141,7 @@ export default async function ChapterPage({ params }) {
                             {topic.name}
                           </h3>
                           <p className="text-xs text-slate-400 line-clamp-1">
-                            {topic.description || 'स्मार्ट नोट्स पढ़ें, 4K विजुअल्स देखें और MCQs हल करें।'}
+                            {topic.description || 'स्मार्ट नोट्स पढ़ें और अभ्यास प्रश्न हल करें।'}
                           </p>
                         </div>
                       </div>
@@ -156,9 +153,9 @@ export default async function ChapterPage({ params }) {
 
                     <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80 text-xs text-slate-400">
                       <div className="flex items-center gap-3 text-[11px]">
-                        <span className="flex items-center gap-1.5 text-slate-300 bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/50">
-                          <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                          {noteCount} Notes
+                        <span className="flex items-center gap-1.5 text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+                          <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                          Smart Notes
                         </span>
                         <span className="flex items-center gap-1.5 text-slate-300 bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/50">
                           <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
@@ -182,7 +179,7 @@ export default async function ChapterPage({ params }) {
 
       </main>
 
-      {/* 2026 VIP Universal Bottom App Bar */}
+      {/* Universal Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/90 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <Link
@@ -201,7 +198,6 @@ export default async function ChapterPage({ params }) {
             <span>नोट्स</span>
           </Link>
 
-          {/* Floating AI Super Button */}
           <Link
             href="/ai-tutor"
             className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200 transition"
@@ -221,7 +217,7 @@ export default async function ChapterPage({ params }) {
           </Link>
 
           <Link
-            href="/subject"
+            href="/student"
             className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200 transition"
           >
             <span className="text-lg">👤</span>
