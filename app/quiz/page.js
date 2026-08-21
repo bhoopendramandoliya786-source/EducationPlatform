@@ -2,9 +2,10 @@ import React from 'react';
 import Link from 'next/link';
 import { createClient } from '../../lib/supabase/server';
 import Navbar from '../components/Navbar';
-import { Zap, Trophy, ArrowRight, ChevronRight, Layers, Award } from 'lucide-react';
+import { Zap, Trophy, ArrowRight, ArrowLeft } from 'lucide-react';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function QuizMainPage() {
   const supabase = await createClient();
@@ -22,6 +23,15 @@ export default async function QuizMainPage() {
 
       <main className="max-w-md mx-auto px-4 pt-3 space-y-4">
 
+        {/* Back Link */}
+        <Link 
+          href="/"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-indigo-400" />
+          <span>होम पर वापस जाएँ</span>
+        </Link>
+
         {/* Banner */}
         <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 space-y-2 shadow-xl">
           <div className="flex items-center gap-2">
@@ -33,7 +43,7 @@ export default async function QuizMainPage() {
             डेली स्पीड क्विज़ & टेस्ट सीरीज़ 🎯
           </h1>
           <p className="text-xs text-slate-300">
-            प्रत्येक टॉपिक के समयबद्ध (Timed) टेस्ट दें, XP पॉइंट्स जीतें और लाइव रैंक देखें।
+            प्रत्येक टॉपिक के समयबद्ध टेस्ट दें, XP पॉइंट्स जीतें और लाइव रैंक देखें।
           </p>
         </section>
 
@@ -102,7 +112,7 @@ export default async function QuizMainPage() {
             <span>क्विज़</span>
           </Link>
 
-          <Link href="/dashboard" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
+          <Link href="/student" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
             <span className="text-base">👤</span>
             <span>प्रोफ़ाइल</span>
           </Link>
@@ -111,4 +121,5 @@ export default async function QuizMainPage() {
 
     </div>
   );
+}
 }
