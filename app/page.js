@@ -1,14 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { createClient } from '../lib/supabase/server';
-import { redirect } from 'next/navigation';
 import Navbar from './components/Navbar';
 import SearchBox from './components/SearchBox';
 import { 
   BookOpen, 
-  HelpCircle, 
   Award, 
-  Bot, 
   ArrowRight, 
   ChevronRight, 
   Sparkles, 
@@ -16,28 +13,43 @@ import {
   Flame, 
   CheckCircle2, 
   TrendingUp, 
-  GraduationCap 
+  GraduationCap,
+  Trophy
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const selectedExamSlug = resolvedSearchParams?.exam || 'all';
+
   const supabase = await createClient();
 
-  // 0. Auto-check: अगर छात्र लॉगिन है तो सीधे Student Dashboard पर भेजें
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    redirect('/student');
-  }
-
-  // 1. Fetch Subjects with Chapter Counts
-  const { data: subjects } = await supabase
-    .from('subjects')
-    .select('*, chapters(count)')
+  // 1. Fetch Active Exams
+  const { data: exams } = await supabase
+    .from('exams')
+    .select('*')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
-  // 2. Fetch High-Yield Topics
+  // 2. Fetch Subjects based on Selected Exam
+  let subjectsQuery = supabase
+    .from('subjects')
+    .select('*, chapters(count), exam_subjects(exam_id, exams(slug))')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  const { data: rawSubjects } = await subjectsQuery;
+
+  // Filter subjects by exam if an exam is selected
+  const subjects = selectedExamSlug === 'all'
+    ? rawSubjects
+    : (rawSubjects || []).filter(sub => 
+        sub.exam_subjects?.some(es => es.exams?.slug === selectedExamSlug)
+      );
+
+  // 3. Fetch High-Yield Topics
   const { data: recentTopics } = await supabase
     .from('topics')
     .select('id, name, slug, chapters(name, subjects(name))')
@@ -47,13 +59,12 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#050711] text-slate-100 font-sans pb-28">
-
       {/* Top Navbar */}
       <Navbar />
 
       <main className="max-w-md mx-auto px-4 pt-3 space-y-5">
 
-        {/* 1. Daily Target / Greeting Banner */}
+        {/* Daily Target / Greeting Banner */}
         <section className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900/80 to-purple-950/50 border border-indigo-500/20 backdrop-blur-md space-y-3">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -69,97 +80,105 @@ export default async function HomePage() {
               <span>7 Days</span>
             </div>
           </div>
-
-          {/* Search Box */}
           <SearchBox />
         </section>
 
-        {/* 2. 4 Core Action Cards */}
-        <section className="grid grid-cols-2 gap-2.5">
+        {/* Target Exam Horizontal Switcher */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-0.5">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              <span>लक्ष्य परीक्षा (Select Target Exam)</span>
+            </h2>
+          </div>
 
-          <Link 
-            href="/subject" 
-            className="p-3.5 rounded-2xl bg-gradient-to-b from-indigo-950/40 to-slate-900/80 border border-indigo-500/20 hover:border-indigo-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
-          >
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <Link
+              href="/"
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border ${
+                selectedExamSlug === 'all'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-500/50 shadow-md shadow-indigo-600/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-white border-slate-800'
+              }`}
+            >
+              🔥 All Exams
+            </Link>
+
+            {exams && exams.map((ex) => {
+              const active = selectedExamSlug === ex.slug;
+              return (
+                <Link
+                  key={ex.id}
+                  href={`/?exam=${ex.slug}`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border ${
+                    active
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-500/50 shadow-md shadow-indigo-600/20'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white border-slate-800'
+                  }`}
+                >
+                  {ex.name}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 4 Core Action Cards */}
+        <section className="grid grid-cols-2 gap-2.5">
+          <Link href="/subject" className="p-3.5 rounded-2xl bg-gradient-to-b from-indigo-950/40 to-slate-900/80 border border-indigo-500/20 hover:border-indigo-500/50 transition-all flex flex-col justify-between h-24 group shadow-md">
             <div className="flex items-center justify-between">
               <div className="w-8 h-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-400">
                 <BookOpen className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
-                Notes
-              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">Notes</span>
             </div>
             <div>
-              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-indigo-300 transition-colors">
-                स्मार्ट नोट्स
-              </h3>
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-indigo-300 transition-colors">स्मार्ट नोट्स</h3>
               <p className="text-[10px] text-slate-400">सभी विषयों के सार</p>
             </div>
           </Link>
 
-          <Link 
-            href="/quiz" 
-            className="p-3.5 rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900/80 border border-emerald-500/20 hover:border-emerald-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
-          >
+          <Link href="/quiz" className="p-3.5 rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900/80 border border-emerald-500/20 hover:border-emerald-500/50 transition-all flex flex-col justify-between h-24 group shadow-md">
             <div className="flex items-center justify-between">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400">
                 <Zap className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                Live
-              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Live</span>
             </div>
             <div>
-              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-emerald-300 transition-colors">
-                डेली क्विज़
-              </h3>
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-emerald-300 transition-colors">डेली क्विज़</h3>
               <p className="text-[10px] text-slate-400">50 MCQs + टाइमर</p>
             </div>
           </Link>
 
-          <Link 
-            href="/subject" 
-            className="p-3.5 rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-900/80 border border-amber-500/20 hover:border-amber-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
-          >
+          <Link href="/subject" className="p-3.5 rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-900/80 border border-amber-500/20 hover:border-amber-500/50 transition-all flex flex-col justify-between h-24 group shadow-md">
             <div className="flex items-center justify-between">
               <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-400">
                 <Award className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                PYQs
-              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">PYQs</span>
             </div>
             <div>
-              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 transition-colors">
-                100+ PYQs
-              </h3>
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 transition-colors">100+ PYQs</h3>
               <p className="text-[10px] text-slate-400">विगत वर्षों के पेपर</p>
             </div>
           </Link>
 
-          <Link 
-            href="/ai-tutor" 
-            className="p-3.5 rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900/80 border border-purple-500/20 hover:border-purple-500/50 transition-all flex flex-col justify-between h-24 group shadow-md"
-          >
+          <Link href="/ai-tutor" className="p-3.5 rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900/80 border border-purple-500/20 hover:border-purple-500/50 transition-all flex flex-col justify-between h-24 group shadow-md">
             <div className="flex items-center justify-between">
               <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
                 <Sparkles className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
-                AI 4o
-              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">AI 4o</span>
             </div>
             <div>
-              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-purple-300 transition-colors">
-                AI ट्यूटर
-              </h3>
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-purple-300 transition-colors">AI ट्यूटर</h3>
               <p className="text-[10px] text-slate-400">24/7 लाइव डाउट</p>
             </div>
           </Link>
-
         </section>
 
-        {/* 3. Subjects Visual Cards */}
+        {/* Subjects Visual Cards */}
         <section className="space-y-2.5">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -210,11 +229,15 @@ export default async function HomePage() {
                   </Link>
                 );
               })
-            ) : null}
+            ) : (
+              <div className="p-6 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-xs text-slate-500">
+                इस परीक्षा के लिए विषय जल्द जोड़े जा रहे हैं।
+              </div>
+            )}
           </div>
         </section>
 
-        {/* 4. Must-Prepare Trending Topics */}
+        {/* Must-Prepare Trending Topics */}
         <section className="space-y-2.5">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -256,10 +279,9 @@ export default async function HomePage() {
             ) : null}
           </div>
         </section>
-
       </main>
 
-      {/* 5. Universal Bottom Nav */}
+      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/95 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <Link href="/" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-indigo-400">
@@ -290,7 +312,6 @@ export default async function HomePage() {
           </Link>
         </div>
       </nav>
-
     </div>
   );
 }
