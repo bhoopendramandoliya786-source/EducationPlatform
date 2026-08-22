@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { createClient } from '../../../../lib/supabase/client';
+import { createClient } from '../../../lib/supabase/client';
 import { ArrowLeft, BookOpen, Trophy, ChevronRight, Layers } from 'lucide-react';
 
 export default function SubjectDetailPage() {
