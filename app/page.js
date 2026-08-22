@@ -1,67 +1,77 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { createClient } from '../lib/supabase/client';
-import { BookOpen, Sparkles, Trophy, HelpCircle, Download, ArrowRight, ChevronRight, Layers, CheckCircle2 } from 'lucide-react';
+"use client";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { createClient } from "../lib/supabase/client";
+import { 
+  BookOpen, Trophy, Sparkles, HelpCircle, Download, 
+  ChevronRight, ArrowRight, Layers
+} from "lucide-react";
 
 export default function HomePage() {
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState(null);
   const [subjects, setSubjects] = useState([]);
+  const [stats, setStats] = useState({ totalNotes: 0, totalQuestions: 0 });
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
-    async function loadInitialData() {
+    async function loadPlatformData() {
       setLoading(true);
       try {
         const { data: examsData } = await supabase
-          .from('exams')
-          .select('*')
-          .order('id', { ascending: true });
+          .from("exams")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
 
         if (examsData && examsData.length > 0) {
           setExams(examsData);
           setSelectedExam(examsData[0]);
-          await fetchSubjects(examsData[0].id);
+          await fetchExamSubjects(examsData[0].id);
         }
+
+        const { count: nCt } = await supabase.from("notes").select("*", { count: "exact", head: true });
+        const { count: qCt } = await supabase.from("questions").select("*", { count: "exact", head: true });
+        setStats({ totalNotes: nCt || 0, totalQuestions: qCt || 0 });
       } catch (err) {
-        console.error('Fetch error:', err);
+        console.error("Home load error:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadInitialData();
+    loadPlatformData();
   }, []);
 
-  const fetchSubjects = async (examId) => {
+  const fetchExamSubjects = async (examId) => {
     try {
       const { data: mappingData } = await supabase
-        .from('exam_subjects')
-        .select('subject_id, subjects(*)')
-        .eq('exam_id', examId);
+        .from("exam_subjects")
+        .select("subject_id, sort_order, subjects(*)")
+        .eq("exam_id", examId)
+        .order("sort_order", { ascending: true });
 
       if (mappingData) {
         const subs = mappingData.map((m) => m.subjects).filter(Boolean);
         setSubjects(subs);
       }
     } catch (err) {
-      console.error('Subjects fetch error:', err);
+      console.error("Fetch subjects error:", err);
     }
   };
 
   const handleSelectExam = (exam) => {
     setSelectedExam(exam);
-    fetchSubjects(exam.id);
+    fetchExamSubjects(exam.id);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 pt-4 space-y-5">
-      {/* 1. Exam Switcher Pills (Touch Clickable) */}
+    <div className="max-w-4xl mx-auto px-4 space-y-5">
+      {/* 1. Exam Switcher Pills */}
       <section className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
           <span>लक्ष्य परीक्षा चुनें (Select Exam)</span>
-          <span className="text-indigo-400">{selectedExam?.name}</span>
+          <span className="text-indigo-400">{selectedExam?.category || "State Exams"}</span>
         </div>
         
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -71,10 +81,10 @@ export default function HomePage() {
               <button
                 key={exam.id}
                 onClick={() => handleSelectExam(exam)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 border active:scale-95 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 border active:scale-95 ${
                   isSelected
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent shadow-lg shadow-indigo-500/25'
-                    : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent shadow-lg shadow-indigo-500/25"
+                    : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
                 }`}
               >
                 {exam.name}
@@ -84,12 +94,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. Selected Exam Focus Card (Touch & Dynamic) */}
+      {/* 2. Target Exam Hero Card */}
       {selectedExam && (
         <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/20 space-y-3 shadow-xl">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {selectedExam.board || 'Official Board'}
+              {selectedExam.category || "Official Exam"}
             </span>
             {selectedExam.syllabus_pdf_url && (
               <a
@@ -106,7 +116,7 @@ export default function HomePage() {
           <div>
             <h2 className="text-xl font-black text-white">{selectedExam.name}</h2>
             <p className="text-xs text-slate-300 mt-1 line-clamp-2">
-              {selectedExam.description || '100% प्रामाणिक सिलेबस, स्मार्ट नोट्स व टेस्ट सीरीज़'}
+              {selectedExam.description || "100% प्रामाणिक सिलेबस, स्मार्ट नोट्स व टेस्ट सीरीज़"}
             </p>
           </div>
 
@@ -116,7 +126,7 @@ export default function HomePage() {
             </span>
             <Link
               href={`/exam/${selectedExam.slug}`}
-              className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-white text-slate-950 hover:bg-slate-200 active:scale-95 transition shadow-sm"
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-1.5 rounded-xl bg-white text-slate-950 hover:bg-slate-200 active:scale-95 transition shadow-sm"
             >
               विस्तृत सिलेबस <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -124,7 +134,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 3. 4 Core Touch Action Cards */}
+      {/* 3. Core Touch Action Cards */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Link
           href="/notes"
@@ -134,7 +144,7 @@ export default function HomePage() {
             <BookOpen className="w-5 h-5" />
           </div>
           <h3 className="text-xs font-bold text-white">स्मार्ट नोट्स</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">टू द पॉइंट बुलेट थ्योरी</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{stats.totalNotes}+ टू द पॉइंट नोट्स</p>
         </Link>
 
         <Link
@@ -145,7 +155,7 @@ export default function HomePage() {
             <Trophy className="w-5 h-5" />
           </div>
           <h3 className="text-xs font-bold text-white">50 MCQs टेस्ट</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">टॉपिकवाइज़ मॉक टेस्ट</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">टॉपिकवाइज़ टेस्ट</p>
         </Link>
 
         <Link
@@ -166,12 +176,12 @@ export default function HomePage() {
           <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition mb-2">
             <Sparkles className="w-5 h-5" />
           </div>
-          <h3 className="text-xs font-bold text-white">AI Tutor</h3>
+          <h3 className="text-xs font-bold text-white">AI ट्यूटर</h3>
           <p className="text-[10px] text-slate-400 mt-0.5">24/7 लाइव डाउट सॉल्व</p>
         </Link>
       </section>
 
-      {/* 4. Included Subjects List (Clickable to Subject Syllabus) */}
+      {/* 4. Included Subjects Hierarchy */}
       <section className="space-y-3 pt-1">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-300">पाठ्यक्रम विषय (Subjects)</h3>
@@ -180,7 +190,7 @@ export default function HomePage() {
 
         {loading ? (
           <div className="space-y-2 animate-pulse">
-            {[1, 2].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 bg-slate-900 rounded-2xl border border-slate-800" />
             ))}
           </div>
@@ -193,7 +203,7 @@ export default function HomePage() {
             {subjects.map((sub) => (
               <Link
                 key={sub.id}
-                href={`/exam/${selectedExam?.slug || 'ras-pre-2026'}`}
+                href={`/subject/${sub.id}`}
                 className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 hover:bg-slate-900 flex items-center justify-between transition active:scale-[0.99] group shadow-sm"
               >
                 <div className="flex items-center gap-3.5">
@@ -204,7 +214,7 @@ export default function HomePage() {
                     <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">
                       {sub.name}
                     </h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5">चैप्टर एवं प्रैक्टिस टेस्ट उपलब्ध</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">अध्याय, टॉपिक, नोट्स व MCQs देखें</p>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300 transition" />
