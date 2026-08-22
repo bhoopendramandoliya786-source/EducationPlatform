@@ -1,124 +1,102 @@
-import React from 'react';
-import Link from 'next/link';
-import { createClient } from '../../lib/supabase/server';
-import Navbar from '../components/Navbar';
-import { Zap, Trophy, ArrowRight, ArrowLeft } from 'lucide-react';
+"use client";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { createClient } from "../../lib/supabase/client";
+import { Trophy, Clock, ArrowRight, ArrowLeft, Flame, CheckCircle, Award } from "lucide-react";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export default function QuizHubPage() {
+  const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
-export default async function QuizMainPage() {
-  const supabase = await createClient();
+  useEffect(() => {
+    async function loadQuizzes() {
+      setLoading(true);
+      try {
+        const { data } = await supabase
+          .from("quizzes")
+          .select("*, chapters(name, subjects(name))")
+          .eq("is_published", true)
+          .order("id", { ascending: false });
 
-  // Fetch Topics with Question Counts
-  const { data: topics } = await supabase
-    .from('topics')
-    .select('*, questions(count), chapters(name, subjects(name))')
-    .eq('is_active', true)
-    .order('id', { ascending: false });
+        if (data) setQuizzes(data);
+      } catch (err) {
+        console.error("Quizzes Fetch Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadQuizzes();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#050711] text-slate-100 font-sans pb-28">
-      <Navbar />
-
-      <main className="max-w-md mx-auto px-4 pt-3 space-y-4">
-
-        {/* Back Link */}
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 text-indigo-400" />
-          <span>होम पर वापस जाएँ</span>
+    <div className="max-w-4xl mx-auto px-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between pt-1">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+          <ArrowLeft className="w-3.5 h-3.5" /> होम
         </Link>
+        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+          <Trophy className="w-3 h-3" /> Live Test Engine
+        </span>
+      </div>
 
-        {/* Banner */}
-        <section className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/60 border border-indigo-500/30 space-y-2 shadow-xl">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 uppercase">
-              Speed Tests
-            </span>
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/40 border border-emerald-500/20 space-y-2 shadow-xl">
+        <h1 className="text-xl font-black text-white">डेली स्पीड क्विज़ और टेस्ट सीरीज़ 🎯</h1>
+        <p className="text-xs text-slate-300">समयबद्ध टेस्ट दें, XP पॉइंट्स जीतें और अपनी रैंकिंग सुधारें।</p>
+      </div>
+
+      {/* Quizzes List */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-slate-300">उपलब्ध मॉक टेस्ट ({quizzes.length})</h3>
+
+        {loading ? (
+          <div className="space-y-2.5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-slate-900 rounded-3xl border border-slate-800 animate-pulse" />
+            ))}
           </div>
-          <h1 className="text-xl font-black text-white">
-            डेली स्पीड क्विज़ & टेस्ट सीरीज़ 🎯
-          </h1>
-          <p className="text-xs text-slate-300">
-            प्रत्येक टॉपिक के समयबद्ध टेस्ट दें, XP पॉइंट्स जीतें और लाइव रैंक देखें।
-          </p>
-        </section>
+        ) : quizzes.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
+            नए टेस्ट जल्द ही अपलोड किए जा रहे हैं।
+          </div>
+        ) : (
+          <div className="grid gap-2.5">
+            {quizzes.map((quiz) => (
+              <div
+                key={quiz.id}
+                className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/40 flex items-center justify-between transition shadow-sm"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 uppercase">
+                      {quiz.quiz_type || "Practice"}
+                    </span>
+                    {quiz.chapters?.subjects?.name && (
+                      <span className="text-[10px] text-slate-500">{quiz.chapters.subjects.name}</span>
+                    )}
+                  </div>
+                  <h4 className="text-xs font-bold text-white">{quiz.title}</h4>
+                  <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                    <span>{quiz.total_questions || 15} Questions</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {quiz.duration_minutes || 10} मिनट
+                    </span>
+                  </div>
+                </div>
 
-        {/* Quiz Topics List */}
-        <section className="space-y-2.5">
-          {topics && topics.length > 0 ? (
-            topics.map((top) => {
-              const qCount = top.questions?.[0]?.count || 0;
-              return (
                 <Link
-                  key={top.id}
-                  href={`/quiz/${top.id}`}
-                  className="group p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800/90 hover:border-emerald-500/40 transition-all flex items-center justify-between gap-3 shadow-lg"
+                  href={`/quiz/${quiz.id}`}
+                  className="px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-md shadow-emerald-500/20 active:scale-95 transition whitespace-nowrap"
                 >
-                  <div className="space-y-1 truncate">
-                    <div className="text-[10px] text-slate-400 uppercase tracking-wider truncate">
-                      {top.chapters?.subjects?.name} › {top.chapters?.name}
-                    </div>
-                    <h3 className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors truncate">
-                      {top.name}
-                    </h3>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                      <span>{qCount} Questions</span>
-                      <span>•</span>
-                      <span className="text-amber-400 font-semibold">+50 XP</span>
-                    </div>
-                  </div>
-
-                  <div className="px-3 py-2 rounded-xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold group-hover:bg-emerald-600 group-hover:text-white transition-all shrink-0">
-                    Start Test ➔
-                  </div>
+                  Start Test →
                 </Link>
-              );
-            })
-          ) : (
-            <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-xs text-slate-500">
-              कोई क्विज़ उपलब्ध नहीं है।
-            </div>
-          )}
-        </section>
-
-      </main>
-
-      {/* Universal Fixed Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#050711]/95 backdrop-blur-2xl border-t border-slate-800/80 px-4 py-2">
-        <div className="max-w-md mx-auto flex items-center justify-around">
-          <Link href="/" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
-            <span className="text-base">🏠</span>
-            <span>होम</span>
-          </Link>
-
-          <Link href="/subject" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
-            <span className="text-base">📚</span>
-            <span>नोट्स</span>
-          </Link>
-
-          <Link href="/ai-tutor" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
-            <div className="w-10 h-10 -mt-5 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 text-lg border-2 border-[#050711] animate-pulse">
-              ✨
-            </div>
-            <span className="text-indigo-300 font-bold text-[10px]">AI सुपर</span>
-          </Link>
-
-          <Link href="/quiz" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-indigo-400">
-            <span className="text-base">🎯</span>
-            <span>क्विज़</span>
-          </Link>
-
-          <Link href="/student" className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
-            <span className="text-base">👤</span>
-            <span>प्रोफ़ाइल</span>
-          </Link>
-        </div>
-      </nav>
-
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
