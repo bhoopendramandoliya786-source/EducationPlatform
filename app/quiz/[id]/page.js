@@ -3,16 +3,22 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
-import { ArrowLeft, Clock, CheckCircle2, XCircle, Trophy, RotateCcw, Award } from "lucide-react";
+import { 
+  ArrowLeft, Clock, CheckCircle2, XCircle, Trophy, 
+  RotateCcw, Award, Layers, Sparkles, HelpCircle, ChevronDown, ChevronUp 
+} from "lucide-react";
 
 export default function QuizRunnerPage() {
   const { id } = useParams();
   const router = useRouter();
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [flashcards, setFlashcards] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [flippedCards, setFlippedCards] = useState({});
+  const [showReview, setShowReview] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -32,11 +38,23 @@ export default function QuizRunnerPage() {
           .eq("quiz_id", id)
           .order("question_order", { ascending: true });
 
+        let loadedQs = [];
         if (qMaps && qMaps.length > 0) {
-          setQuestions(qMaps.map((m) => m.questions).filter(Boolean));
+          loadedQs = qMaps.map((m) => m.questions).filter(Boolean);
         } else if (qz?.topic_id) {
           const { data: topicQs } = await supabase.from("questions").select("*").eq("topic_id", qz.topic_id);
-          if (topicQs) setQuestions(topicQs);
+          if (topicQs) loadedQs = topicQs;
+        }
+        setQuestions(loadedQs);
+
+        // Fetch Flashcards for this topic/chapter
+        if (qz?.topic_id) {
+          const { data: fcData } = await supabase
+            .from("flashcards")
+            .select("*")
+            .eq("topic_id", qz.topic_id)
+            .eq("is_active", true);
+          if (fcData) setFlashcards(fcData);
         }
       } catch (err) {
         console.error("Quiz Fetch Error:", err);
@@ -56,6 +74,10 @@ export default function QuizRunnerPage() {
   const handleSelectOption = (optKey) => {
     if (isSubmitted) return;
     setSelectedAnswers((prev) => ({ ...prev, [currentIndex]: optKey }));
+  };
+
+  const toggleFlip = (fcId) => {
+    setFlippedCards((prev) => ({ ...prev, [fcId]: !prev[fcId] }));
   };
 
   const calculateScore = () => {
@@ -96,7 +118,7 @@ export default function QuizRunnerPage() {
   const scoreResult = isSubmitted ? calculateScore() : null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 space-y-4">
+    <div className="max-w-4xl mx-auto px-4 space-y-4 pb-12">
       {/* Top Header & Timer */}
       <div className="flex items-center justify-between pt-1">
         <Link href="/quiz" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300">
@@ -178,8 +200,9 @@ export default function QuizRunnerPage() {
           </div>
         </div>
       ) : (
-        /* Result Screen */
-        <div className="space-y-4">
+        /* Result Screen + Dynamic Flashcards + Solution Review */
+        <div className="space-y-5">
+          {/* Scorecard Hero */}
           <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 text-center space-y-3 shadow-xl">
             <Trophy className="w-10 h-10 text-amber-400 mx-auto" />
             <h2 className="text-lg font-black text-white">टेस्ट परिणाम (Scorecard)</h2>
@@ -200,19 +223,103 @@ export default function QuizRunnerPage() {
                 <div className="text-[10px] text-slate-400">छोड़े गए</div>
               </div>
             </div>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                onClick={() => {
+                  setSelectedAnswers({});
+                  setIsSubmitted(false);
+                  setCurrentIndex(0);
+                  if (quiz?.duration_minutes) setTimeLeft(quiz.duration_minutes * 60);
+                }}
+                className="flex-1 py-3 rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-lg active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें
+              </button>
+              <button
+                onClick={() => setShowReview(!showReview)}
+                className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center gap-1"
+              >
+                {showReview ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                उत्तर देखें
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={() => {
-              setSelectedAnswers({});
-              setIsSubmitted(false);
-              setCurrentIndex(0);
-              if (quiz?.duration_minutes) setTimeLeft(quiz.duration_minutes * 60);
-            }}
-            className="w-full py-3 rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-lg active:scale-95 flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें (Re-attempt)
-          </button>
+          {/* 3D Quick Revision Flashcards */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                <Sparkles className="w-4 h-4" />
+                <span>त्वरित रिवीजन फ्लैशकार्ड्स (Quick Revision)</span>
+              </div>
+              <span className="text-[10px] text-slate-500">टच करके उत्तर देखें</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(flashcards.length > 0
+                ? flashcards
+                : questions.slice(0, 4).map((q) => ({
+                    id: q.id,
+                    front: q.question,
+                    back: `सही उत्तर: ${q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_c : q.option_d}${q.explanation ? `\n\nव्याख्या: ${q.explanation}` : ""}`
+                  }))
+              ).map((fc) => {
+                const isFlipped = Boolean(flippedCards[fc.id]);
+                return (
+                  <div
+                    key={fc.id}
+                    onClick={() => toggleFlip(fc.id)}
+                    className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 cursor-pointer min-h-[120px] flex flex-col justify-between transition-all duration-300 shadow-md active:scale-[0.98]"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        {isFlipped ? "💡 उत्तर व व्याख्या" : "❓ प्रश्न"}
+                      </span>
+                      <p className="text-xs text-slate-200 font-semibold mt-2 leading-relaxed whitespace-pre-line">
+                        {isFlipped ? fc.back : fc.front}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-slate-500 text-right mt-2">
+                      {isFlipped ? "प्रश्न देखने के लिए पुनः टैप करें ↺" : "उत्तर देखने के लिए टैप करें ➔"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Detailed Question Review (If toggled) */}
+          {showReview && (
+            <div className="space-y-3 pt-2">
+              <h3 className="text-xs font-bold text-slate-300">विस्तृत प्रश्न समीक्षा ({questions.length} प्रश्न)</h3>
+              {questions.map((q, idx) => {
+                const userAnswer = selectedAnswers[idx];
+                const isCorrect = userAnswer === q.answer;
+                return (
+                  <div key={q.id} className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-bold text-white">Q{idx + 1}. {q.question}</span>
+                      {isCorrect ? (
+                        <span className="text-emerald-400 flex items-center gap-1 font-bold text-[10px]"><CheckCircle2 className="w-3.5 h-3.5" /> सही</span>
+                      ) : (
+                        <span className="text-rose-400 flex items-center gap-1 font-bold text-[10px]"><XCircle className="w-3.5 h-3.5" /> गलत</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 space-y-0.5">
+                      <div>आपका उत्तर: <strong className={isCorrect ? "text-emerald-400" : "text-rose-400"}>{userAnswer || "छोड़ा गया"}</strong></div>
+                      <div>सही उत्तर: <strong className="text-emerald-400">{q.answer}</strong> ({q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_c : q.option_d})</div>
+                    </div>
+                    {q.explanation && (
+                      <div className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-[11px] text-indigo-200">
+                        {q.explanation}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
