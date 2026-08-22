@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { 
   BookOpen, Trophy, Sparkles, Layers, 
-  ChevronRight, ArrowRight, Zap, Flame 
+  ChevronRight, ArrowRight, Zap 
 } from "lucide-react";
 
 export default function HomePage() {
@@ -102,7 +102,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Clean & High-Impact Action Tiles */}
+      {/* 4 Standard Action Cards (2x2 Grid) */}
       <div className="grid grid-cols-2 gap-2.5">
         <Link
           href="/notes"
@@ -122,33 +122,22 @@ export default function HomePage() {
           <p className="text-[10px] text-slate-400">{counts.tests}+ लाइव मॉक टेस्ट</p>
         </Link>
 
-        {/* Big Flashcard Tile */}
         <Link
           href="/flashcards"
-          className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-slate-900 to-orange-500/10 border border-amber-500/30 hover:border-amber-500/60 space-y-1 transition active:scale-[0.98] col-span-2"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 space-y-1 transition active:scale-[0.98]"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-amber-400" />
-              <h3 className="text-xs font-black text-white">फ्लैशकार्ड्स रिवीजन (Unlimited)</h3>
-            </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Fast ⚡</span>
-          </div>
-          <p className="text-[10px] text-slate-400">1-टैप फ्लिप कार्ड्स से सभी विषयों का तीव्र रिवीजन करें</p>
+          <Layers className="w-5 h-5 text-amber-400" />
+          <h3 className="text-xs font-bold text-white">फ्लैशकार्ड्स</h3>
+          <p className="text-[10px] text-slate-400">अनलिमिटेड 1-टैप कार्ड्स</p>
         </Link>
 
         <Link
           href="/student"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 space-y-1 transition active:scale-[0.98] col-span-2 flex items-center justify-between"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 space-y-1 transition active:scale-[0.98]"
         >
-          <div className="flex items-center gap-3">
-            <Zap className="w-5 h-5 text-purple-400" />
-            <div>
-              <h3 className="text-xs font-bold text-white">AI ट्यूटर एवं प्रोग्रेस रिपोर्ट</h3>
-              <p className="text-[10px] text-slate-400">24/7 लाइव डाउट सॉल्व एवं दैनिक स्ट्रीक</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-500" />
+          <Zap className="w-5 h-5 text-purple-400" />
+          <h3 className="text-xs font-bold text-white">AI ट्यूटर</h3>
+          <p className="text-[10px] text-slate-400">24/7 लाइव डाउट सॉल्व</p>
         </Link>
       </div>
 
