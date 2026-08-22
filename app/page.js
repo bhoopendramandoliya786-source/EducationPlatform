@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { 
   BookOpen, Trophy, Sparkles, Layers, 
-  ChevronRight, ArrowRight, Zap, Bell
+  ChevronRight, ArrowRight, Zap, Flame 
 } from "lucide-react";
 
 export default function HomePage() {
@@ -12,7 +12,7 @@ export default function HomePage() {
   const [selectedExam, setSelectedExam] = useState(null);
   const [subjects, setSubjects] = useState([]);
   const [banners, setBanners] = useState([]);
-  const [counts, setCounts] = useState({ notes: 0, tests: 0, pyqs: 0 });
+  const [counts, setCounts] = useState({ notes: 0, tests: 0 });
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -20,14 +20,12 @@ export default function HomePage() {
     async function loadData() {
       setLoading(true);
       try {
-        // Load Exams
         const { data: exData } = await supabase.from("exams").select("*").eq("is_active", true).order("id");
         if (exData && exData.length > 0) {
           setExams(exData);
           setSelectedExam(exData[0]);
         }
 
-        // Fetch Live Banners in Real-Time
         const { data: bData } = await supabase
           .from("banners")
           .select("*")
@@ -36,11 +34,9 @@ export default function HomePage() {
           setBanners(bData);
         }
 
-        // Load Global Counts
         const { count: nCount } = await supabase.from("notes").select("*", { count: "exact", head: true });
         const { count: tCount } = await supabase.from("quizzes").select("*", { count: "exact", head: true });
-        const { count: pCount } = await supabase.from("questions").select("*", { count: "exact", head: true }).eq("is_pyq", true);
-        setCounts({ notes: nCount || 0, tests: tCount || 0, pyqs: pCount || 0 });
+        setCounts({ notes: nCount || 0, tests: tCount || 0 });
       } catch (err) {
         console.error("Home Load Error:", err);
       } finally {
@@ -71,7 +67,7 @@ export default function HomePage() {
 
   return (
     <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-2">
-      {/* Top Exam Selector Chips */}
+      {/* Top Exam Selector */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
           <span>लक्ष्य परीक्षा चुनें (Select Exam)</span>
@@ -94,7 +90,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Target Exam Hero Card */}
+      {/* Target Exam Hero */}
       {selectedExam && (
         <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 space-y-1.5 shadow-xl">
           <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">{selectedExam.category || "EXAM PORTAL"}</span>
@@ -106,7 +102,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 5 High-Impact Action Tiles Grid */}
+      {/* Clean & High-Impact Action Tiles */}
       <div className="grid grid-cols-2 gap-2.5">
         <Link
           href="/notes"
@@ -126,6 +122,7 @@ export default function HomePage() {
           <p className="text-[10px] text-slate-400">{counts.tests}+ लाइव मॉक टेस्ट</p>
         </Link>
 
+        {/* Big Flashcard Tile */}
         <Link
           href="/flashcards"
           className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-slate-900 to-orange-500/10 border border-amber-500/30 hover:border-amber-500/60 space-y-1 transition active:scale-[0.98] col-span-2"
@@ -135,31 +132,27 @@ export default function HomePage() {
               <Layers className="w-5 h-5 text-amber-400" />
               <h3 className="text-xs font-black text-white">फ्लैशकार्ड्स रिवीजन (Unlimited)</h3>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">New ✨</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Fast ⚡</span>
           </div>
           <p className="text-[10px] text-slate-400">1-टैप फ्लिप कार्ड्स से सभी विषयों का तीव्र रिवीजन करें</p>
         </Link>
 
         <Link
-          href="/notes"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 space-y-1 transition active:scale-[0.98]"
-        >
-          <Sparkles className="w-5 h-5 text-amber-400" />
-          <h3 className="text-xs font-bold text-white">PYQs प्रश्न</h3>
-          <p className="text-[10px] text-slate-400">{counts.pyqs}+ विगत वर्षों के प्रश्न</p>
-        </Link>
-
-        <Link
           href="/student"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 space-y-1 transition active:scale-[0.98]"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 space-y-1 transition active:scale-[0.98] col-span-2 flex items-center justify-between"
         >
-          <Zap className="w-5 h-5 text-purple-400" />
-          <h3 className="text-xs font-bold text-white">AI ट्यूटर</h3>
-          <p className="text-[10px] text-slate-400">24/7 लाइव डाउट सॉल्व</p>
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5 text-purple-400" />
+            <div>
+              <h3 className="text-xs font-bold text-white">AI ट्यूटर एवं प्रोग्रेस रिपोर्ट</h3>
+              <p className="text-[10px] text-slate-400">24/7 लाइव डाउट सॉल्व एवं दैनिक स्ट्रीक</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-500" />
         </Link>
       </div>
 
-      {/* Dynamic Admin Live Banners */}
+      {/* Dynamic Live Admin Banners */}
       <div className="space-y-2">
         {banners.length > 0 ? (
           banners.map((b) => (
@@ -196,7 +189,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-2">
-          {subjects.map((sub, idx) => (
+          {subjects.map((sub) => (
             <Link
               key={sub.id}
               href={`/subject/${sub.id}`}
@@ -208,7 +201,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">{sub.name}</h4>
-                  <p className="text-[10px] text-slate-400">अध्याय, टॉपिक, स्मार्ट नोट्स व MCQs देखें</p>
+                  <p className="text-[10px] text-slate-400">अध्याय ➔ टॉपिक ➔ नोट्स, MCQs व PYQs देखें</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300" />
