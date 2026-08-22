@@ -1,17 +1,17 @@
 import './globals.css';
 import Link from 'next/link';
-import { Home, BookOpen, Sparkles, Trophy, HelpCircle } from 'lucide-react';
+import { Home, BookOpen, Sparkles, Trophy, HelpCircle, Zap } from 'lucide-react';
 
 export const metadata = {
-  title: 'EduAI Pro - राजस्थान प्रतियोगी परीक्षा तैयारी',
-  description: '100% Free Smart Notes, MCQs, PYQs & AI Tutor',
+  title: 'EduAI Pro - राजस्थान परीक्षा तैयारी',
+  description: '100% Free Complete Exam Syllabus, Smart Notes, MCQs & Test Engine',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="hi" className="dark">
       <body className="bg-[#0b0f19] text-slate-100 min-h-screen antialiased flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
-        {/* Top Navbar (छात्रों के लिए - कोई एडमिन नहीं) */}
+        {/* Single Top Navbar */}
         <header className="sticky top-0 z-40 bg-[#0b0f19]/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-fuchsia-600 to-indigo-600 flex items-center justify-center font-black text-white text-sm shadow-md shadow-indigo-500/20">
@@ -29,19 +29,19 @@ export default function RootLayout({ children }) {
             </div>
             <Link
               href="/quiz"
-              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition"
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition flex items-center gap-1"
             >
-              Start Free
+              <Zap className="w-3 h-3 fill-current" /> Start Free
             </Link>
           </div>
         </header>
 
-        {/* मुख्य पेज कंटेंट */}
+        {/* Main Content */}
         <main className="flex-1 pb-24">
           {children}
         </main>
 
-        {/* Universal Touch Bottom Navigation (100% छात्र मोड - No Admin) */}
+        {/* Universal Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800/80 px-3 py-2 flex items-center justify-around">
           <Link href="/" className="flex flex-col items-center text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Home className="w-5 h-5" />
