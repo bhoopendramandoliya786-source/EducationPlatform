@@ -246,7 +246,9 @@ export default function AdminPage() {
         <p style={{ color: "#94a3b8", fontSize: "14px", marginTop: 0 }}>
           परीक्षाएं जोड़ें और प्रत्येक परीक्षा में शामिल विषय (Subjects) मैप करें
         </p>
-        <ExamManager />
+        <BannerManager />
+
+      <ExamManager />
       </section>
 
       {/* CONTENT MANAGEMENT */}
