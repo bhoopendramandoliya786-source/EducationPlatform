@@ -13,6 +13,7 @@ import TopicManager from "./components/TopicManager";
 import QuestionManager from "./components/QuestionManager";
 import NotesManager from "./components/NotesManager";
 import QuizManager from "./components/QuizManager";
+import BannerManager from "./components/BannerManager";
 import JsonImport from "./components/JsonImport";
 
 export default function AdminPage() {
