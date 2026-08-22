@@ -1,23 +1,25 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, Clock, CheckCircle2, XCircle, Trophy, 
-  RotateCcw, Award, Layers, Sparkles, HelpCircle, ChevronDown, ChevronUp 
+  RotateCcw, Sparkles, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, HelpCircle 
 } from "lucide-react";
 
 export default function QuizRunnerPage() {
   const { id } = useParams();
-  const router = useRouter();
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [flashcards, setFlashcards] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [flippedCards, setFlippedCards] = useState({});
+  
+  // Flashcard slider states
+  const [currentFcIndex, setCurrentFcIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,6 @@ export default function QuizRunnerPage() {
         setQuiz(qz);
         if (qz?.duration_minutes) setTimeLeft(qz.duration_minutes * 60);
 
-        // Fetch Questions mapped to this quiz
         const { data: qMaps } = await supabase
           .from("quiz_questions")
           .select("question_order, questions(*)")
@@ -47,14 +48,15 @@ export default function QuizRunnerPage() {
         }
         setQuestions(loadedQs);
 
-        // Fetch Flashcards for this topic/chapter
         if (qz?.topic_id) {
           const { data: fcData } = await supabase
             .from("flashcards")
             .select("*")
             .eq("topic_id", qz.topic_id)
             .eq("is_active", true);
-          if (fcData) setFlashcards(fcData);
+          if (fcData && fcData.length > 0) {
+            setFlashcards(fcData);
+          }
         }
       } catch (err) {
         console.error("Quiz Fetch Error:", err);
@@ -74,10 +76,6 @@ export default function QuizRunnerPage() {
   const handleSelectOption = (optKey) => {
     if (isSubmitted) return;
     setSelectedAnswers((prev) => ({ ...prev, [currentIndex]: optKey }));
-  };
-
-  const toggleFlip = (fcId) => {
-    setFlippedCards((prev) => ({ ...prev, [fcId]: !prev[fcId] }));
   };
 
   const calculateScore = () => {
@@ -117,9 +115,20 @@ export default function QuizRunnerPage() {
   const currentQ = questions[currentIndex];
   const scoreResult = isSubmitted ? calculateScore() : null;
 
+  // Active Flashcards Array
+  const activeFlashcards = flashcards.length > 0 
+    ? flashcards 
+    : questions.map((q) => ({
+        id: q.id,
+        front: q.question,
+        back: `सही उत्तर: ${q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_d}\n\n${q.explanation ? `व्याख्या: ${q.explanation}` : ""}`
+      }));
+
+  const currentCard = activeFlashcards[currentFcIndex];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 space-y-4 pb-12">
-      {/* Top Header & Timer */}
+    <div className="max-w-4xl mx-auto px-4 space-y-4 pb-16">
+      {/* Header & Timer */}
       <div className="flex items-center justify-between pt-1">
         <Link href="/quiz" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300">
           <ArrowLeft className="w-3.5 h-3.5" /> टेस्ट छोड़ें
@@ -134,19 +143,16 @@ export default function QuizRunnerPage() {
 
       {!isSubmitted ? (
         <div className="space-y-4">
-          {/* Progress Indicator */}
           <div className="flex items-center justify-between text-xs font-bold text-slate-400">
             <span>प्रश्न {currentIndex + 1} / {questions.length}</span>
             <span>हल किए: {Object.keys(selectedAnswers).length}</span>
           </div>
 
-          {/* Question Card */}
-          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
-            <h3 className="text-sm font-bold text-white leading-snug">
+          <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white leading-relaxed">
               {currentIndex + 1}. {currentQ.question}
             </h3>
 
-            {/* Options */}
             <div className="grid gap-2.5">
               {[
                 { key: "A", text: currentQ.option_a },
@@ -159,7 +165,7 @@ export default function QuizRunnerPage() {
                   <button
                     key={opt.key}
                     onClick={() => handleSelectOption(opt.key)}
-                    className={`p-3.5 rounded-2xl border text-left text-xs flex items-center justify-between transition active:scale-[0.99] ${
+                    className={`p-4 rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between transition active:scale-[0.99] ${
                       isSelected
                         ? "bg-indigo-600/20 border-indigo-500 text-white font-bold"
                         : "bg-slate-950/80 border-slate-800/80 text-slate-300 hover:border-slate-700"
@@ -172,12 +178,11 @@ export default function QuizRunnerPage() {
             </div>
           </div>
 
-          {/* Navigation Controls */}
           <div className="flex items-center justify-between pt-2">
             <button
               disabled={currentIndex === 0}
               onClick={() => setCurrentIndex((prev) => prev - 1)}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 disabled:opacity-40"
+              className="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 disabled:opacity-40"
             >
               ← पिछला
             </button>
@@ -192,7 +197,7 @@ export default function QuizRunnerPage() {
             ) : (
               <button
                 onClick={() => setCurrentIndex((prev) => prev + 1)}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-md active:scale-95"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-md active:scale-95"
               >
                 अगला →
               </button>
@@ -200,13 +205,12 @@ export default function QuizRunnerPage() {
           </div>
         </div>
       ) : (
-        /* Result Screen + Dynamic Flashcards + Solution Review */
-        <div className="space-y-5">
+        /* Results + 1-by-1 Slide Flashcard + Solution Review */
+        <div className="space-y-6">
           {/* Scorecard Hero */}
           <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 text-center space-y-3 shadow-xl">
             <Trophy className="w-10 h-10 text-amber-400 mx-auto" />
             <h2 className="text-lg font-black text-white">टेस्ट परिणाम (Scorecard)</h2>
-            
             <div className="text-3xl font-black text-emerald-400">{scoreResult.percentage}%</div>
 
             <div className="grid grid-cols-3 gap-2 pt-2">
@@ -246,73 +250,92 @@ export default function QuizRunnerPage() {
             </div>
           </div>
 
-          {/* 3D Quick Revision Flashcards */}
+          {/* 1-by-1 Interactive Slide Flashcard */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+              <div className="flex items-center gap-2 text-xs font-black text-amber-400">
                 <Sparkles className="w-4 h-4" />
-                <span>त्वरित रिवीजन फ्लैशकार्ड्स (Quick Revision)</span>
+                <span>त्वरित रिवीजन फ्लैशकार्ड (Slide Mode)</span>
               </div>
-              <span className="text-[10px] text-slate-500">टच करके उत्तर देखें</span>
+              <span className="text-xs font-bold text-slate-400">
+                {currentFcIndex + 1} / {activeFlashcards.length}
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(flashcards.length > 0
-                ? flashcards
-                : questions.slice(0, 4).map((q) => ({
-                    id: q.id,
-                    front: q.question,
-                    back: `सही उत्तर: ${q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_c : q.option_d}${q.explanation ? `\n\nव्याख्या: ${q.explanation}` : ""}`
-                  }))
-              ).map((fc) => {
-                const isFlipped = Boolean(flippedCards[fc.id]);
-                return (
-                  <div
-                    key={fc.id}
-                    onClick={() => toggleFlip(fc.id)}
-                    className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 cursor-pointer min-h-[120px] flex flex-col justify-between transition-all duration-300 shadow-md active:scale-[0.98]"
-                  >
-                    <div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        {isFlipped ? "💡 उत्तर व व्याख्या" : "❓ प्रश्न"}
-                      </span>
-                      <p className="text-xs text-slate-200 font-semibold mt-2 leading-relaxed whitespace-pre-line">
-                        {isFlipped ? fc.back : fc.front}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-slate-500 text-right mt-2">
-                      {isFlipped ? "प्रश्न देखने के लिए पुनः टैप करें ↺" : "उत्तर देखने के लिए टैप करें ➔"}
-                    </span>
-                  </div>
-                );
-              })}
+            {/* Single Slide Flip Card */}
+            <div
+              onClick={() => setIsFlipped(!isFlipped)}
+              className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-amber-500/30 hover:border-amber-500/60 cursor-pointer min-h-[180px] flex flex-col justify-between transition-all duration-300 shadow-2xl active:scale-[0.99] select-none"
+            >
+              <div>
+                <span className={`text-[11px] font-black px-3 py-1 rounded-full border inline-block ${
+                  isFlipped 
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                }`}>
+                  {isFlipped ? "💡 सही उत्तर व व्याख्या (Back Side)" : "❓ प्रश्न (Front Side)"}
+                </span>
+
+                <p className="text-sm sm:text-base text-white font-bold mt-4 leading-relaxed whitespace-pre-line">
+                  {isFlipped ? currentCard?.back : currentCard?.front}
+                </p>
+              </div>
+
+              <div className="text-[11px] font-bold text-indigo-400 text-right mt-4 flex items-center justify-end gap-1">
+                <span>{isFlipped ? "कार्ड पलटने के लिए टैप करें ↺" : "उत्तर देखने के लिए टच करें ➔"}</span>
+              </div>
+            </div>
+
+            {/* Flashcard Slider Controls */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                disabled={currentFcIndex === 0}
+                onClick={() => {
+                  setIsFlipped(false);
+                  setCurrentFcIndex((prev) => prev - 1);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 disabled:opacity-30 flex items-center gap-1 active:scale-95"
+              >
+                <ChevronLeft className="w-4 h-4" /> पिछला कार्ड
+              </button>
+
+              <button
+                disabled={currentFcIndex === activeFlashcards.length - 1}
+                onClick={() => {
+                  setIsFlipped(false);
+                  setCurrentFcIndex((prev) => prev + 1);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-xs font-black text-slate-950 disabled:opacity-30 flex items-center gap-1 shadow-md shadow-amber-500/20 active:scale-95"
+              >
+                अगला कार्ड <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Detailed Question Review (If toggled) */}
+          {/* Full Solution Review */}
           {showReview && (
-            <div className="space-y-3 pt-2">
-              <h3 className="text-xs font-bold text-slate-300">विस्तृत प्रश्न समीक्षा ({questions.length} प्रश्न)</h3>
+            <div className="space-y-4 pt-3">
+              <h3 className="text-sm font-bold text-slate-300">विस्तृत उत्तर समीक्षा ({questions.length} प्रश्न)</h3>
               {questions.map((q, idx) => {
                 const userAnswer = selectedAnswers[idx];
                 const isCorrect = userAnswer === q.answer;
                 return (
-                  <div key={q.id} className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2 text-xs">
+                  <div key={q.id} className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3 text-xs sm:text-sm">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="font-bold text-white">Q{idx + 1}. {q.question}</span>
+                      <span className="font-bold text-white leading-snug">Q{idx + 1}. {q.question}</span>
                       {isCorrect ? (
-                        <span className="text-emerald-400 flex items-center gap-1 font-bold text-[10px]"><CheckCircle2 className="w-3.5 h-3.5" /> सही</span>
+                        <span className="text-emerald-400 flex items-center gap-1 font-bold text-xs"><CheckCircle2 className="w-4 h-4" /> सही</span>
                       ) : (
-                        <span className="text-rose-400 flex items-center gap-1 font-bold text-[10px]"><XCircle className="w-3.5 h-3.5" /> गलत</span>
+                        <span className="text-rose-400 flex items-center gap-1 font-bold text-xs"><XCircle className="w-4 h-4" /> गलत</span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-400 space-y-0.5">
+                    <div className="text-xs text-slate-400 space-y-1">
                       <div>आपका उत्तर: <strong className={isCorrect ? "text-emerald-400" : "text-rose-400"}>{userAnswer || "छोड़ा गया"}</strong></div>
                       <div>सही उत्तर: <strong className="text-emerald-400">{q.answer}</strong> ({q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_c : q.option_d})</div>
                     </div>
                     {q.explanation && (
-                      <div className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-[11px] text-indigo-200">
-                        {q.explanation}
+                      <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-200">
+                        <strong>व्याख्या:</strong> {q.explanation}
                       </div>
                     )}
                   </div>
