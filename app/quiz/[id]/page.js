@@ -92,6 +92,15 @@ export default function QuizRunnerPage() {
     };
   };
 
+  const getOptionText = (q, key) => {
+    if (!q) return "";
+    if (key === "A") return q.option_a;
+    if (key === "B") return q.option_b;
+    if (key === "C") return q.option_c;
+    if (key === "D") return q.option_d;
+    return "";
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 pt-6 space-y-4 animate-pulse">
@@ -118,11 +127,15 @@ export default function QuizRunnerPage() {
   // Active Flashcards Array
   const activeFlashcards = flashcards.length > 0 
     ? flashcards 
-    : questions.map((q) => ({
-        id: q.id,
-        front: q.question,
-        back: `सही उत्तर: ${q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_d}\n\n${q.explanation ? `व्याख्या: ${q.explanation}` : ""}`
-      }));
+    : questions.map((q) => {
+        const correctText = getOptionText(q, q.answer);
+        const expl = q.explanation ? "\n\nव्याख्या: " + q.explanation : "";
+        return {
+          id: q.id,
+          front: q.question,
+          back: "सही उत्तर: " + correctText + expl
+        };
+      });
 
   const currentCard = activeFlashcards[currentFcIndex];
 
@@ -331,7 +344,7 @@ export default function QuizRunnerPage() {
                     </div>
                     <div className="text-xs text-slate-400 space-y-1">
                       <div>आपका उत्तर: <strong className={isCorrect ? "text-emerald-400" : "text-rose-400"}>{userAnswer || "छोड़ा गया"}</strong></div>
-                      <div>सही उत्तर: <strong className="text-emerald-400">{q.answer}</strong> ({q.answer === "A" ? q.option_a : q.answer === "B" ? q.option_b : q.answer === "C" ? q.option_c : q.option_d})</div>
+                      <div>सही उत्तर: <strong className="text-emerald-400">{q.answer}</strong> ({getOptionText(q, q.answer)})</div>
                     </div>
                     {q.explanation && (
                       <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-200">
