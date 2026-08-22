@@ -3,16 +3,16 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { 
-  BookOpen, Trophy, Sparkles, HelpCircle, Download, 
-  ChevronRight, ArrowRight, Layers, Flame, BookCheck,
-  TrendingUp, Award, Zap, BrainCircuit
+  BookOpen, Trophy, Sparkles, Layers, 
+  ChevronRight, ArrowRight, Zap, Bell
 } from "lucide-react";
 
 export default function HomePage() {
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState(null);
   const [subjects, setSubjects] = useState([]);
-  const [stats, setStats] = useState({ notes: 0, questions: 0, quizzes: 0 });
+  const [banners, setBanners] = useState([]);
+  const [counts, setCounts] = useState({ notes: 0, tests: 0, pyqs: 0 });
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -20,26 +20,29 @@ export default function HomePage() {
     async function loadData() {
       setLoading(true);
       try {
-        const { data: examsData } = await supabase
-          .from("exams")
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true });
-
-        if (examsData && examsData.length > 0) {
-          setExams(examsData);
-          setSelectedExam(examsData[0]);
-          await fetchExamSubjects(examsData[0].id);
+        // Load Exams
+        const { data: exData } = await supabase.from("exams").select("*").eq("is_active", true).order("id");
+        if (exData && exData.length > 0) {
+          setExams(exData);
+          setSelectedExam(exData[0]);
         }
 
-        const [{ count: nCt }, { count: qCt }, { count: qzCt }] = await Promise.all([
-          supabase.from("notes").select("*", { count: "exact", head: true }),
-          supabase.from("questions").select("*", { count: "exact", head: true }),
-          supabase.from("quizzes").select("*", { count: "exact", head: true })
-        ]);
-        setStats({ notes: nCt || 0, questions: qCt || 0, quizzes: qzCt || 0 });
+        // Fetch Live Banners in Real-Time
+        const { data: bData } = await supabase
+          .from("banners")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (bData && bData.length > 0) {
+          setBanners(bData);
+        }
+
+        // Load Global Counts
+        const { count: nCount } = await supabase.from("notes").select("*", { count: "exact", head: true });
+        const { count: tCount } = await supabase.from("quizzes").select("*", { count: "exact", head: true });
+        const { count: pCount } = await supabase.from("questions").select("*", { count: "exact", head: true }).eq("is_pyq", true);
+        setCounts({ notes: nCount || 0, tests: tCount || 0, pyqs: pCount || 0 });
       } catch (err) {
-        console.error("Home Data Fetch Error:", err);
+        console.error("Home Load Error:", err);
       } finally {
         setLoading(false);
       }
@@ -47,200 +50,172 @@ export default function HomePage() {
     loadData();
   }, []);
 
-  const fetchExamSubjects = async (examId) => {
-    try {
-      const { data: mappings } = await supabase
+  useEffect(() => {
+    async function loadSubjects() {
+      if (!selectedExam) return;
+      const { data: subMaps } = await supabase
         .from("exam_subjects")
-        .select("subject_id, sort_order, subjects(*)")
-        .eq("exam_id", examId)
+        .select("sort_order, subjects(*)")
+        .eq("exam_id", selectedExam.id)
         .order("sort_order", { ascending: true });
 
-      if (mappings) {
-        setSubjects(mappings.map((m) => m.subjects).filter(Boolean));
+      if (subMaps && subMaps.length > 0) {
+        setSubjects(subMaps.map((m) => m.subjects).filter(Boolean));
+      } else {
+        const { data: allSubs } = await supabase.from("subjects").select("*").eq("is_active", true);
+        if (allSubs) setSubjects(allSubs);
       }
-    } catch (err) {
-      console.error(err);
     }
-  };
-
-  const handleSelectExam = (exam) => {
-    setSelectedExam(exam);
-    fetchExamSubjects(exam.id);
-  };
+    loadSubjects();
+  }, [selectedExam]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 space-y-5">
-      
-      {/* 1. Exam Switcher Scrollable Pills */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+    <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-2">
+      {/* Top Exam Selector Chips */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
           <span>लक्ष्य परीक्षा चुनें (Select Exam)</span>
-          <span className="text-indigo-400 font-semibold">{selectedExam?.category || "Rajasthan State"}</span>
+          <span className="text-indigo-400 font-extrabold">RPSC / RSMSSB</span>
         </div>
-        
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {loading ? (
-            [1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-9 w-28 bg-slate-900 rounded-xl animate-pulse border border-slate-800" />
-            ))
-          ) : (
-            exams.map((exam) => {
-              const isSelected = selectedExam?.id === exam.id;
-              return (
-                <button
-                  key={exam.id}
-                  onClick={() => handleSelectExam(exam)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 border active:scale-95 ${
-                    isSelected
-                      ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white border-transparent shadow-lg shadow-indigo-500/25"
-                      : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
-                  }`}
-                >
-                  {exam.name}
-                </button>
-              );
-            })
-          )}
-        </div>
-      </section>
-
-      {/* 2. Target Exam Hero Card */}
-      {selectedExam && (
-        <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-slate-950 border border-indigo-500/20 space-y-3 shadow-xl relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {selectedExam.category || "Official Board"}
-            </span>
-            {selectedExam.syllabus_pdf_url && (
-              <a
-                href={selectedExam.syllabus_pdf_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:underline"
-              >
-                <Download className="w-3.5 h-3.5" /> PDF सिलेबस
-              </a>
-            )}
-          </div>
-
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">{selectedExam.name}</h2>
-            <p className="text-xs text-slate-300 mt-1 line-clamp-2">
-              {selectedExam.description || "सम्पूर्ण पाठ्यक्रम, स्मार्ट थ्योरी नोट्स, टॉपिकवाइज़ टेस्ट एवं विगत वर्षों के हल प्रश्न पत्र।"}
-            </p>
-          </div>
-
-          <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
-            <span className="text-xs text-slate-400">
-              उपलब्ध विषय: <strong className="text-white">{subjects.length}</strong>
-            </span>
-            <Link
-              href={`/exam/${selectedExam.slug}`}
-              className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-white text-slate-950 hover:bg-slate-200 active:scale-95 transition shadow-sm"
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          {exams.map((ex) => (
+            <button
+              key={ex.id}
+              onClick={() => setSelectedExam(ex)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${
+                selectedExam?.id === ex.id
+                  ? "bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
             >
-              विस्तृत सिलेबस <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+              {ex.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Target Exam Hero Card */}
+      {selectedExam && (
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 space-y-1.5 shadow-xl">
+          <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">{selectedExam.category || "EXAM PORTAL"}</span>
+          <h1 className="text-lg font-black text-white">{selectedExam.name}</h1>
+          <p className="text-xs text-slate-300">{selectedExam.description || "संपूर्ण पाठ्यक्रम, स्मार्ट थ्योरी एवं टॉपिकवाइज़ टेस्ट"}</p>
+          <div className="pt-2 text-[11px] font-semibold text-emerald-400">
+            उपलब्ध विषय: {subjects.length}
           </div>
-        </section>
+        </div>
       )}
 
-      {/* 3. Core Feature Touch Grid */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* 5 High-Impact Action Tiles Grid */}
+      <div className="grid grid-cols-2 gap-2.5">
         <Link
           href="/notes"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 active:scale-95 transition group"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 space-y-1 transition active:scale-[0.98]"
         >
-          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition mb-2">
-            <BookOpen className="w-5 h-5" />
-          </div>
+          <BookOpen className="w-5 h-5 text-indigo-400" />
           <h3 className="text-xs font-bold text-white">स्मार्ट नोट्स</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">{stats.notes}+ टू-द-पॉइंट नोट्स</p>
+          <p className="text-[10px] text-slate-400">{counts.notes}+ टू-द-पॉइंट नोट्स</p>
         </Link>
 
         <Link
           href="/quiz"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 active:scale-95 transition group"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/40 space-y-1 transition active:scale-[0.98]"
         >
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition mb-2">
-            <Trophy className="w-5 h-5" />
-          </div>
+          <Trophy className="w-5 h-5 text-emerald-400" />
           <h3 className="text-xs font-bold text-white">स्पीड टेस्ट</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">{stats.quizzes}+ लाइव मॉक टेस्ट</p>
+          <p className="text-[10px] text-slate-400">{counts.tests}+ लाइव मॉक टेस्ट</p>
         </Link>
 
         <Link
-          href="/pyq"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 active:scale-95 transition group"
+          href="/flashcards"
+          className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-slate-900 to-orange-500/10 border border-amber-500/30 hover:border-amber-500/60 space-y-1 transition active:scale-[0.98] col-span-2"
         >
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition mb-2">
-            <HelpCircle className="w-5 h-5" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layers className="w-5 h-5 text-amber-400" />
+              <h3 className="text-xs font-black text-white">फ्लैशकार्ड्स रिवीजन (Unlimited)</h3>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">New ✨</span>
           </div>
+          <p className="text-[10px] text-slate-400">1-टैप फ्लिप कार्ड्स से सभी विषयों का तीव्र रिवीजन करें</p>
+        </Link>
+
+        <Link
+          href="/notes"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 space-y-1 transition active:scale-[0.98]"
+        >
+          <Sparkles className="w-5 h-5 text-amber-400" />
           <h3 className="text-xs font-bold text-white">PYQs प्रश्न</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">{stats.questions}+ विगत वर्षों के प्रश्न</p>
+          <p className="text-[10px] text-slate-400">{counts.pyqs}+ विगत वर्षों के प्रश्न</p>
         </Link>
 
         <Link
-          href="/ai-tutor"
-          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 active:scale-95 transition group"
+          href="/student"
+          className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 space-y-1 transition active:scale-[0.98]"
         >
-          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition mb-2">
-            <Sparkles className="w-5 h-5" />
-          </div>
+          <Zap className="w-5 h-5 text-purple-400" />
           <h3 className="text-xs font-bold text-white">AI ट्यूटर</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">24/7 लाइव डाउट सॉल्व</p>
+          <p className="text-[10px] text-slate-400">24/7 लाइव डाउट सॉल्व</p>
         </Link>
-      </section>
+      </div>
 
-      {/* 4. Subject Hierarchy (Syllabus Structure) */}
-      <section className="space-y-3 pt-1">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-300">पाठ्यक्रम विषय (Syllabus Subjects)</h3>
-          <span className="text-[11px] text-slate-500">{subjects.length} विषय उपलब्ध</span>
-        </div>
-
-        {loading ? (
-          <div className="space-y-2.5">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-slate-900 rounded-2xl border border-slate-800 animate-pulse" />
-            ))}
-          </div>
-        ) : subjects.length === 0 ? (
-          <div className="p-8 rounded-3xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
-            विषय लोड हो रहे हैं...
-          </div>
+      {/* Dynamic Admin Live Banners */}
+      <div className="space-y-2">
+        {banners.length > 0 ? (
+          banners.map((b) => (
+            <div
+              key={b.id}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/90 via-slate-900 to-purple-950/80 border border-indigo-500/30 flex items-center justify-between gap-2 shadow-md"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
+                  {b.badge_text || "अपडेट"}
+                </span>
+                <p className="text-xs text-slate-200 font-semibold leading-tight">{b.title}</p>
+              </div>
+              {b.link && (
+                <Link href={b.link} className="text-indigo-400 hover:text-indigo-300 flex-shrink-0">
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
+            </div>
+          ))
         ) : (
-          <div className="grid gap-2.5">
-            {subjects.map((sub) => (
-              <Link
-                key={sub.id}
-                href={`/subject/${sub.id}`}
-                className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 hover:bg-slate-900 flex items-center justify-between transition active:scale-[0.99] group shadow-sm"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm group-hover:scale-105 transition">
-                    {sub.name.substring(0, 1)}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">{sub.name}</h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5">अध्याय, टॉपिक, स्मार्ट नोट्स व MCQs देखें</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300 transition" />
-              </Link>
-            ))}
+          <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 text-center text-xs text-slate-300 flex items-center justify-center gap-2">
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">अपडेट</span>
+            <span>🎯 REET Mains & RAS 2026 संपूर्ण मॉक टेस्ट सीरीज व फ्लैशकार्ड्स निःशुल्क उपलब्ध हैं!</span>
           </div>
         )}
-      </section>
+      </div>
 
-      {/* 5. Clean Non-Intrusive Sponsored / Ad Banner Slot (Future Monetization) */}
-      <section className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800 text-center space-y-1.5">
-        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-wider">
-          Sponsored / अपडेट्स
-        </span>
-        <p className="text-xs font-semibold text-slate-200">
-          🎯 REET Mains & RAS 2026 संपूर्ण मॉक टेस्ट सीरीज निशुल्क उपलब्ध है!
-        </p>
-      </section>
+      {/* Syllabus Subjects List */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+          <span>पाठ्यक्रम विषय (Syllabus Subjects)</span>
+          <span>{subjects.length} विषय उपलब्ध</span>
+        </div>
+
+        <div className="grid gap-2">
+          {subjects.map((sub, idx) => (
+            <Link
+              key={sub.id}
+              href={`/subject/${sub.id}`}
+              className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 flex items-center justify-between group transition active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
+                  {sub.name?.charAt(0) || "S"}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">{sub.name}</h4>
+                  <p className="text-[10px] text-slate-400">अध्याय, टॉपिक, स्मार्ट नोट्स व MCQs देखें</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300" />
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
