@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
-  Sparkles, HelpCircle, Trophy, Play 
+  Sparkles, HelpCircle, Trophy, Play, RotateCcw, Timer
 } from "lucide-react";
 
 export default function ChapterSingleViewPage() {
@@ -14,9 +14,16 @@ export default function ChapterSingleViewPage() {
   const [activeTab, setActiveTab] = useState("notes");
   const [notes, setNotes] = useState([]);
   const [questions, setQuestions] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // In-Chapter Speed Test State
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -54,13 +61,6 @@ export default function ChapterSingleViewPage() {
             .eq("is_active", true)
             .order("id", { ascending: true });
           if (qData) setQuestions(qData);
-
-          const { data: qzData } = await supabase
-            .from("quizzes")
-            .select("*")
-            .in("topic_id", topicIds)
-            .eq("is_active", true);
-          if (qzData) setQuizzes(qzData);
         }
       } catch (err) {
         console.error("Chapter direct load error:", err);
@@ -71,9 +71,32 @@ export default function ChapterSingleViewPage() {
     loadChapterData();
   }, [id]);
 
+  // Speed test timer
+  useEffect(() => {
+    let timer;
+    if (quizStarted && !quizSubmitted && timeLeft > 0) {
+      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (timeLeft === 0 && quizStarted && !quizSubmitted) {
+      setQuizSubmitted(true);
+    }
+    return () => clearInterval(timer);
+  }, [quizStarted, quizSubmitted, timeLeft]);
+
   const handleSelectOption = (qId, optKey) => {
     if (selectedAnswers[qId]) return;
     setSelectedAnswers((prev) => ({ ...prev, [qId]: optKey }));
+  };
+
+  const handleQuizAnswer = (qId, optKey) => {
+    setQuizAnswers((prev) => ({ ...prev, [qId]: optKey }));
+  };
+
+  const resetQuiz = () => {
+    setQuizStarted(false);
+    setQuizSubmitted(false);
+    setCurrentQIndex(0);
+    setQuizAnswers({});
+    setTimeLeft(600);
   };
 
   if (loading) {
@@ -95,6 +118,11 @@ export default function ChapterSingleViewPage() {
 
   const mcqsList = questions.filter((q) => !q.is_pyq);
   const pyqsList = questions.filter((q) => q.is_pyq);
+
+  // Speed test score calculations
+  const totalScore = questions.reduce((acc, q) => {
+    return quizAnswers[q.id] === q.answer ? acc + 1 : acc;
+  }, 0);
 
   return (
     <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-2">
@@ -149,7 +177,7 @@ export default function ChapterSingleViewPage() {
         >
           <Trophy className={"w-5 h-5 " + (activeTab === "quiz" ? "text-purple-400" : "text-slate-400")} />
           <h3 className="text-xs font-bold text-white">4. स्पीड टेस्ट</h3>
-          <p className="text-[10px] text-purple-300 font-bold">मॉक टेस्ट शुरू करें</p>
+          <p className="text-[10px] text-purple-300 font-bold">{questions.length} प्रश्नों का लाइव टेस्ट</p>
         </button>
       </div>
 
@@ -255,33 +283,102 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
+      {/* TAB 4: In-Chapter Dedicated Speed Test */}
       {activeTab === "quiz" && (
-        <div className="space-y-3 pt-1">
-          {quizzes.length === 0 ? (
-            <div className="p-8 rounded-3xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400 space-y-2">
-              <p>इस पूरे अध्याय के सभी प्रश्नों का लाइव स्पीड टेस्ट दें।</p>
-              <Link 
-                href="/quiz"
-                className="inline-block px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-md"
+        <div className="space-y-4 pt-1">
+          {questions.length === 0 ? (
+            <div className="p-8 rounded-3xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
+              इस अध्याय में अभी प्रश्न जोड़े जा रहे हैं।
+            </div>
+          ) : !quizStarted ? (
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-xl">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto">
+                <Trophy className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white">{chapter.name} - लाइव टेस्ट</h3>
+                <p className="text-xs text-slate-400">कुल प्रश्न: {questions.length} • समय सीमा: 10 मिनट</p>
+              </div>
+              <button
+                onClick={() => setQuizStarted(true)}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold shadow-lg transition flex items-center justify-center gap-1.5"
               >
-                क्विज़ हब खोलें
-              </Link>
+                <Play className="w-4 h-4 fill-current" /> अभी टेस्ट शुरू करें
+              </button>
+            </div>
+          ) : quizSubmitted ? (
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-xl">
+              <span className="text-[10px] font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase">
+                परिणाम (Test Result)
+              </span>
+              <div className="text-3xl font-black text-white">
+                {totalScore} / {questions.length}
+              </div>
+              <p className="text-xs text-slate-300">
+                सटीकता: {Math.round((totalScore / questions.length) * 100)}%
+              </p>
+              <button
+                onClick={resetQuiz}
+                className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें
+              </button>
             </div>
           ) : (
-            quizzes.map((qz) => (
-              <div key={qz.id} className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 flex items-center justify-between shadow-xl">
-                <div>
-                  <h3 className="text-xs font-bold text-white">{qz.title}</h3>
-                  <p className="text-[10px] text-slate-400">समय: {qz.duration_minutes} मिनट</p>
-                </div>
-                <Link
-                  href={"/quiz/" + qz.id}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-md"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" /> स्टार्ट
-                </Link>
+            <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-400">
+                <span>प्रश्न {currentQIndex + 1} / {questions.length}</span>
+                <span className="text-amber-400 flex items-center gap-1">
+                  <Timer className="w-4 h-4" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+                </span>
               </div>
-            ))
+
+              <h3 className="text-xs sm:text-sm font-bold text-white leading-relaxed whitespace-pre-line">
+                {questions[currentQIndex].question}
+              </h3>
+
+              <div className="grid grid-cols-1 gap-2 pt-1">
+                {[
+                  { key: "A", text: questions[currentQIndex].option_a },
+                  { key: "B", text: questions[currentQIndex].option_b },
+                  { key: "C", text: questions[currentQIndex].option_c },
+                  { key: "D", text: questions[currentQIndex].option_d }
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => handleQuizAnswer(questions[currentQIndex].id, opt.key)}
+                    className={"p-3.5 rounded-2xl border text-left text-xs transition " + (quizAnswers[questions[currentQIndex].id] === opt.key ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" : "bg-slate-950/80 border-slate-800 text-slate-300")}
+                  >
+                    <strong>{opt.key}.</strong> {opt.text}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  disabled={currentQIndex === 0}
+                  onClick={() => setCurrentQIndex((prev) => prev - 1)}
+                  className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-bold text-slate-300 disabled:opacity-30"
+                >
+                  पिछला
+                </button>
+                {currentQIndex === questions.length - 1 ? (
+                  <button
+                    onClick={() => setQuizSubmitted(true)}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold text-white shadow-md"
+                  >
+                    सबमिट करें
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setCurrentQIndex((prev) => prev + 1)}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white shadow-md"
+                  >
+                    अगला
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}
