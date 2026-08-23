@@ -410,4 +410,92 @@ export default function ChapterSingleViewPage() {
                         <span className="text-xs font-bold text-slate-300">प्रश्न {idx + 1}</span>
                         {isCorrect ? (
                           <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                            <CheckCircle2 classNam
+                            <CheckCircle2 className="w-3 h-3" /> सही
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                            <XCircle className="w-3 h-3" /> गलत (आपका: {userAns || "नहीं दिया"})
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="text-xs font-bold text-white leading-relaxed whitespace-pre-line">
+                        {q.question}
+                      </h4>
+
+                      <div className="p-3.5 rounded-2xl bg-[#082f49]/60 border border-sky-500/30 text-xs text-sky-100 space-y-1">
+                        <div className="font-extrabold text-cyan-300 flex items-center gap-1 text-[11px]">
+                          <HelpCircle className="w-3.5 h-3.5" /> सही उत्तर: विकल्प ({q.answer}) - {q["option_" + q.answer?.toLowerCase()]}
+                        </div>
+                        {q.explanation && (
+                          <p className="leading-relaxed whitespace-pre-line text-slate-200 pt-1 text-xs">
+                            {q.explanation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-400">
+                <span>प्रश्न {currentQIndex + 1} / {questions.length}</span>
+                <span className="text-amber-400 flex items-center gap-1">
+                  <Timer className="w-4 h-4" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+                </span>
+              </div>
+
+              <h3 className="text-xs sm:text-sm font-bold text-white leading-relaxed whitespace-pre-line">
+                {questions[currentQIndex].question}
+              </h3>
+
+              <div className="grid grid-cols-1 gap-2 pt-1">
+                {[
+                  { key: "A", text: questions[currentQIndex].option_a },
+                  { key: "B", text: questions[currentQIndex].option_b },
+                  { key: "C", text: questions[currentQIndex].option_c },
+                  { key: "D", text: questions[currentQIndex].option_d }
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => handleQuizAnswer(questions[currentQIndex].id, opt.key)}
+                    className={"p-3.5 rounded-2xl border text-left text-xs transition " + (quizAnswers[questions[currentQIndex].id] === opt.key ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" : "bg-slate-950/80 border-slate-800 text-slate-300")}
+                  >
+                    <strong>{opt.key}.</strong> {opt.text}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  disabled={currentQIndex === 0}
+                  onClick={() => setCurrentQIndex((prev) => prev - 1)}
+                  className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-bold text-slate-300 disabled:opacity-30"
+                >
+                  पिछला
+                </button>
+                {currentQIndex === questions.length - 1 ? (
+                  <button
+                    onClick={() => setQuizSubmitted(true)}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold text-white shadow-md"
+                  >
+                    सबमिट करें
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setCurrentQIndex((prev) => prev + 1)}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white shadow-md"
+                  >
+                    अगला
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
