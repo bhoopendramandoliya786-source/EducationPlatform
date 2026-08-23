@@ -142,7 +142,7 @@ export default function ChapterSingleViewPage() {
         </div>
         <h1 className="text-lg font-black text-white">{chapter.name}</h1>
         <p className="text-xs text-slate-300 leading-relaxed">
-          {chapter.description || "डॉ. वासुदेव नंदन प्रसाद व मानक पुस्तकों पर आधारित संपूर्ण प्रामाणिक थ्योरी नोट्स, अभ्यास MCQs एवं विगत वर्ष PYQs"}
+          {chapter.description || "मानक पुस्तकों पर आधारित संपूर्ण प्रामाणिक थ्योरी नोट्स, अभ्यास MCQs एवं विगत वर्ष PYQs"}
         </p>
       </div>
 
@@ -286,7 +286,7 @@ export default function ChapterSingleViewPage() {
                   </div>
 
                   {isAttempted && q.explanation && (
-                    <div className="p-4 rounded-2xl bg-[#082f49]/60 border border-sky-500/30 text-xs text-sky-100 space-y-1 animate-in fade-in duration-200">
+                    <div className="p-4 rounded-2xl bg-[#082f49]/60 border border-sky-500/30 text-xs text-sky-100 space-y-1">
                       <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-[11px]">
                         <HelpCircle className="w-3.5 h-3.5" /> विस्तृत व्याख्या:
                       </div>
@@ -331,7 +331,7 @@ export default function ChapterSingleViewPage() {
                   </h3>
 
                   {isFlipped ? (
-                    <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-xs space-y-2 animate-in fade-in duration-200">
+                    <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-xs space-y-2">
                       <div className="font-extrabold text-emerald-300 text-xs flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" /> सही उत्तर: विकल्प ({q.answer}) - {correctOptText}
                       </div>
@@ -409,4 +409,5 @@ export default function ChapterSingleViewPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-300">प्रश्न {idx + 1}</span>
                         {isCorrect ? (
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-e
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            <CheckCircle2 classNam
