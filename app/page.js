@@ -10,7 +10,8 @@ import {
 export default function HomePage() {
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState(null);
-  const [subjects, setSubjects] = useState([]);
+  const [allSubjects, setAllSubjects] = useState([]);
+  const [displayedSubjects, setDisplayedSubjects] = useState([]);
   const [banners, setBanners] = useState([]);
   const [counts, setCounts] = useState({ notes: 0, tests: 0 });
   const [loading, setLoading] = useState(true);
@@ -20,81 +21,66 @@ export default function HomePage() {
     async function loadInitialData() {
       setLoading(true);
       try {
-        const { data: exData } = await supabase
-          .from("exams")
-          .select("*")
-          .eq("is_active", true)
-          .order("id");
+        const [examsRes, subsRes, bannersRes, notesRes, quizRes] = await Promise.all([
+          supabase.from("exams").select("*").eq("is_active", true).order("id"),
+          supabase.from("subjects").select("*").eq("is_active", true).order("id", { ascending: true }),
+          supabase.from("banners").select("*").order("created_at", { ascending: false }),
+          supabase.from("notes").select("*", { count: "exact", head: true }),
+          supabase.from("quizzes").select("*", { count: "exact", head: true })
+        ]);
 
-        if (exData && exData.length > 0) {
-          setExams(exData);
-          setSelectedExam(exData[0]);
+        if (examsRes.data && examsRes.data.length > 0) {
+          setExams(examsRes.data);
+          setSelectedExam(examsRes.data[0]);
         }
 
-        const { data: allSubs } = await supabase
-          .from("subjects")
-          .select("*")
-          .eq("is_active", true)
-          .order("id", { ascending: true });
+        const subjectsList = subsRes.data || [];
+        setAllSubjects(subjectsList);
+        setDisplayedSubjects(subjectsList);
 
-        if (allSubs && allSubs.length > 0) {
-          setSubjects(allSubs);
+        if (bannersRes.data) {
+          setBanners(bannersRes.data);
         }
 
-        const { data: bData } = await supabase
-          .from("banners")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (bData && bData.length > 0) {
-          setBanners(bData);
-        }
-
-        const { count: nCount } = await supabase.from("notes").select("*", { count: "exact", head: true });
-        const { count: tCount } = await supabase.from("quizzes").select("*", { count: "exact", head: true });
-        setCounts({ notes: nCount || 0, tests: tCount || 0 });
+        setCounts({
+          notes: notesRes.count || 0,
+          tests: quizRes.count || 0
+        });
       } catch (err) {
-        console.error("Home Initial Load Error:", err);
+        console.error("Home Load Error:", err);
       } finally {
         setLoading(false);
       }
     }
+
     loadInitialData();
   }, []);
 
   useEffect(() => {
-    if (!selectedExam) return;
+    if (!selectedExam || allSubjects.length === 0) return;
 
-    async function filterSubjectsByExam() {
+    async function syncSubjectsForExam() {
       try {
-        const { data: subMaps } = await supabase
+        const { data: mapping } = await supabase
           .from("exam_subjects")
           .select("sort_order, subjects(*)")
           .eq("exam_id", selectedExam.id)
           .order("sort_order", { ascending: true });
 
-        const mapped = (subMaps || []).map((m) => m.subjects).filter(Boolean);
+        const mappedSubs = (mapping || []).map((m) => m.subjects).filter(Boolean);
 
-        if (mapped.length > 0) {
-          setSubjects(mapped);
+        if (mappedSubs.length > 0) {
+          setDisplayedSubjects(mappedSubs);
         } else {
-          const { data: allSubs } = await supabase
-            .from("subjects")
-            .select("*")
-            .eq("is_active", true)
-            .order("id", { ascending: true });
-
-          if (allSubs && allSubs.length > 0) {
-            setSubjects(allSubs);
-          }
+          setDisplayedSubjects(allSubjects);
         }
       } catch (e) {
-        console.error("Exam filter error:", e);
+        setDisplayedSubjects(allSubjects);
       }
     }
 
-    filterSubjectsByExam();
-  }, [selectedExam]);
+    syncSubjectsForExam();
+  }, [selectedExam, allSubjects]);
 
   return (
     <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-2">
@@ -122,7 +108,7 @@ export default function HomePage() {
           <h1 className="text-lg font-black text-white">{selectedExam.name}</h1>
           <p className="text-xs text-slate-300">{selectedExam.description || "संपूर्ण पाठ्यक्रम, स्मार्ट थ्योरी एवं टॉपिकवाइज़ टेस्ट"}</p>
           <div className="pt-2 text-[11px] font-semibold text-emerald-400">
-            उपलब्ध विषय: {subjects.length}
+            उपलब्ध विषय: {displayedSubjects.length}
           </div>
         </div>
       )}
@@ -196,16 +182,16 @@ export default function HomePage() {
       <div className="space-y-2.5">
         <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
           <span>पाठ्यक्रम विषय (Syllabus Subjects)</span>
-          <span className="text-indigo-400 font-bold">{subjects.length} विषय उपलब्ध</span>
+          <span className="text-indigo-400 font-bold">{displayedSubjects.length} विषय उपलब्ध</span>
         </div>
 
         <div className="grid gap-2">
-          {subjects.length === 0 ? (
+          {displayedSubjects.length === 0 ? (
             <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
               विषय लोड हो रहे हैं...
             </div>
           ) : (
-            subjects.map((sub) => (
+            displayedSubjects.map((sub) => (
               <Link
                 key={sub.id}
                 href={"/subject/" + sub.id}
