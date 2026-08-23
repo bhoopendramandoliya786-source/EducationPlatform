@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { 
-  BookOpen, Trophy, Sparkles, Layers, 
+  BookOpen, Trophy, Layers, 
   ChevronRight, ArrowRight, Zap 
 } from "lucide-react";
 
@@ -17,19 +17,35 @@ export default function HomePage() {
   const supabase = createClient();
 
   useEffect(() => {
-    async function loadData() {
+    async function loadInitialData() {
       setLoading(true);
       try {
-        const { data: exData } = await supabase.from("exams").select("*").eq("is_active", true).order("id");
+        const { data: exData } = await supabase
+          .from("exams")
+          .select("*")
+          .eq("is_active", true)
+          .order("id");
+
         if (exData && exData.length > 0) {
           setExams(exData);
           setSelectedExam(exData[0]);
+        }
+
+        const { data: allSubs } = await supabase
+          .from("subjects")
+          .select("*")
+          .eq("is_active", true)
+          .order("id", { ascending: true });
+
+        if (allSubs && allSubs.length > 0) {
+          setSubjects(allSubs);
         }
 
         const { data: bData } = await supabase
           .from("banners")
           .select("*")
           .order("created_at", { ascending: false });
+
         if (bData && bData.length > 0) {
           setBanners(bData);
         }
@@ -38,48 +54,50 @@ export default function HomePage() {
         const { count: tCount } = await supabase.from("quizzes").select("*", { count: "exact", head: true });
         setCounts({ notes: nCount || 0, tests: tCount || 0 });
       } catch (err) {
-        console.error("Home Load Error:", err);
+        console.error("Home Initial Load Error:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadData();
+    loadInitialData();
   }, []);
 
   useEffect(() => {
-    async function loadSubjects() {
-      try {
-        if (selectedExam) {
-          const { data: subMaps } = await supabase
-            .from("exam_subjects")
-            .select("sort_order, subjects(*)")
-            .eq("exam_id", selectedExam.id)
-            .order("sort_order", { ascending: true });
+    if (!selectedExam) return;
 
-          if (subMaps && subMaps.length > 0) {
-            setSubjects(subMaps.map((m) => m.subjects).filter(Boolean));
-            return;
+    async function filterSubjectsByExam() {
+      try {
+        const { data: subMaps } = await supabase
+          .from("exam_subjects")
+          .select("sort_order, subjects(*)")
+          .eq("exam_id", selectedExam.id)
+          .order("sort_order", { ascending: true });
+
+        const mapped = (subMaps || []).map((m) => m.subjects).filter(Boolean);
+
+        if (mapped.length > 0) {
+          setSubjects(mapped);
+        } else {
+          const { data: allSubs } = await supabase
+            .from("subjects")
+            .select("*")
+            .eq("is_active", true)
+            .order("id", { ascending: true });
+
+          if (allSubs && allSubs.length > 0) {
+            setSubjects(allSubs);
           }
         }
-        
-        // Fallback: Show all active subjects created in database
-        const { data: allSubs } = await supabase
-          .from("subjects")
-          .select("*")
-          .eq("is_active", true)
-          .order("id", { ascending: true });
-
-        if (allSubs) setSubjects(allSubs);
-      } catch (err) {
-        console.error("Subject Load Error:", err);
+      } catch (e) {
+        console.error("Exam filter error:", e);
       }
     }
-    loadSubjects();
+
+    filterSubjectsByExam();
   }, [selectedExam]);
 
   return (
     <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-2">
-      {/* Top Exam Selector */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
           <span>लक्ष्य परीक्षा चुनें (Select Exam)</span>
@@ -90,11 +108,7 @@ export default function HomePage() {
             <button
               key={ex.id}
               onClick={() => setSelectedExam(ex)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${
-                selectedExam?.id === ex.id
-                  ? "bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
-              }`}
+              className={"px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition " + (selectedExam?.id === ex.id ? "bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20" : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white")}
             >
               {ex.name}
             </button>
@@ -102,7 +116,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Target Exam Hero */}
       {selectedExam && (
         <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 space-y-1.5 shadow-xl">
           <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">{selectedExam.category || "EXAM PORTAL"}</span>
@@ -114,7 +127,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 4 Standard Action Cards (2x2 Grid) */}
       <div className="grid grid-cols-2 gap-2.5">
         <Link
           href="/notes"
@@ -153,7 +165,6 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* Dynamic Live Admin Banners */}
       <div className="space-y-2">
         {banners.length > 0 ? (
           banners.map((b) => (
@@ -177,37 +188,42 @@ export default function HomePage() {
         ) : (
           <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 text-center text-xs text-slate-300 flex items-center justify-center gap-2">
             <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">अपडेट</span>
-            <span>🎯 REET Mains & RAS 2026 संपूर्ण मॉक टेस्ट सीरीज व फ्लैशकार्ड्स निःशुल्क उपलब्ध हैं!</span>
+            <span>🎯 सभी विषयों के नए मॉक टेस्ट एवं नोट्स लाइव उपलब्ध हैं!</span>
           </div>
         )}
       </div>
 
-      {/* Syllabus Subjects List */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
           <span>पाठ्यक्रम विषय (Syllabus Subjects)</span>
-          <span>{subjects.length} विषय उपलब्ध</span>
+          <span className="text-indigo-400 font-bold">{subjects.length} विषय उपलब्ध</span>
         </div>
 
         <div className="grid gap-2">
-          {subjects.map((sub) => (
-            <Link
-              key={sub.id}
-              href={`/subject/${sub.id}`}
-              className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 flex items-center justify-between group transition active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
-                  {sub.name?.charAt(0) || "S"}
+          {subjects.length === 0 ? (
+            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
+              विषय लोड हो रहे हैं...
+            </div>
+          ) : (
+            subjects.map((sub) => (
+              <Link
+                key={sub.id}
+                href={"/subject/" + sub.id}
+                className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 flex items-center justify-between group transition active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
+                    {sub.icon || sub.name?.charAt(0) || "S"}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">{sub.name}</h4>
+                    <p className="text-[10px] text-slate-400">अध्याय ➔ टॉपिक ➔ नोट्स, MCQs व PYQs देखें</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">{sub.name}</h4>
-                  <p className="text-[10px] text-slate-400">अध्याय ➔ टॉपिक ➔ नोट्स, MCQs व PYQs देखें</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300" />
-            </Link>
-          ))}
+                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300" />
+              </Link>
+            ))
+          )}
         </div>
       </div>
     </div>
