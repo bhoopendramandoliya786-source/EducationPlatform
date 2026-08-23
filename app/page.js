@@ -48,18 +48,30 @@ export default function HomePage() {
 
   useEffect(() => {
     async function loadSubjects() {
-      if (!selectedExam) return;
-      const { data: subMaps } = await supabase
-        .from("exam_subjects")
-        .select("sort_order, subjects(*)")
-        .eq("exam_id", selectedExam.id)
-        .order("sort_order", { ascending: true });
+      try {
+        if (selectedExam) {
+          const { data: subMaps } = await supabase
+            .from("exam_subjects")
+            .select("sort_order, subjects(*)")
+            .eq("exam_id", selectedExam.id)
+            .order("sort_order", { ascending: true });
 
-      if (subMaps && subMaps.length > 0) {
-        setSubjects(subMaps.map((m) => m.subjects).filter(Boolean));
-      } else {
-        const { data: allSubs } = await supabase.from("subjects").select("*").eq("is_active", true);
+          if (subMaps && subMaps.length > 0) {
+            setSubjects(subMaps.map((m) => m.subjects).filter(Boolean));
+            return;
+          }
+        }
+        
+        // Fallback: Show all active subjects created in database
+        const { data: allSubs } = await supabase
+          .from("subjects")
+          .select("*")
+          .eq("is_active", true)
+          .order("id", { ascending: true });
+
         if (allSubs) setSubjects(allSubs);
+      } catch (err) {
+        console.error("Subject Load Error:", err);
       }
     }
     loadSubjects();
