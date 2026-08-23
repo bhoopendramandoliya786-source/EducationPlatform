@@ -6,7 +6,7 @@ import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
   Sparkles, HelpCircle, Trophy, Play, RotateCcw, Timer,
-  ChevronLeft, ChevronRight, Eye, Layers
+  ChevronLeft, ChevronRight, Layers, Eye
 } from "lucide-react";
 
 export default function ChapterSingleViewPage() {
@@ -24,9 +24,10 @@ export default function ChapterSingleViewPage() {
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
-  const [showFullReview, setShowFullReview] = useState(false);
 
-  // In-Result Flashcard State
+  // Post-Quiz Interactive Toggles
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [showFullReview, setShowFullReview] = useState(false);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -102,6 +103,7 @@ export default function ChapterSingleViewPage() {
     setCurrentQIndex(0);
     setQuizAnswers({});
     setTimeLeft(600);
+    setShowFlashcards(false);
     setShowFullReview(false);
     setFlashcardIndex(0);
     setIsFlipped(false);
@@ -176,11 +178,15 @@ export default function ChapterSingleViewPage() {
         </p>
       </div>
 
-      {/* Exactly 4 Standard Cards Grid */}
+      {/* 4 Standard Action Cards Grid */}
       <div className="grid grid-cols-2 gap-2.5">
         <button
           onClick={() => setActiveTab("notes")}
-          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${activeTab === "notes" ? "bg-indigo-600/20 border-indigo-500 shadow-md shadow-indigo-500/10" : "bg-slate-900/80 border-slate-800 hover:border-slate-700"}`}
+          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
+            activeTab === "notes"
+              ? "bg-indigo-600/20 border-indigo-500 shadow-md shadow-indigo-500/10"
+              : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+          }`}
         >
           <BookOpen className={`w-5 h-5 ${activeTab === "notes" ? "text-indigo-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">1. स्मार्ट नोट्स</h3>
@@ -189,7 +195,11 @@ export default function ChapterSingleViewPage() {
 
         <button
           onClick={() => setActiveTab("mcqs")}
-          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${activeTab === "mcqs" ? "bg-emerald-600/20 border-emerald-500 shadow-md shadow-emerald-500/10" : "bg-slate-900/80 border-slate-800 hover:border-slate-700"}`}
+          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
+            activeTab === "mcqs"
+              ? "bg-emerald-600/20 border-emerald-500 shadow-md shadow-emerald-500/10"
+              : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+          }`}
         >
           <CheckCircle2 className={`w-5 h-5 ${activeTab === "mcqs" ? "text-emerald-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">2. अभ्यास MCQs</h3>
@@ -198,7 +208,11 @@ export default function ChapterSingleViewPage() {
 
         <button
           onClick={() => setActiveTab("pyqs")}
-          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${activeTab === "pyqs" ? "bg-amber-600/20 border-amber-500 shadow-md shadow-amber-500/10" : "bg-slate-900/80 border-slate-800 hover:border-slate-700"}`}
+          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
+            activeTab === "pyqs"
+              ? "bg-amber-600/20 border-amber-500 shadow-md shadow-amber-500/10"
+              : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+          }`}
         >
           <Sparkles className={`w-5 h-5 ${activeTab === "pyqs" ? "text-amber-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">3. विगत वर्ष PYQs</h3>
@@ -207,7 +221,11 @@ export default function ChapterSingleViewPage() {
 
         <button
           onClick={() => setActiveTab("quiz")}
-          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${activeTab === "quiz" ? "bg-purple-600/20 border-purple-500 shadow-md shadow-purple-500/10" : "bg-slate-900/80 border-slate-800 hover:border-slate-700"}`}
+          className={`p-4 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
+            activeTab === "quiz"
+              ? "bg-purple-600/20 border-purple-500 shadow-md shadow-purple-500/10"
+              : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+          }`}
         >
           <Trophy className={`w-5 h-5 ${activeTab === "quiz" ? "text-purple-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">4. स्पीड टेस्ट</h3>
@@ -219,7 +237,7 @@ export default function ChapterSingleViewPage() {
       {activeTab === "notes" && (
         <div className="space-y-4 pt-1">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
-            <span>अध्याय संपूर्ण थ्योरी एवं नियम ({notes.length})</span>
+            <span>स्मार्ट थ्योरी एवं महत्वपूर्ण तथ्य ({notes.length})</span>
           </div>
 
           {notes.map((n) => (
@@ -236,7 +254,7 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
-      {/* TAB 2 & 3: MCQs / PYQs */}
+      {/* TAB 2 & TAB 3: MCQs / PYQs */}
       {(activeTab === "mcqs" || activeTab === "pyqs") && (
         <div className="space-y-4 pt-1">
           {(() => {
@@ -256,8 +274,12 @@ export default function ChapterSingleViewPage() {
               return (
                 <div key={q.id} className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3.5 shadow-xl">
                   <div className="flex items-center justify-between">
-                    <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full border ${q.is_pyq ? "bg-amber-500/10 text-amber-300 border-amber-500/30" : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"}`}>
-                      {q.is_pyq ? (`PYQ: ${q.source || "Official Exam"}${q.year ? ` (${q.year})` : ""}`) : "अभ्यास प्रश्न (MCQ)"}
+                    <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      q.is_pyq 
+                        ? "bg-amber-500/10 text-amber-300 border-amber-500/30" 
+                        : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                    }`}>
+                      {q.is_pyq ? `PYQ: ${q.source || "Official Exam"} ${q.year ? `(${q.year})` : ""}` : "अभ्यास प्रश्न (MCQ)"}
                     </span>
                     <span className="text-[10px] font-bold text-slate-500 uppercase">{q.difficulty || "Medium"}</span>
                   </div>
@@ -305,7 +327,7 @@ export default function ChapterSingleViewPage() {
                   </div>
 
                   {isAttempted && q.explanation && (
-                    <div className="p-4 rounded-2xl bg-[#082f49]/60 border border-sky-500/30 text-xs text-sky-100 space-y-1">
+                    <div className="p-4 rounded-2xl bg-[#082f49]/60 border border-sky-500/30 text-xs text-sky-100 space-y-1 animate-in fade-in duration-200">
                       <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-[11px]">
                         <HelpCircle className="w-3.5 h-3.5" /> विस्तृत व्याख्या:
                       </div>
@@ -319,7 +341,7 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
-      {/* TAB 4: Speed Test Mode */}
+      {/* TAB 4: Speed Test (Mock Test Hub & Post-Test Review) */}
       {activeTab === "quiz" && (
         <div className="space-y-4 pt-1">
           {questions.length === 0 ? (
@@ -369,97 +391,133 @@ export default function ChapterSingleViewPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-1">
+                {/* Retest & Toggles */}
+                <div className="space-y-2 pt-1">
                   <button
                     onClick={resetQuiz}
-                    className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
+                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
                   >
                     <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें
                   </button>
-                  <button
-                    onClick={() => setShowFullReview(!showFullReview)}
-                    className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    {showFullReview ? "समीक्षा छुपाएं" : "उत्तर देखें ➔"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowFlashcards(!showFlashcards);
+                        if (!showFlashcards) setShowFullReview(false);
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                        showFlashcards
+                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                          : "bg-slate-800 border-slate-700 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {showFlashcards ? "फ्लैशकार्ड बंद करें" : "फ्लैशकार्ड देखें"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowFullReview(!showFullReview);
+                        if (!showFullReview) setShowFlashcards(false);
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                        showFullReview
+                          ? "bg-sky-500/20 border-sky-500 text-sky-300"
+                          : "bg-slate-800 border-slate-700 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      {showFullReview ? "समीक्षा बंद करें" : "उत्तर देखें ➔"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* 2. Slide-by-Slide Flip Flashcard */}
-              <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3.5 shadow-xl">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-extrabold">
-                    <Sparkles className="w-3.5 h-3.5" /> त्वरित रिवीजन फ्लैशकार्ड (Slide Mode)
-                  </span>
-                  <span className="text-indigo-400 font-black">{flashcardIndex + 1} / {questions.length}</span>
-                </div>
-
-                {/* Interactive Flashcard Card */}
-                <div
-                  onClick={() => setIsFlipped(!isFlipped)}
-                  className={`min-h-[220px] p-5 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between select-none shadow-lg ${
-                    isFlipped 
-                      ? "bg-gradient-to-br from-[#0c4a6e] to-[#082f49] border-sky-400/50 text-white" 
-                      : "bg-slate-950/90 border-slate-800 text-slate-100"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${isFlipped ? "bg-sky-400/20 text-sky-200 border-sky-400/30" : "bg-rose-500/10 text-rose-300 border-rose-500/30"}`}>
-                      {isFlipped ? "उत्तर (Back Side)" : "❓ प्रश्न (Front Side)"}
+              {/* 2. On-Demand Slide-by-Slide Flip Flashcards */}
+              {showFlashcards && (
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-amber-500/30 space-y-3.5 shadow-2xl animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+                    <span className="flex items-center gap-1.5 text-amber-400 font-extrabold">
+                      <Sparkles className="w-3.5 h-3.5" /> त्वरित रिवीजन फ्लैशकार्ड (Slide Mode)
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {isFlipped ? "टच करके प्रश्न देखें" : "उत्तर देखने के लिए टच करें ➔"}
-                    </span>
+                    <span className="text-amber-400 font-black">{flashcardIndex + 1} / {questions.length}</span>
                   </div>
 
-                  <div className="py-3 my-auto text-left">
-                    {!isFlipped ? (
-                      <h4 className="text-xs sm:text-sm font-bold text-white leading-relaxed whitespace-pre-line">
-                        {currentCard?.question}
-                      </h4>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="text-xs sm:text-sm font-black text-emerald-300">
-                          सही उत्तर: ({currentCard?.answer}) {currentCard?.[`option_${currentCard?.answer?.toLowerCase()}`]}
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-amber-500 to-orange-500 h-full transition-all duration-300"
+                      style={{ width: `${((flashcardIndex + 1) / questions.length) * 100}%` }}
+                    />
+                  </div>
+
+                  {/* Flip Card Container */}
+                  <div
+                    onClick={() => setIsFlipped(!isFlipped)}
+                    className={`min-h-[220px] p-5 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between select-none shadow-lg ${
+                      isFlipped 
+                        ? "bg-gradient-to-br from-[#0c4a6e] to-[#082f49] border-sky-400/50 text-white" 
+                        : "bg-slate-950/90 border-slate-800 text-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                        isFlipped ? "bg-sky-400/20 text-sky-200 border-sky-400/30" : "bg-rose-500/10 text-rose-300 border-rose-500/30"
+                      }`}>
+                        {isFlipped ? "उत्तर (Back Side)" : "❓ प्रश्न (Front Side)"}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {isFlipped ? "टच करके प्रश्न देखें" : "उत्तर देखने के लिए टच करें ➔"}
+                      </span>
+                    </div>
+
+                    <div className="py-3 my-auto text-left">
+                      {!isFlipped ? (
+                        <h4 className="text-xs sm:text-sm font-bold text-white leading-relaxed whitespace-pre-line">
+                          {currentCard?.question}
+                        </h4>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="text-xs sm:text-sm font-black text-emerald-300">
+                            सही उत्तर: ({currentCard?.answer}) {currentCard?.[`option_${currentCard?.answer?.toLowerCase()}`]}
+                          </div>
+                          {currentCard?.explanation && (
+                            <p className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line border-t border-sky-400/20 pt-2">
+                              <strong>व्याख्या:</strong> {currentCard?.explanation}
+                            </p>
+                          )}
                         </div>
-                        {currentCard?.explanation && (
-                          <p className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line border-t border-sky-400/20 pt-2">
-                            <strong>व्याख्या:</strong> {currentCard?.explanation}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
+
+                    <div className="text-[10px] text-center text-slate-500">
+                      टैप करके पलटें
+                    </div>
                   </div>
 
-                  <div className="text-[10px] text-center text-slate-500">
-                    टैप करके पलटें
+                  {/* Navigation Controls */}
+                  <div className="flex gap-2">
+                    <button
+                      disabled={flashcardIndex === 0}
+                      onClick={prevFlashcard}
+                      className="flex-1 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 disabled:opacity-30 flex items-center justify-center gap-1 hover:bg-slate-800 transition"
+                    >
+                      <ChevronLeft className="w-4 h-4" /> पिछला कार्ड
+                    </button>
+                    <button
+                      disabled={flashcardIndex === questions.length - 1}
+                      onClick={nextFlashcard}
+                      className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl text-xs font-bold text-white disabled:opacity-30 flex items-center justify-center gap-1 hover:opacity-90 transition shadow-md"
+                    >
+                      अगला कार्ड <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {/* Slide Controls */}
-                <div className="flex gap-2">
-                  <button
-                    disabled={flashcardIndex === 0}
-                    onClick={prevFlashcard}
-                    className="flex-1 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 disabled:opacity-30 flex items-center justify-center gap-1 hover:bg-slate-800 transition"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> पिछला कार्ड
-                  </button>
-                  <button
-                    disabled={flashcardIndex === questions.length - 1}
-                    onClick={nextFlashcard}
-                    className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl text-xs font-bold text-white disabled:opacity-30 flex items-center justify-center gap-1 hover:opacity-90 transition shadow-md"
-                  >
-                    अगला कार्ड <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* 3. Detailed Question-by-Question Review */}
+              {/* 3. On-Demand Full Question-by-Question Review */}
               {showFullReview && (
                 <div className="space-y-3 animate-in fade-in duration-200">
                   <div className="text-xs font-bold text-slate-400 px-1">
-                    📋 टेस्ट के सभी प्रश्नों के उत्तर एवं व्याख्या:
+                    📋 टेस्ट के सभी प्रश्नों के उत्तर एवं विस्तृत व्याख्या:
                   </div>
 
                   {questions.map((q, idx) => {
@@ -524,7 +582,11 @@ export default function ChapterSingleViewPage() {
                   <button
                     key={opt.key}
                     onClick={() => handleQuizAnswer(questions[currentQIndex].id, opt.key)}
-                    className={`p-3.5 rounded-2xl border text-left text-xs transition ${quizAnswers[questions[currentQIndex].id] === opt.key ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" : "bg-slate-950/80 border-slate-800 text-slate-300"}`}
+                    className={`p-3.5 rounded-2xl border text-left text-xs transition ${
+                      quizAnswers[questions[currentQIndex].id] === opt.key 
+                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" 
+                        : "bg-slate-950/80 border-slate-800 text-slate-300"
+                    }`}
                   >
                     <strong>{opt.key}.</strong> {opt.text}
                   </button>
