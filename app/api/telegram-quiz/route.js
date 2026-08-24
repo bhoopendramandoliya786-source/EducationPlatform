@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8988298606:AAFWS8KfvTgvmLXZtbFEj9wA4lhOOVTERa4";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = "@EduAI_RajasthanExam";
 
 export async function GET(request) {
   try {
+    if (!TELEGRAM_BOT_TOKEN) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "TELEGRAM_BOT_TOKEN is missing in Environment Variables." 
+      }, { status: 400 });
+    }
+
     const fallbackQuestions = [
       {
         question: "राजस्थान का राज्य वृक्ष 'खेजड़ी' को राज्य वृक्ष कब घोषित किया गया था?",
         options: ["1981", "1983", "1985", "1989"],
         correct_index: 1,
-        explanation: "खेजड़ी (Prosopis cineraria) को 31 अक्टूबर 1983 को राजस्थान का राज्य वृक्ष घोषित किया गया था।"
+        explanation: "खेजड़ी को 31 अक्टूबर 1983 को राजस्थान का राज्य वृक्ष घोषित किया गया था।"
       },
       {
         question: "पाबूजी की फड़ का वाचन करते समय किस वाद्ययंत्र का मुख्य रूप से प्रयोग किया जाता है?",
@@ -57,7 +64,7 @@ export async function GET(request) {
         type: "quiz",
         correct_option_id: Math.max(0, Math.min(selectedQ.correct_index, selectedQ.options.length - 1)),
         explanation: `${(selectedQ.explanation || "सही उत्तर!").substring(0, 150)}\n\n👉 पूरे 100 प्रश्नों का टेस्ट दें: https://education-platform-fawn-six.vercel.app/quiz`,
-        is_anonymous: false
+        is_anonymous: true
       })
     });
 
