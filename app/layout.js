@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Home, BookOpen, Sparkles, Trophy, User, Search, Flame } from "lucide-react";
 
 export const metadata = {
-  metadataBase: new URL("https://education-platform1.vercel.app"),
+  metadataBase: new URL("https://education-platform-fawn-six.vercel.app"),
   title: {
     default: "EduAI Pro - दिशा 20-20 राजस्थान GK, स्मार्ट नोट्स, 100 PYQ व मॉक टेस्ट",
     template: "%s | EduAI Pro"
@@ -29,7 +29,7 @@ export const metadata = {
   openGraph: {
     title: "EduAI Pro - राजस्थान प्रतियोगी परीक्षाओं की सम्पूर्ण तैयारी",
     description: "दिशा 20-20 टॉपिकवाइज़ नोट्स, 100% सटीक PYQ, स्पीड टेस्ट एवं 24/7 AI ट्यूटर सपोर्ट।",
-    url: "https://education-platform1.vercel.app",
+    url: "https://education-platform-fawn-six.vercel.app",
     siteName: "EduAI Pro",
     locale: "hi_IN",
     type: "website",
@@ -57,7 +57,7 @@ export default function RootLayout({ children }) {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     "name": "EduAI Pro",
-    "url": "https://education-platform1.vercel.app",
+    "url": "https://education-platform-fawn-six.vercel.app",
     "description": "राजस्थान प्रतियोगी परीक्षाओं हेतु स्मार्ट नोट्स, मॉक टेस्ट एवं PYQ प्रश्न बैंक।",
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "All"

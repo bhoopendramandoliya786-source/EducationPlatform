@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 export default async function sitemap() {
-  const baseUrl = "https://education-platform1.vercel.app";
+  const baseUrl = "https://education-platform-fawn-six.vercel.app";
 
   const staticRoutes = [
     "",
@@ -9,7 +9,7 @@ export default async function sitemap() {
     "/quiz",
     "/flashcards",
     "/student",
-    "/search"
+    "/search",
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
@@ -18,26 +18,30 @@ export default async function sitemap() {
   }));
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return staticRoutes;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const [{ data: subjects }, { data: chapters }] = await Promise.all([
-      supabase.from("subjects").select("id, updated_at"),
-      supabase.from("chapters").select("id, updated_at"),
+      supabase.from("subjects").select("id"),
+      supabase.from("chapters").select("id"),
     ]);
 
     const subjectRoutes = (subjects || []).map((sub) => ({
       url: `${baseUrl}/subject/${sub.id}`,
-      lastModified: sub.updated_at || new Date().toISOString(),
+      lastModified: new Date().toISOString(),
       changeFrequency: "weekly",
       priority: 0.9,
     }));
 
     const chapterRoutes = (chapters || []).map((chap) => ({
       url: `${baseUrl}/chapter/${chap.id}`,
-      lastModified: chap.updated_at || new Date().toISOString(),
+      lastModified: new Date().toISOString(),
       changeFrequency: "weekly",
       priority: 0.8,
     }));

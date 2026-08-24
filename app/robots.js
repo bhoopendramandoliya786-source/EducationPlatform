@@ -5,6 +5,6 @@ export default function robots() {
       allow: "/",
       disallow: ["/admin/", "/api/"],
     },
-    sitemap: "https://education-platform1.vercel.app/sitemap.xml",
+    sitemap: "https://education-platform-fawn-six.vercel.app/sitemap.xml",
   };
 }
