@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = "@EduAI_RajasthanExam";
+const WEBSITE_URL = "https://education-platform-fawn-six.vercel.app/quiz";
 
 export async function GET(request) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request) {
         question: "राजस्थान का राज्य वृक्ष 'खेजड़ी' को राज्य वृक्ष कब घोषित किया गया था?",
         options: ["1981", "1983", "1985", "1989"],
         correct_index: 1,
-        explanation: "खेजड़ी को 31 अक्टूबर 1983 को राजस्थान का राज्य वृक्ष घोषित किया गया था।"
+        explanation: "खेजड़ी (Prosopis cineraria) को 31 अक्टूबर 1983 को राजस्थान का राज्य वृक्ष घोषित किया गया था।"
       },
       {
         question: "पाबूजी की फड़ का वाचन करते समय किस वाद्ययंत्र का मुख्य रूप से प्रयोग किया जाता है?",
@@ -53,8 +54,12 @@ export async function GET(request) {
       }
     }
 
+    // 1. Send Quiz Poll with clickable HTML link in explanation
     const pollUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPoll`;
-    const res = await fetch(pollUrl, {
+    const cleanExplanation = (selectedQ.explanation || "सही उत्तर!").substring(0, 120);
+    const htmlExplanation = `${cleanExplanation}\n\n👉 <a href="${WEBSITE_URL}">पूरे 100 प्रश्नों का टेस्ट यहाँ दें</a>`;
+
+    const pollRes = await fetch(pollUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -63,17 +68,40 @@ export async function GET(request) {
         options: JSON.stringify(selectedQ.options.map(opt => String(opt || "").substring(0, 95))),
         type: "quiz",
         correct_option_id: Math.max(0, Math.min(selectedQ.correct_index, selectedQ.options.length - 1)),
-        explanation: `${(selectedQ.explanation || "सही उत्तर!").substring(0, 150)}\n\n👉 पूरे 100 प्रश्नों का टेस्ट दें: https://education-platform-fawn-six.vercel.app/quiz`,
+        explanation: htmlExplanation,
+        explanation_parse_mode: "HTML",
         is_anonymous: true
       })
     });
 
-    const data = await res.json();
-    if (!data.ok) {
-      return NextResponse.json({ success: false, error: data.description }, { status: 400 });
+    const pollData = await pollRes.json();
+    if (!pollData.ok) {
+      return NextResponse.json({ success: false, error: pollData.description }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: "Quiz successfully posted to Telegram channel!" });
+    // 2. Send Direct Clickable Button right below the poll
+    const msgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    await fetch(msgUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: `📝 <b>आज के विषय के सभी 100 PYQ व 50 MCQ टेस्ट लाइव हैं!</b>\nअपनी रैंक व स्कोरकार्ड तुरंत देखने के लिए नीचे दिए गए बटन पर क्लिक करें:`,
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🚀 ऑनलाइन टेस्ट दें (100% Free)",
+                url: WEBSITE_URL
+              }
+            ]
+          ]
+        }
+      })
+    });
+
+    return NextResponse.json({ success: true, message: "Quiz & clickable button successfully posted to Telegram channel!" });
   } catch (err) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
