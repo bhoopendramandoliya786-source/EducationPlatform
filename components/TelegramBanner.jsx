@@ -11,7 +11,7 @@ export default function TelegramBanner() {
     <div className="fixed bottom-20 left-4 right-4 z-40 max-w-md mx-auto pointer-events-auto">
       <div className="p-3 rounded-2xl bg-slate-900/95 border border-sky-500/30 backdrop-blur-md shadow-2xl flex items-center justify-between gap-2 animate-in fade-in">
         <a
-          href="https://t.me/rajasthangkquiz"
+          href="https://t.me/EduAI_RajasthanExam"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2.5 flex-1 hover:opacity-90 transition"
@@ -21,7 +21,7 @@ export default function TelegramBanner() {
           </div>
           <div className="leading-tight">
             <div className="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>टेलीग्राम ग्रुप ज्वाइन करें</span>
+              <span>टेलीग्राम चैनल ज्वाइन करें</span>
               <span className="text-[9px] bg-sky-500/20 text-sky-400 border border-sky-500/30 px-1 py-0.2 rounded font-semibold">फ्री PDF</span>
             </div>
             <div className="text-[10px] text-slate-400">डेली क्विज़, नोट्स और परीक्षा अपडेट्स</div>
