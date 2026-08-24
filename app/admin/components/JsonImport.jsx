@@ -23,6 +23,23 @@ export default function JsonImport() {
     failed: 0,
   });
 
+  // Auto-link subject to all active exams
+  async function autoMapSubjectToExams(subjectId) {
+    if (!subjectId) return;
+    try {
+      const { data: exams } = await supabase.from("exams").select("id").eq("is_active", true);
+      if (exams && exams.length > 0) {
+        const mappings = exams.map((ex) => ({
+          exam_id: ex.id,
+          subject_id: subjectId,
+        }));
+        await supabase.from("exam_subjects").upsert(mappings, { onConflict: "exam_id,subject_id", ignoreDuplicates: true });
+      }
+    } catch (e) {
+      console.error("Auto exam mapping error:", e);
+    }
+  }
+
   function normalizeQuestion(q, targetTopicId) {
     if (!q || typeof q !== "object") throw new Error("Invalid question object");
     if (!q.question?.toString().trim()) throw new Error("Question text missing");
@@ -75,6 +92,11 @@ export default function JsonImport() {
           subjectId = newSub.id;
           sCreated++;
         }
+      }
+
+      // Automatically map subject to all exams
+      if (subjectId) {
+        await autoMapSubjectToExams(subjectId);
       }
     }
 
@@ -262,7 +284,7 @@ export default function JsonImport() {
       failed: totalFail,
     });
 
-    setMessage(`✅ ${chapters.length} अध्याय, ${totalN} नोट्स एवं ${totalQ} प्रश्न सफलतापूर्वक सिंक हो गए!`);
+    setMessage(`✅ ${chapters.length} अध्याय, ${totalN} नोट्स एवं ${totalQ} प्रश्न सिंक हो गए (सभी परीक्षाओं से ऑटो-मैप हो गए)!`);
   }
 
   async function processArrayInput(arr) {
@@ -289,7 +311,7 @@ export default function JsonImport() {
         skippedDuplicates: 0,
         failed: 0,
       });
-      setMessage(`✅ ${sCreated} विषय, ${cCreated} अध्याय और ${tCreated} टॉपिक्स सफलतापूर्वक बन गए!`);
+      setMessage(`✅ ${sCreated} विषय, ${cCreated} अध्याय और ${tCreated} टॉपिक्स बन गए!`);
       return;
     }
 
@@ -350,7 +372,7 @@ export default function JsonImport() {
             skippedDuplicates: res.dupCount,
             failed: res.failCount,
           });
-          setMessage("✅ टॉपिक और सारा कंटेंट सफलतापूर्वक सिंक हो गया!");
+          setMessage("✅ टॉपिक और सारा कंटेंट सिंक हो गया (ऑटो-मैप सहित)!");
         }
       }
       setJsonText("");
@@ -369,7 +391,7 @@ export default function JsonImport() {
           <span>📦</span> Universal JSON Importer
         </h2>
         <p className="text-xs text-slate-400">
-          विषय (Subjects), अध्याय (Chapters), टॉपिक्स, नोट्स या 100+ MCQs/PYQs सीधे JSON से सिंक करें।
+          विषय (Subjects), अध्याय (Chapters), टॉपिक्स, नोट्स या 100+ MCQs/PYQs सीधे JSON से सिंक करें (Auto Exam Mapping Enabled)।
         </p>
       </div>
 
