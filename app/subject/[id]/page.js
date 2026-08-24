@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
-import { ArrowLeft, ChevronRight, BookOpen, Layers } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 
 export default function SubjectDetailPage() {
   const { id } = useParams();
@@ -28,8 +28,7 @@ export default function SubjectDetailPage() {
           .from("chapters")
           .select("*, topics(id, name)")
           .eq("subject_id", id)
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true });
+          .order("id", { ascending: true });
 
         if (chapData) setChapters(chapData);
       } catch (err) {
@@ -104,7 +103,7 @@ export default function SubjectDetailPage() {
                   <div>
                     <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition">{chap.name}</h4>
                     <p className="text-[10px] text-slate-400">
-                      {chap.topics?.length || 0} टॉपिक्स उपलब्ध
+                      {chap.topics?.length || 1} टॉपिक्स उपलब्ध
                     </p>
                   </div>
                 </div>
