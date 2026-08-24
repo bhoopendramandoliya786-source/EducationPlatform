@@ -155,7 +155,7 @@ export default function JsonImport() {
         .select("title")
         .eq("topic_id", targetTopicId);
 
-      const existingTitles = new Set((existingNotes || []).map((n) => n.title.trim().toLowerCase()));
+      const existingTitles = new Set((existingNotes || []).map((n) => n.title?.trim().toLowerCase()));
       const notesToInsert = [];
 
       for (const n of data.notes) {
@@ -217,24 +217,58 @@ export default function JsonImport() {
       }
     }
 
+    return { sCreated, cCreated, tCreated, nImported, qImported, dupCount, failCount };
+  }
+
+  async function processBatchChapters(batchData) {
+    const subjectName = batchData.subject_name;
+    const chapters = batchData.chapters_batch || [];
+
+    let totalS = 0, totalC = 0, totalT = 0, totalN = 0, totalQ = 0, totalDup = 0, totalFail = 0;
+
+    for (let i = 0; i < chapters.length; i++) {
+      const chap = chapters[i];
+      const payload = {
+        subject_name: subjectName,
+        chapter_name: chap.chapter_name,
+        chapter_description: chap.chapter_description,
+        topic_name: chap.topic_name || chap.chapter_name,
+        topic_description: chap.topic_description,
+        notes: chap.notes || [],
+        mcqs: chap.mcqs || [],
+        pyqs: chap.pyqs || [],
+        questions: chap.questions || [],
+      };
+
+      const res = await processMasterTopic(payload);
+      totalS += res.sCreated;
+      totalC += res.cCreated;
+      totalT += res.tCreated;
+      totalN += res.nImported;
+      totalQ += res.qImported;
+      totalDup += res.dupCount;
+      totalFail += res.failCount;
+
+      setProgress(Math.round(((i + 1) / chapters.length) * 100));
+    }
+
     setStats({
-      subjectsCreated: sCreated,
-      chaptersCreated: cCreated,
-      topicsCreated: tCreated,
-      notesImported: nImported,
-      questionsImported: qImported,
-      skippedDuplicates: dupCount,
-      failed: failCount,
+      subjectsCreated: totalS,
+      chaptersCreated: totalC,
+      topicsCreated: totalT,
+      notesImported: totalN,
+      questionsImported: totalQ,
+      skippedDuplicates: totalDup,
+      failed: totalFail,
     });
 
-    setMessage("✅ टॉपिक और सारा कंटेंट सफलतापूर्वक सिंक हो गया!");
+    setMessage(`✅ ${chapters.length} अध्याय, ${totalN} नोट्स एवं ${totalQ} प्रश्न सफलतापूर्वक सिंक हो गए!`);
   }
 
   async function processArrayInput(arr) {
     let sCreated = 0, cCreated = 0, tCreated = 0;
     let qImported = 0, failCount = 0, dupCount = 0;
 
-    // Check if it is a list of Subjects / Chapters / Topics
     const isHierarchyList = arr.some((item) => item.subject_name || item.chapter_name);
 
     if (isHierarchyList) {
@@ -259,7 +293,6 @@ export default function JsonImport() {
       return;
     }
 
-    // Otherwise it is an array of Questions
     let defaultTopicId = null;
     const { data: firstTopic } = await supabase.from("topics").select("id").limit(1).single();
     defaultTopicId = firstTopic?.id;
@@ -304,7 +337,21 @@ export default function JsonImport() {
       if (Array.isArray(parsedJson)) {
         await processArrayInput(parsedJson);
       } else if (typeof parsedJson === "object" && parsedJson !== null) {
-        await processMasterTopic(parsedJson);
+        if (Array.isArray(parsedJson.chapters_batch)) {
+          await processBatchChapters(parsedJson);
+        } else {
+          const res = await processMasterTopic(parsedJson);
+          setStats({
+            subjectsCreated: res.sCreated,
+            chaptersCreated: res.cCreated,
+            topicsCreated: res.tCreated,
+            notesImported: res.nImported,
+            questionsImported: res.qImported,
+            skippedDuplicates: res.dupCount,
+            failed: res.failCount,
+          });
+          setMessage("✅ टॉपिक और सारा कंटेंट सफलतापूर्वक सिंक हो गया!");
+        }
       }
       setJsonText("");
       if (fileInputRef.current) fileInputRef.current.value = "";
