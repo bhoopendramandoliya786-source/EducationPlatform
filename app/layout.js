@@ -2,6 +2,7 @@ import "./globals.css";
 import Link from "next/link";
 import Script from "next/script";
 import { Home, BookOpen, Sparkles, Trophy, User, Search, Flame } from "lucide-react";
+import TelegramBanner from "../components/TelegramBanner";
 
 export const metadata = {
   metadataBase: new URL("https://education-platform-fawn-six.vercel.app"),
@@ -19,8 +20,6 @@ export const metadata = {
     "Rajasthan History Geography Polity MCQ",
     "Rajasthan Exam Prep Portal"
   ],
-  manifest: "/manifest.json",
-  themeColor: "#070b14",
   authors: [{ name: "EduAI Pro Team" }],
   creator: "EduAI Pro",
   publisher: "EduAI Pro",
@@ -130,6 +129,9 @@ export default function RootLayout({ children }) {
         <main className="flex-1 pb-24 pt-2">
           {children}
         </main>
+
+        {/* Floating Telegram Join Prompt */}
+        <TelegramBanner />
 
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around">
           <Link href="/" className="flex flex-col items-center text-slate-400 hover:text-indigo-400 active:scale-95 transition">

@@ -1,0 +1,40 @@
+"use client";
+import React, { useState } from "react";
+import { Send, X } from "lucide-react";
+
+export default function TelegramBanner() {
+  const [showBanner, setShowBanner] = useState(true);
+
+  if (!showBanner) return null;
+
+  return (
+    <div className="fixed bottom-20 left-4 right-4 z-40 max-w-md mx-auto pointer-events-auto">
+      <div className="p-3 rounded-2xl bg-slate-900/95 border border-sky-500/30 backdrop-blur-md shadow-2xl flex items-center justify-between gap-2 animate-in fade-in">
+        <a
+          href="https://t.me/rajasthangkquiz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 flex-1 hover:opacity-90 transition"
+        >
+          <div className="w-8 h-8 rounded-xl bg-sky-500 flex items-center justify-center text-white shadow-md flex-shrink-0">
+            <Send className="w-4 h-4" />
+          </div>
+          <div className="leading-tight">
+            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>टेलीग्राम ग्रुप ज्वाइन करें</span>
+              <span className="text-[9px] bg-sky-500/20 text-sky-400 border border-sky-500/30 px-1 py-0.2 rounded font-semibold">फ्री PDF</span>
+            </div>
+            <div className="text-[10px] text-slate-400">डेली क्विज़, नोट्स और परीक्षा अपडेट्स</div>
+          </div>
+        </a>
+        <button
+          onClick={() => setShowBanner(false)}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          aria-label="Close"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
