@@ -3,21 +3,76 @@ import Link from "next/link";
 import { Home, BookOpen, Sparkles, Trophy, User, Search, Flame } from "lucide-react";
 
 export const metadata = {
-  title: "EduAI Pro - प्रतियोगी परीक्षाओं की सर्वश्रेष्ठ तैयारी",
-  description: "100% फ्री स्मार्ट नोट्स, मॉक टेस्ट सीरीज, विगत वर्ष प्रश्न पत्र एवं 24/7 AI ट्यूटर सपोर्ट।",
-  keywords: "RAS, REET, CET, Rajasthan SI, GK Notes, Mock Test, PYQ, Competition Exam Prep",
+  metadataBase: new URL("https://education-platform1.vercel.app"),
+  title: {
+    default: "EduAI Pro - दिशा 20-20 राजस्थान GK, स्मार्ट नोट्स, 100 PYQ व मॉक टेस्ट",
+    template: "%s | EduAI Pro"
+  },
+  description: "RPSC, RSMSSB, CET, REET Mains 2026 हेतु राजस्थान का इतिहास, कला, संस्कृति, भूगोल, अर्थव्यवस्था एवं राजव्यवस्था के टॉपिकवाइज़ 100 PYQ, 50 MCQ व स्मार्ट नोट्स।",
+  keywords: [
+    "Rajasthan GK in Hindi",
+    "Disha 2020 Rajasthan GK",
+    "RPSC PYQ Previous Year Questions",
+    "RSMSSB CET Mock Test 2026",
+    "REET Mains Smart Notes",
+    "Rajasthan History Geography Polity MCQ",
+    "Rajasthan Exam Prep Portal"
+  ],
+  authors: [{ name: "EduAI Pro Team" }],
+  creator: "EduAI Pro",
+  publisher: "EduAI Pro",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   openGraph: {
-    title: "EduAI Pro - Complete Exam Prep Platform",
-    description: "Syllabus, Smart Notes, Test Engine & AI Doubt Solver",
+    title: "EduAI Pro - राजस्थान प्रतियोगी परीक्षाओं की सम्पूर्ण तैयारी",
+    description: "दिशा 20-20 टॉपिकवाइज़ नोट्स, 100% सटीक PYQ, स्पीड टेस्ट एवं 24/7 AI ट्यूटर सपोर्ट।",
+    url: "https://education-platform1.vercel.app",
+    siteName: "EduAI Pro",
+    locale: "hi_IN",
     type: "website",
-  }
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EduAI Pro - राजस्थान GK व मॉक टेस्ट",
+    description: "दिशा 20-20 अनुसार राजस्थान सामान्य ज्ञान, टू-द-पॉइंट नोट्स व पिछले वर्षों के प्रश्न।",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({ children }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "EduAI Pro",
+    "url": "https://education-platform1.vercel.app",
+    "description": "राजस्थान प्रतियोगी परीक्षाओं हेतु स्मार्ट नोट्स, मॉक टेस्ट एवं PYQ प्रश्न बैंक।",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "All"
+  };
+
   return (
     <html lang="hi" className="dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="bg-[#070b14] text-slate-100 min-h-screen antialiased flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
-        
+
         {/* Top Navbar */}
         <header className="sticky top-0 z-50 bg-[#070b14]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between gap-3">
           {/* Brand Logo */}
@@ -71,7 +126,7 @@ export default function RootLayout({ children }) {
             <BookOpen className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">नोट्स</span>
           </Link>
-          <Link href="/ai-tutor" className="flex flex-col items-center -mt-5 group active:scale-95 transition">
+          <Link href="/student" className="flex flex-col items-center -mt-5 group active:scale-95 transition">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/40 group-hover:scale-105 transition">
               <Sparkles className="w-6 h-6" />
             </div>
