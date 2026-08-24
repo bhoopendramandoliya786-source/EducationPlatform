@@ -4,15 +4,13 @@ import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { 
   BookOpen, Trophy, Layers, 
-  ChevronRight, ChevronDown, ArrowRight, Zap, FolderTree 
+  ChevronRight, ChevronDown, ArrowRight, Zap, FolderTree, Sparkles
 } from "lucide-react";
 
 export default function HomePage() {
-  const [exams, setExams] = useState([]);
-  const [selectedExam, setSelectedExam] = useState(null);
   const [subjects, setSubjects] = useState([]);
   const [banners, setBanners] = useState([]);
-  const [counts, setCounts] = useState({ notes: 0, tests: 0 });
+  const [counts, setCounts] = useState({ notes: 0, tests: 0, subjects: 0 });
   const [isOpenSubjects, setIsOpenSubjects] = useState(true);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -21,18 +19,12 @@ export default function HomePage() {
     async function loadAllData() {
       setLoading(true);
       try {
-        const [examsRes, subsRes, bannersRes, notesRes, quizRes] = await Promise.all([
-          supabase.from("exams").select("*").eq("is_active", true).order("id"),
-          supabase.from("subjects").select("*").eq("is_active", true).order("id", { ascending: true }),
+        const [subsRes, bannersRes, notesRes, quizRes] = await Promise.all([
+          supabase.from("subjects").select("*").order("id", { ascending: true }),
           supabase.from("banners").select("*").order("created_at", { ascending: false }),
           supabase.from("notes").select("*", { count: "exact", head: true }),
           supabase.from("quizzes").select("*", { count: "exact", head: true })
         ]);
-
-        if (examsRes.data && examsRes.data.length > 0) {
-          setExams(examsRes.data);
-          setSelectedExam(examsRes.data[0]);
-        }
 
         if (subsRes.data) {
           setSubjects(subsRes.data);
@@ -44,7 +36,8 @@ export default function HomePage() {
 
         setCounts({
           notes: notesRes.count || 0,
-          tests: quizRes.count || 0
+          tests: quizRes.count || 0,
+          subjects: subsRes.data ? subsRes.data.length : 0
         });
       } catch (err) {
         console.error("Home Load Error:", err);
@@ -57,37 +50,22 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-2">
-      {/* Top Exam Selector */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
-          <span>लक्ष्य परीक्षा चुनें (Select Exam)</span>
-          <span className="text-indigo-400 font-extrabold">RPSC / RSMSSB</span>
+    <div className="max-w-md mx-auto px-4 space-y-5 pb-24 pt-3">
+      {/* Direct Smart Header Hero */}
+      <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-purple-950/70 border border-indigo-500/20 space-y-2 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider uppercase flex items-center gap-1">
+            <Sparkles className="w-3 h-3" /> Rajasthan Exam Prep
+          </span>
+          <span className="text-[11px] font-bold text-emerald-400">
+            {counts.subjects} विषय उपलब्ध
+          </span>
         </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-          {exams.map((ex) => (
-            <button
-              key={ex.id}
-              onClick={() => setSelectedExam(ex)}
-              className={"px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition " + (selectedExam?.id === ex.id ? "bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20" : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white")}
-            >
-              {ex.name}
-            </button>
-          ))}
-        </div>
+        <h1 className="text-xl font-black text-white tracking-tight">दिशा 20-20 & सम्पूर्ण पाठ्यक्रम</h1>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          राजस्थान सामान्य ज्ञान, इतिहास, कला-संस्कृति, भूगोल, अर्थव्यवस्था एवं प्रशासनिक व्यवस्था।
+        </p>
       </div>
-
-      {/* Target Exam Hero */}
-      {selectedExam && (
-        <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 space-y-1.5 shadow-xl">
-          <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">{selectedExam.category || "EXAM PORTAL"}</span>
-          <h1 className="text-lg font-black text-white">{selectedExam.name}</h1>
-          <p className="text-xs text-slate-300">{selectedExam.description || "संपूर्ण पाठ्यक्रम, स्मार्ट थ्योरी एवं टॉपिकवाइज़ टेस्ट"}</p>
-          <div className="pt-2 text-[11px] font-semibold text-emerald-400">
-            उपलब्ध विषय: {subjects.length}
-          </div>
-        </div>
-      )}
 
       {/* 4 Standard Action Cards Grid */}
       <div className="grid grid-cols-2 gap-2.5">
@@ -152,13 +130,13 @@ export default function HomePage() {
         ) : (
           <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 text-center text-xs text-slate-300 flex items-center justify-center gap-2">
             <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">अपडेट</span>
-            <span>🎯 सभी विषयों के नए मॉक टेस्ट एवं नोट्स लाइव उपलब्ध हैं!</span>
+            <span>🎯 सभी विषयों के 100% PYQs व नए नोट्स उपलब्ध हैं!</span>
           </div>
         )}
       </div>
 
-      {/* Interactive Dropdown / Accordion for Subjects */}
-      <div className="rounded-3xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl transition">
+      {/* Direct All Subjects Accordion */}
+      <div className="rounded-3xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-2xl transition">
         <button
           onClick={() => setIsOpenSubjects(!isOpenSubjects)}
           className="w-full p-4 flex items-center justify-between bg-slate-900/90 hover:bg-slate-800/80 transition"
@@ -179,19 +157,23 @@ export default function HomePage() {
 
         {isOpenSubjects && (
           <div className="p-3 pt-0 grid gap-2 divide-y divide-slate-800/40">
-            {subjects.length === 0 ? (
+            {loading ? (
               <div className="p-4 text-center text-xs text-slate-400">
                 विषय लोड हो रहे हैं...
+              </div>
+            ) : subjects.length === 0 ? (
+              <div className="p-4 text-center text-xs text-amber-400">
+                कोई विषय नहीं मिला। कृपया JSON अपलोड करें।
               </div>
             ) : (
               subjects.map((sub) => (
                 <Link
                   key={sub.id}
                   href={"/subject/" + sub.id}
-                  className="p-3 rounded-2xl bg-slate-950/60 hover:bg-indigo-950/30 border border-slate-800/60 hover:border-indigo-500/30 flex items-center justify-between group transition active:scale-[0.99] mt-2"
+                  className="p-3.5 rounded-2xl bg-slate-950/70 hover:bg-indigo-950/40 border border-slate-800/80 hover:border-indigo-500/40 flex items-center justify-between group transition active:scale-[0.99] mt-2 shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-black text-sm group-hover:scale-105 transition">
                       {sub.icon || sub.name?.charAt(0) || "S"}
                     </div>
                     <div>
@@ -199,7 +181,7 @@ export default function HomePage() {
                       <p className="text-[10px] text-slate-400">अध्याय ➔ टॉपिक ➔ नोट्स, MCQs व PYQs</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300" />
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition" />
                 </Link>
               ))
             )}
