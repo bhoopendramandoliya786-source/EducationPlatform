@@ -19,6 +19,8 @@ export const metadata = {
     "Rajasthan History Geography Polity MCQ",
     "Rajasthan Exam Prep Portal"
   ],
+  manifest: "/manifest.json",
+  themeColor: "#070b14",
   authors: [{ name: "EduAI Pro Team" }],
   creator: "EduAI Pro",
   publisher: "EduAI Pro",
@@ -71,7 +73,6 @@ export default function RootLayout({ children }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        {/* Google Analytics Scripts */}
         <Script
           strategy="afterInteractive"
           src="https://www.googletagmanager.com/gtag/js?id=G-9DVDLMZYJM"
@@ -92,7 +93,6 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-[#070b14] text-slate-100 min-h-screen antialiased flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
 
-        {/* Top Navbar */}
         <header className="sticky top-0 z-50 bg-[#070b14]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0 group">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition">
