@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, Clock, CheckCircle2, XCircle, Trophy, 
-  RotateCcw, Sparkles, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check, X, Maximize2 
+  RotateCcw, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check, X, Maximize2, Share2 
 } from "lucide-react";
 
 export default function QuizRunnerPage() {
@@ -93,6 +93,12 @@ export default function QuizRunnerPage() {
     };
   };
 
+  const shareScoreOnWhatsApp = (score) => {
+    const quizTitle = quiz?.title || "राजस्थान GK मॉक टेस्ट";
+    const text = `🔥 मैंने *EduAI Pro* पर "${quizTitle}" टेस्ट में *${score.total} में से ${score.correct} अंक (${score.percentage}%)* प्राप्त किए! 🎯\n\nक्या आप मेरा स्कोर तोड़ सकते हैं? अभी फ्री टेस्ट दें:\n👉 https://education-platform-fawn-six.vercel.app/quiz`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   const getOptionText = (q, key) => {
     if (!q) return "";
     if (key === "A") return q.option_a;
@@ -144,7 +150,6 @@ export default function QuizRunnerPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 space-y-5 pb-28 pt-1 select-none">
-      {/* Top Header */}
       <div className="flex items-center justify-between">
         <Link href="/quiz" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300">
           <ArrowLeft className="w-4 h-4" /> टेस्ट छोड़ें
@@ -225,12 +230,11 @@ export default function QuizRunnerPage() {
           </div>
         </div>
       ) : (
-        /* Results + Exact Clean Gemini/Quizlet Flashcard UI */
         <div className="space-y-5">
-          <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 text-center space-y-2.5 shadow-xl">
+          <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 text-center space-y-3 shadow-xl">
             <Trophy className="w-8 h-8 text-amber-400 mx-auto" />
             <h2 className="text-base font-black text-white">टेस्ट परिणाम (Scorecard)</h2>
-            <div className="text-2xl font-black text-emerald-400">{scoreResult.percentage}%</div>
+            <div className="text-3xl font-black text-emerald-400">{scoreResult.percentage}%</div>
 
             <div className="grid grid-cols-3 gap-2 pt-1">
               <div className="p-2.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-center">
@@ -247,7 +251,16 @@ export default function QuizRunnerPage() {
               </div>
             </div>
 
-            <div className="pt-2 flex gap-2">
+            {/* WhatsApp Share Button */}
+            <button
+              onClick={() => shareScoreOnWhatsApp(scoreResult)}
+              className="w-full py-3 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-4 h-4 text-slate-950" />
+              <span>WhatsApp पर दोस्तों को चैलेंज करें</span>
+            </button>
+
+            <div className="pt-1 flex gap-2">
               <button
                 onClick={() => {
                   setSelectedAnswers({});
