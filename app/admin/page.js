@@ -9,7 +9,6 @@ import DashboardHeader from "./components/DashboardHeader";
 import ExamManager from "./components/ExamManager";
 import SubjectManager from "./components/SubjectManager";
 import ChapterManager from "./components/ChapterManager";
-import TopicManager from "./components/TopicManager";
 import QuestionManager from "./components/QuestionManager";
 import NotesManager from "./components/NotesManager";
 import QuizManager from "./components/QuizManager";
@@ -20,6 +19,9 @@ export default function AdminPage() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkingAdmin, setCheckingAdmin] = useState(false);
+
+  // 🎯 Clean Active Tab State (structure | notes | questions | quizzes)
+  const [activeTab, setActiveTab] = useState("structure");
 
   /*
    * ---------------------------------------------------------
@@ -191,7 +193,7 @@ export default function AdminPage() {
 
   /*
    * ---------------------------------------------------------
-   * ADMIN DASHBOARD
+   * ADMIN DASHBOARD (CLEAN TABBED ARCHITECTURE)
    * ---------------------------------------------------------
    */
 
@@ -201,86 +203,165 @@ export default function AdminPage() {
         minHeight: "100vh",
         background: "#020617",
         color: "#fff",
-        padding: "20px",
-        paddingBottom: "60px",
+        padding: "16px",
+        paddingBottom: "80px",
         boxSizing: "border-box",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        maxWidth: "1000px",
+        margin: "0 auto",
       }}
     >
       {/* HEADER */}
       <DashboardHeader onLogout={handleLogout} />
 
-      {/* ADMIN INFORMATION */}
+      {/* ADMIN STATUS BAR */}
       <section
         style={{
-          marginTop: "20px",
+          marginTop: "16px",
           background: "#0f172a",
           border: "1px solid #1e293b",
-          borderRadius: "16px",
-          padding: "18px",
+          borderRadius: "18px",
+          padding: "16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px",
         }}
       >
-        <h1 style={{ margin: 0, marginBottom: "6px", fontSize: "24px" }}>
-          ⚙️ EducationPlatform Admin
-        </h1>
-        <p style={{ color: "#94a3b8", margin: 0, fontSize: "14px" }}>
-          Content Management System
-        </p>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>
+            ⚙️ EduAI Pro Control Center
+          </h1>
+          <p style={{ color: "#94a3b8", margin: 0, fontSize: "12px", marginTop: "2px" }}>
+            Clean Modular Architecture (Subject ➔ Chapter ➔ Content)
+          </p>
+        </div>
         <div
           style={{
-            marginTop: "12px",
             color: "#10b981",
-            fontSize: "13px",
+            fontSize: "12px",
             fontWeight: "bold",
+            background: "rgba(16, 185, 129, 0.1)",
+            padding: "4px 10px",
+            borderRadius: "20px",
+            border: "1px solid rgba(16, 185, 129, 0.2)",
           }}
         >
-          ● Admin authenticated
+          ● Admin Active
         </div>
       </section>
 
-      {/* EXAM & SYLLABUS MANAGER */}
-      <section style={{ marginTop: "30px" }}>
-        <h2 style={{ marginBottom: "6px", color: "#f59e0b" }}>
-          🏆 Target Exams & Syllabus Mapping
-        </h2>
-        <p style={{ color: "#94a3b8", fontSize: "14px", marginTop: 0 }}>
-          परीक्षाएं जोड़ें और प्रत्येक परीक्षा में शामिल विषय (Subjects) मैप करें
-        </p>
-        <BannerManager />
+      {/* 🚀 4 CLEAN NAVIGATION TABS (NO CLUTTER) */}
+      <nav
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+          gap: "8px",
+          marginTop: "20px",
+          marginBottom: "24px",
+        }}
+      >
+        <button
+          onClick={() => setActiveTab("structure")}
+          style={{
+            padding: "12px 8px",
+            borderRadius: "14px",
+            border: activeTab === "structure" ? "1px solid #6366f1" : "1px solid #1e293b",
+            background: activeTab === "structure" ? "rgba(99, 102, 241, 0.2)" : "#0f172a",
+            color: activeTab === "structure" ? "#818cf8" : "#94a3b8",
+            fontWeight: "bold",
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+        >
+          🏛️ स्ट्रक्चर (Exams/Subjects)
+        </button>
 
-      <ExamManager />
-      </section>
+        <button
+          onClick={() => setActiveTab("notes")}
+          style={{
+            padding: "12px 8px",
+            borderRadius: "14px",
+            border: activeTab === "notes" ? "1px solid #10b981" : "1px solid #1e293b",
+            background: activeTab === "notes" ? "rgba(16, 185, 129, 0.2)" : "#0f172a",
+            color: activeTab === "notes" ? "#34d399" : "#94a3b8",
+            fontWeight: "bold",
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+        >
+          📖 नोट्स (Notes Sheet)
+        </button>
 
-      {/* CONTENT MANAGEMENT */}
-      <section style={{ marginTop: "40px" }}>
-        <h2 style={{ marginBottom: "6px" }}>
-          📚 Content Management
-        </h2>
-        <p style={{ color: "#64748b", fontSize: "14px", marginTop: 0 }}>
-          Subjects → Chapters → Topics → Notes / Questions / Quizzes
-        </p>
-      </section>
+        <button
+          onClick={() => setActiveTab("questions")}
+          style={{
+            padding: "12px 8px",
+            borderRadius: "14px",
+            border: activeTab === "questions" ? "1px solid #f59e0b" : "1px solid #1e293b",
+            background: activeTab === "questions" ? "rgba(245, 158, 11, 0.2)" : "#0f172a",
+            color: activeTab === "questions" ? "#fbbf24" : "#94a3b8",
+            fontWeight: "bold",
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+        >
+          ❓ प्रश्न बैंक (MCQ/JSON)
+        </button>
 
-      {/* SUBJECT */}
-      <SubjectManager />
+        <button
+          onClick={() => setActiveTab("quizzes")}
+          style={{
+            padding: "12px 8px",
+            borderRadius: "14px",
+            border: activeTab === "quizzes" ? "1px solid #ec4899" : "1px solid #1e293b",
+            background: activeTab === "quizzes" ? "rgba(236, 72, 153, 0.2)" : "#0f172a",
+            color: activeTab === "quizzes" ? "#f472b6" : "#94a3b8",
+            fontWeight: "bold",
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+        >
+          🏆 टेस्ट मैनेजर (Quizzes)
+        </button>
+      </nav>
 
-      {/* CHAPTER */}
-      <ChapterManager />
+      {/* ----------------- TAB 1: STRUCTURE (EXAMS, SUBJECTS, CHAPTERS) ----------------- */}
+      {activeTab === "structure" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <BannerManager />
+          <ExamManager />
+          <SubjectManager />
+          <ChapterManager />
+        </div>
+      )}
 
-      {/* TOPIC */}
-      <TopicManager />
+      {/* ----------------- TAB 2: NOTES MANAGER ----------------- */}
+      {activeTab === "notes" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <NotesManager />
+        </div>
+      )}
 
-      {/* QUESTIONS */}
-      <QuestionManager />
+      {/* ----------------- TAB 3: QUESTIONS & BULK JSON IMPORTER ----------------- */}
+      {activeTab === "questions" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <JsonImport />
+          <QuestionManager />
+        </div>
+      )}
 
-      {/* NOTES */}
-      <NotesManager />
-
-      {/* QUIZZES */}
-      <QuizManager />
-
-      {/* JSON IMPORT */}
-      <JsonImport />
+      {/* ----------------- TAB 4: QUIZZES / SPEED TESTS ----------------- */}
+      {activeTab === "quizzes" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <QuizManager />
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer
@@ -290,10 +371,10 @@ export default function AdminPage() {
           textAlign: "center",
           color: "#64748b",
           borderTop: "1px solid #1e293b",
-          fontSize: "13px",
+          fontSize: "12px",
         }}
       >
-        EducationPlatform Admin System
+        EduAI Pro Control Dashboard • Zero Clutter Architecture
       </footer>
     </main>
   );
