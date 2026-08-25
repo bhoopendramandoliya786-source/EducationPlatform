@@ -10,6 +10,53 @@ import {
   Share2, Layers
 } from "lucide-react";
 
+// Formatter component for Statement, Matching, and Code questions
+function FormattedQuestionText({ text }) {
+  if (!text) return null;
+
+  // 1. Matching Questions (सूची-I / सूची-II)
+  if (text.includes("सूची-I") || text.includes("सूची-1") || text.includes("सूची - I")) {
+    const segments = text.split(/(?=सूची-I|सूची-II|सूची-1|सूची-2|सूची - I|सूची - II|कूट:)/gi);
+    return (
+      <div className="space-y-2">
+        {segments.map((seg, idx) => {
+          const trimmed = seg.trim();
+          if (/^(सूची-I|सूची-1|सूची - I)/i.test(trimmed) || /^(सूची-II|सूची-2|सूची - II)/i.test(trimmed)) {
+            return (
+              <div key={idx} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/90 text-indigo-200 text-xs font-medium leading-relaxed">
+                {trimmed}
+              </div>
+            );
+          }
+          if (/^कूट:/i.test(trimmed)) {
+            return (
+              <div key={idx} className="text-amber-400 font-bold pt-1 text-xs">
+                {trimmed}
+              </div>
+            );
+          }
+          return <div key={idx} className="text-white leading-relaxed">{trimmed}</div>;
+        })}
+      </div>
+    );
+  }
+
+  // 2. Multi-Statement Questions (1. कथन... 2. कथन...)
+  if (/(1\.\s+|कथन\s*1)/i.test(text) && /(2\.\s+|कथन\s*2)/i.test(text)) {
+    const formatted = text
+      .replace(/(\b\d+\.\s+)/g, "\n$1")
+      .replace(/(उपर्युक्त|उपरोक्त|इनमें से)/g, "\n\n$1");
+    return (
+      <div className="text-white leading-relaxed whitespace-pre-line">
+        {formatted.trim()}
+      </div>
+    );
+  }
+
+  // 3. Regular Questions
+  return <div className="text-white leading-relaxed">{text}</div>;
+}
+
 export default function ChapterSingleViewPage() {
   const { id } = useParams();
   const [chapter, setChapter] = useState(null);
@@ -139,15 +186,12 @@ export default function ChapterSingleViewPage() {
   const mcqsList = questions.filter((q) => !q.is_pyq);
   const pyqsList = questions.filter((q) => q.is_pyq);
 
-  // Active question list for Tabs 2 & 3
   const currentTabList = activeTab === "mcqs" ? mcqsList : activeTab === "pyqs" ? pyqsList : questions;
 
-  // Split into Sets of 20
   const totalSets = Math.max(1, Math.ceil(currentTabList.length / 20));
   const startIndex = (selectedSet - 1) * 20;
   const currentSetQuestions = currentTabList.slice(startIndex, startIndex + 20);
 
-  // Speed Test Questions (Active Set of 20)
   const speedTestQuestions = questions.slice((selectedSet - 1) * 20, selectedSet * 20);
 
   let correctCount = 0;
@@ -237,7 +281,7 @@ export default function ChapterSingleViewPage() {
         </button>
       </div>
 
-      {/* Set Selector Bar (For Tabs 2, 3 and 4) */}
+      {/* Set Selector Bar */}
       {activeTab !== "notes" && totalSets > 1 && !quizStarted && (
         <div className="space-y-1.5 pt-1">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
@@ -307,10 +351,10 @@ export default function ChapterSingleViewPage() {
                     <span className="text-[10px] font-semibold text-slate-500 uppercase">{q.difficulty || "Medium"}</span>
                   </div>
 
-                  <h3 className="text-xs sm:text-sm font-bold text-white leading-relaxed">
+                  <div className="text-xs sm:text-sm font-bold leading-relaxed">
                     <span className="text-indigo-400 mr-1.5 font-black">Q{globalIndex + 1}.</span>
-                    {q.question}
-                  </h3>
+                    <FormattedQuestionText text={q.question} />
+                  </div>
 
                   <div className="grid grid-cols-1 gap-2 pt-1">
                     {[
@@ -334,8 +378,8 @@ export default function ChapterSingleViewPage() {
                           className={`p-3 rounded-xl border text-left text-xs flex items-center justify-between transition ${style}`}
                         >
                           <span><strong>{opt.key}.</strong> {opt.text}</span>
-                          {isAttempted && opt.key === q.answer && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                          {isAttempted && opt.key === userAnswer && opt.key !== q.answer && <XCircle className="w-4 h-4 text-rose-400" />}
+                          {isAttempted && opt.key === q.answer && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+                          {isAttempted && opt.key === userAnswer && opt.key !== q.answer && <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />}
                         </button>
                       );
                     })}
@@ -374,7 +418,7 @@ export default function ChapterSingleViewPage() {
               </div>
               <button
                 onClick={() => setQuizStarted(true)}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg active:scale-95 transition"
               >
                 <Play className="w-4 h-4 inline-block mr-1" /> Set {selectedSet} टेस्ट शुरू करें
               </button>
@@ -402,13 +446,13 @@ export default function ChapterSingleViewPage() {
               </div>
               <button
                 onClick={shareScoreOnWhatsApp}
-                className="w-full py-3 rounded-xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5"
+                className="w-full py-3 rounded-xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
                 <Share2 className="w-4 h-4" /> WhatsApp पर शेयर करें
               </button>
               <button
                 onClick={resetQuiz}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
                 <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें
               </button>
@@ -421,9 +465,11 @@ export default function ChapterSingleViewPage() {
                   <Timer className="w-4 h-4" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
                 </span>
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-white leading-relaxed">
-                {speedTestQuestions[currentQIndex].question}
-              </h3>
+
+              <div className="text-xs sm:text-sm font-bold leading-relaxed">
+                <FormattedQuestionText text={speedTestQuestions[currentQIndex].question} />
+              </div>
+
               <div className="grid grid-cols-1 gap-2 pt-1">
                 {[
                   { key: "A", text: speedTestQuestions[currentQIndex].option_a },
@@ -434,16 +480,17 @@ export default function ChapterSingleViewPage() {
                   <button
                     key={opt.key}
                     onClick={() => handleQuizAnswer(speedTestQuestions[currentQIndex].id, opt.key)}
-                    className={`p-3 rounded-xl border text-left text-xs ${
+                    className={`p-3 rounded-xl border text-left text-xs transition ${
                       quizAnswers[speedTestQuestions[currentQIndex].id] === opt.key 
-                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" 
-                        : "bg-slate-950/80 border-slate-800 text-slate-300"
+                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold shadow-md shadow-indigo-600/20" 
+                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700"
                     }`}
                   >
                     <strong>{opt.key}.</strong> {opt.text}
                   </button>
                 ))}
               </div>
+
               <div className="flex justify-between items-center pt-2">
                 <button
                   disabled={currentQIndex === 0}
@@ -455,14 +502,14 @@ export default function ChapterSingleViewPage() {
                 {currentQIndex === speedTestQuestions.length - 1 ? (
                   <button
                     onClick={() => setQuizSubmitted(true)}
-                    className="px-5 py-2 bg-emerald-600 rounded-xl text-xs font-bold text-white"
+                    className="px-5 py-2 bg-emerald-600 rounded-xl text-xs font-bold text-white active:scale-95 transition shadow-md"
                   >
                     सबमिट करें ✓
                   </button>
                 ) : (
                   <button
                     onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                    className="px-5 py-2 bg-indigo-600 rounded-xl text-xs font-bold text-white"
+                    className="px-5 py-2 bg-indigo-600 rounded-xl text-xs font-bold text-white active:scale-95 transition shadow-md"
                   >
                     अगला →
                   </button>
