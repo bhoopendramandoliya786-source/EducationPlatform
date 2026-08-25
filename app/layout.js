@@ -115,37 +115,42 @@ export default function RootLayout({ children }) {
           </div>
         </header>
 
-        {/* Non-intrusive Install PWA Bar */}
+        {/* Install PWA Banner */}
         <InstallPWA />
 
-        {/* Main Content Area */}
+        {/* Main Body Content */}
         <main className="flex-1 pb-28 pt-2">
           {children}
         </main>
 
-        {/* Clean Telegram Bar */}
+        {/* Telegram Banner */}
         <TelegramBanner />
 
-        {/* Modern App Floating Bottom Navigation Bar */}
+        {/* 5 Bottom Nav Items (Home, Notes, AI Tutor, Tests, Profile) */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around shadow-2xl">
           <Link href="/" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Home className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">होम</span>
           </Link>
+
           <Link href="/notes" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <BookOpen className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">नोट्स</span>
           </Link>
-          <Link href="/student" className="flex items-center flex-col -mt-5 group active:scale-95 transition">
+
+          {/* AI Tutor - Direct Public Chat (No Login) */}
+          <Link href="/ai-tutor" className="flex items-center flex-col -mt-5 group active:scale-95 transition">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 group-hover:scale-105 transition">
               <Sparkles className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-bold text-indigo-400 mt-0.5">AI ट्यूटर</span>
           </Link>
+
           <Link href="/quiz" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Trophy className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">टेस्ट</span>
           </Link>
+
           <Link href="/student" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <User className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">प्रोफाइल</span>
