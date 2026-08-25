@@ -1,23 +1,17 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-import { Video, FileText, Sparkles, ChevronDown, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { Video, Sparkles, PlusCircle } from "lucide-react";
 
-const QUESTION_BANK = [
+const DEFAULT_BANK = [
   {
     topic: "राजस्थान के प्रतीक चिन्ह",
     exam: "CET / REET 2026 Special",
     question: "राजस्थान का राज्य वृक्ष 'खेजड़ी' को किस वर्ष राज्य वृक्ष घोषित किया गया था?",
     options: ["(A) 1981", "(B) 1983", "(C) 1985", "(D) 1989"],
     correctIndex: 1,
-    explanation: "खेजड़ी (Prosopis cineraria) को 31 अक्टूबर 1983 को राज्य वृक्ष घोषित किया गया था।",
-    points: [
-      { title: "राज्य वृक्ष (खेजड़ी)", desc: "31 अक्टूबर 1983 को घोषित। वैज्ञानिक नाम Prosopis cineraria है। थार का कल्पवृक्ष व जांटी कहलाता है।" },
-      { title: "राज्य पुष्प (रोहिड़ा)", desc: "31 अक्टूबर 1983 को घोषित। वैज्ञानिक नाम Tecomella undulata है। मारवाड़ टीक कहलाता है।" },
-      { title: "राज्य पशु (चिंकारा व ऊंट)", desc: "चिंकारा (वन्यजीव) 1981 में, ऊंट (पशुधन) 30 जून 2014 को राज्य पशु घोषित हुआ।" }
-    ]
+    explanation: "खेजड़ी (Prosopis cineraria) को 31 अक्टूबर 1983 को राज्य वृक्ष घोषित किया गया था।"
   },
   {
     topic: "राजस्थान के प्रमुख लोक देवता",
@@ -25,37 +19,91 @@ const QUESTION_BANK = [
     question: "पाबूजी की फड़ का वाचन करते समय किस वाद्ययंत्र का प्रयोग मुख्य रूप से किया जाता है?",
     options: ["(A) जंतर", "(B) रावणहत्था", "(C) सारंगी", "(D) कमायचा"],
     correctIndex: 1,
-    explanation: "पाबूजी की फड़ का वाचन नायक/भील भोपों द्वारा रावणहत्था वाद्ययंत्र से किया जाता है।",
-    points: [
-      { title: "पाबूजी (ऊंटों के देवता)", desc: "मारवाड़ में सर्वप्रथम ऊंट लाने का श्रेय। मुख्य मंदिर: कोलू मण्ड (फलौदी)। फड़ वाचन में रावणहत्था प्रयोग।" },
-      { title: "गोगाजी (साँपों के देवता)", desc: "थान खेजड़ी वृक्ष के नीचे। शीर्षमेड़ी ददरेवा (चूरू) तथा धुरमेड़ी गोगामेड़ी (हनुमानगढ़) में है।" },
-      { title: "देवनारायण जी (गुर्जर समाज)", desc: "फड़ वाचन में 'जंतर' वाद्ययंत्र का प्रयोग। इनकी फड़ सबसे लंबी और प्राचीन है।" }
-    ]
+    explanation: "पाबूजी की फड़ का वाचन नायक/भील भोपों द्वारा रावणहत्था वाद्ययंत्र से किया जाता है।"
   },
   {
-    topic: "राजस्थान का नया भूगोल (संभाग व जिले)",
+    topic: "राजस्थान का नया भूगोल",
     exam: "CET / REET 2026 Special",
     question: "राजस्थान का नवगठित 'डीडवाना-कुचामन' जिला किस संभाग के अंतर्गत आता है?",
     options: ["(A) जयपुर", "(B) अजमेर", "(C) बीकानेर", "(D) जोधपुर"],
     correctIndex: 1,
-    explanation: "डीडवाना-कुचामन जिला अजमेर संभाग के अंतर्गत आता है।",
-    points: [
-      { title: "अजमेर संभाग", desc: "वर्तमान में 7 जिले: अजमेर, ब्यावर, केकड़ी, टोंक, नागौर, डीडवाना-कुचामन, शाहपुरा।" },
-      { title: "नवीनतम 3 संभाग", desc: "बांसवाड़ा, पाली और सीकर नवीन संभाग बनाए गए हैं।" },
-      { title: "खारे पानी की झीलें", desc: "डीडवाना व कुचामन झीलें अब नवगठित डीडवाना-कुचामन जिले में स्थित हैं।" }
-    ]
+    explanation: "डीडवाना-कुचामन जिला अजमेर संभाग के अंतर्गत आता है।"
+  },
+  {
+    topic: "1857 की क्रांति (राजस्थान)",
+    exam: "CET / REET 2026 Special",
+    question: "1857 की क्रांति के समय राजस्थान में छावनियों की कुल संख्या कितनी थी?",
+    options: ["(A) 4", "(B) 6", "(C) 8", "(D) 10"],
+    correctIndex: 1,
+    explanation: "राजस्थान में 6 सैनिक छावनियां थीं: नसीराबाद, नीमच, देवली, ब्यावर, एरिनपुरा और खेरवाड़ा।"
+  },
+  {
+    topic: "राजस्थान के प्रमुख दुर्ग",
+    exam: "CET / REET 2026 Special",
+    question: "यूनेस्को की विश्व धरोहर सूची में राजस्थान के कितने पहाड़ी दुर्ग शामिल हैं?",
+    options: ["(A) 4", "(B) 6", "(C) 7", "(D) 8"],
+    correctIndex: 1,
+    explanation: "2013 में 6 दुर्ग (चीकू गाजर आम: चित्तौड़गढ़, कुंभलगढ़, गागरोन, जैसलमेर, रणथंभौर, आमेर) शामिल किए गए।"
+  },
+  {
+    topic: "राजस्थान की नदियाँ",
+    exam: "CET / REET 2026 Special",
+    question: "राजस्थान में पूर्णतः बहने वाली सबसे लंबी नदी कौन सी है?",
+    options: ["(A) चंबल", "(B) बनास", "(C) माही", "(D) लूनी"],
+    correctIndex: 1,
+    explanation: "पूर्णतः राजस्थान में बहने वाली सबसे लंबी नदी बनास (480 किमी) है। इसे 'वन की आशा' कहते हैं।"
   }
 ];
 
 export default function CreatorStudio() {
+  const [bank, setBank] = useState(DEFAULT_BANK);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [activeTab, setActiveTab] = useState("reel");
   const [isProcessing, setIsProcessing] = useState(false);
-  const pdfTemplateRef = useRef(null);
+  const [isCustom, setIsCustom] = useState(false);
 
-  const currentItem = QUESTION_BANK[selectedIdx];
+  const [customTopic, setCustomTopic] = useState("राजस्थान GK स्पेशल");
+  const [customQ, setCustomQ] = useState("");
+  const [optA, setOptA] = useState("");
+  const [optB, setOptB] = useState("");
+  const [optC, setOptC] = useState("");
+  const [optD, setOptD] = useState("");
+  const [correctOpt, setCorrectOpt] = useState(0);
+  const [customExp, setCustomExp] = useState("");
 
-  // 1. Native High-Res Reel Canvas Drawing
+  useEffect(() => {
+    async function loadDbQuestions() {
+      if (!supabase) return;
+      try {
+        const { data } = await supabase.from("quiz_questions").select("*").limit(60);
+        if (data && data.length > 0) {
+          const dbMapped = data.map((q) => ({
+            topic: q.topic || "राजस्थान GK",
+            exam: "CET / REET 2026 Special",
+            question: q.question,
+            options: Array.isArray(q.options) ? q.options.slice(0, 4) : [q.option_a, q.option_b, q.option_c, q.option_d],
+            correctIndex: typeof q.correct_index === "number" ? q.correct_index : 0,
+            explanation: q.explanation || "विस्तृत व्याख्या व मॉक टेस्ट पोर्टल पर उपलब्ध है।"
+          }));
+          setBank((prev) => [...DEFAULT_BANK, ...dbMapped]);
+        }
+      } catch (err) {
+        console.log("Using default bank");
+      }
+    }
+    loadDbQuestions();
+  }, []);
+
+  const currentItem = isCustom
+    ? {
+        topic: customTopic || "राजस्थान GK स्पेशल",
+        exam: "CET / REET 2026 Special",
+        question: customQ || "यहाँ आपका प्रश्न दिखेगा?",
+        options: [optA || "(A) विकल्प A", optB || "(B) विकल्प B", optC || "(C) विकल्प C", optD || "(D) विकल्प D"],
+        correctIndex: correctOpt,
+        explanation: customExp || "सही उत्तर की व्याख्या यहाँ दिखाई देगी।"
+      }
+    : bank[selectedIdx] || bank[0];
+
   const generateReelImage = (withAnswer = false) => {
     setIsProcessing(true);
     try {
@@ -64,7 +112,7 @@ export default function CreatorStudio() {
       canvas.height = 1920;
       const ctx = canvas.getContext("2d");
 
-      // BG
+      // BG Gradient
       const bgGrad = ctx.createLinearGradient(0, 0, 0, 1920);
       bgGrad.addColorStop(0, "#090D16");
       bgGrad.addColorStop(0.5, "#0F172A");
@@ -72,7 +120,7 @@ export default function CreatorStudio() {
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, 1080, 1920);
 
-      // Top Badge
+      // Top Alert Badge
       ctx.fillStyle = "rgba(245, 158, 11, 0.15)";
       ctx.beginPath();
       ctx.roundRect(140, 120, 800, 80, 40);
@@ -90,7 +138,7 @@ export default function CreatorStudio() {
       ctx.fillStyle = "#94A3B8";
       ctx.fillText(`${currentItem.topic} • ${currentItem.exam}`, 540, 260);
 
-      // Question Card
+      // Question Box
       ctx.fillStyle = "#1E293B";
       ctx.beginPath();
       ctx.roundRect(80, 340, 920, 340, 32);
@@ -104,7 +152,7 @@ export default function CreatorStudio() {
       ctx.textAlign = "center";
 
       const wrapText = (text, x, y, maxWidth, lineHeight) => {
-        const words = text.split(" ");
+        const words = String(text || "").split(" ");
         let line = "";
         for (let n = 0; n < words.length; n++) {
           const testLine = line + words[n] + " ";
@@ -124,7 +172,7 @@ export default function CreatorStudio() {
       // Options
       const startY = 730;
       currentItem.options.forEach((opt, idx) => {
-        const y = startY + (idx * 160);
+        const y = startY + idx * 160;
         const isCorrect = withAnswer && idx === currentItem.correctIndex;
 
         ctx.fillStyle = isCorrect ? "rgba(16, 185, 129, 0.2)" : "#1E293B";
@@ -138,7 +186,7 @@ export default function CreatorStudio() {
         ctx.font = isCorrect ? "bold 40px system-ui, sans-serif" : "600 38px system-ui, sans-serif";
         ctx.fillStyle = isCorrect ? "#6EE7B7" : "#F1F5F9";
         ctx.textAlign = "left";
-        ctx.fillText(opt, 140, y + 74);
+        ctx.fillText(String(opt || ""), 140, y + 74);
 
         if (isCorrect) {
           ctx.textAlign = "right";
@@ -146,7 +194,7 @@ export default function CreatorStudio() {
         }
       });
 
-      // Explanation (On Answer Frame)
+      // Explanation (Answer Frame Only)
       if (withAnswer) {
         ctx.fillStyle = "rgba(99, 102, 241, 0.15)";
         ctx.beginPath();
@@ -165,7 +213,7 @@ export default function CreatorStudio() {
         wrapText(currentItem.explanation, 120, 1515, 840, 42);
       }
 
-      // Footer CTA
+      // Bottom CTA
       ctx.textAlign = "center";
       ctx.font = "bold 36px system-ui, sans-serif";
       ctx.fillStyle = "#F59E0B";
@@ -175,10 +223,10 @@ export default function CreatorStudio() {
       ctx.fillStyle = "#64748B";
       ctx.fillText("EduAI Pro • t.me/EduAI_RajasthanExam", 540, 1790);
 
-      // Download
+      // Instant Download
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
-      a.download = `EduAI_${currentItem.topic}_${withAnswer ? "Ans" : "Q"}.png`;
+      a.download = `EduAI_${currentItem.topic.replace(/\s+/g, "_")}_${withAnswer ? "Ans" : "Q"}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -189,154 +237,118 @@ export default function CreatorStudio() {
     }
   };
 
-  // 2. High-Quality Hindi Unicode PDF Generator
-  const generateHindiPDF = async () => {
-    setIsProcessing(true);
-    try {
-      if (pdfTemplateRef.current) {
-        const canvas = await html2canvas(pdfTemplateRef.current, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: "#ffffff"
-        });
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`EduAI_${currentItem.topic.replace(/\s+/g, "_")}_Capsule.pdf`);
-      }
-    } catch (err) {
-      alert("PDF Error: " + err.message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-28 font-sans">
-      <div className="max-w-md mx-auto space-y-5">
+      <div className="max-w-md mx-auto space-y-4">
         
         {/* Header */}
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold">
+          <div className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5" /> EduAI Creator Studio
           </div>
-          <h1 className="text-xl font-bold text-white">Reel & 1-Page PDF Generator</h1>
+          <h1 className="text-xl font-bold text-white">Reel & Story Card Generator</h1>
+          <p className="text-xs text-slate-400">1080x1920 HD क्विज़ रील्स कार्ड्स 1-क्लिक में बनाएँ</p>
         </div>
 
-        {/* Question Selector Dropdown */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2">
-          <label className="text-xs font-semibold text-slate-400">अभ्यास प्रश्न व विषय चुनें:</label>
-          <select
-            value={selectedIdx}
-            onChange={(e) => setSelectedIdx(Number(e.target.value))}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            {QUESTION_BANK.map((q, idx) => (
-              <option key={idx} value={idx}>
-                {idx + 1}. {q.topic} - {q.question.substring(0, 38)}...
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+        {/* Switcher */}
+        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
           <button
-            onClick={() => setActiveTab("reel")}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === "reel" ? "bg-indigo-600 text-white" : "text-slate-400"
+            onClick={() => setIsCustom(false)}
+            className={`flex-1 py-2 rounded-lg font-bold transition-all ${
+              !isCustom ? "bg-slate-800 text-indigo-400 shadow" : "text-slate-400"
             }`}
           >
-            <Video className="w-3.5 h-3.5" /> Reel Generator
+            📚 बैंक से चुनें ({bank.length} प्रश्न)
           </button>
           <button
-            onClick={() => setActiveTab("pdf")}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === "pdf" ? "bg-indigo-600 text-white" : "text-slate-400"
+            onClick={() => setIsCustom(true)}
+            className={`flex-1 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1 ${
+              isCustom ? "bg-slate-800 text-indigo-400 shadow" : "text-slate-400"
             }`}
           >
-            <FileText className="w-3.5 h-3.5" /> Revision PDF
+            <PlusCircle className="w-3.5 h-3.5" /> नया सवाल लिखें
           </button>
         </div>
 
-        {/* TAB 1: REEL */}
-        {activeTab === "reel" && (
-          <div className="space-y-3">
-            <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-xl text-xs text-slate-300">
-              <b>चयनित प्रश्न:</b> {currentItem.question}
-            </div>
-            <button
-              onClick={() => generateReelImage(false)}
-              disabled={isProcessing}
-              className="w-full py-3 bg-rose-600 active:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2"
+        {!isCustom ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-1.5">
+            <label className="text-xs font-semibold text-slate-400">उपलब्ध टॉपिक व प्रश्न:</label>
+            <select
+              value={selectedIdx}
+              onChange={(e) => setSelectedIdx(Number(e.target.value))}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-medium outline-none"
             >
-              📥 1. सवाल इमेज डाउनलोड करें (HD)
-            </button>
-            <button
-              onClick={() => generateReelImage(true)}
-              disabled={isProcessing}
-              className="w-full py-3 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2"
-            >
-              📥 2. उत्तर इमेज डाउनलोड करें (HD)
-            </button>
+              {bank.map((q, idx) => (
+                <option key={idx} value={idx}>
+                  {idx + 1}. [{q.topic}] {q.question.substring(0, 36)}...
+                </option>
+              ))}
+            </select>
           </div>
-        )}
-
-        {/* TAB 2: PDF */}
-        {activeTab === "pdf" && (
-          <div className="space-y-3">
-            <button
-              onClick={generateHindiPDF}
-              disabled={isProcessing}
-              className="w-full py-3 bg-indigo-600 active:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2"
-            >
-              📥 इस टॉपिक की साफ़ 1-Page PDF डाउनलोड करें
-            </button>
-
-            {/* Hidden Perfect Hindi Template for Rendering */}
-            <div
-              ref={pdfTemplateRef}
-              className="bg-white text-slate-900 rounded-xl p-6 border border-slate-300 shadow-md font-sans"
-            >
-              <div className="border-b-2 border-indigo-600 pb-3 mb-4 flex justify-between items-center">
-                <div>
-                  <h2 className="text-base font-black text-indigo-950 uppercase tracking-tight">
-                    🎯 EduAI Pro — 1-Page Revision Capsule
-                  </h2>
-                  <p className="text-xs font-bold text-indigo-600">
-                    विषय: {currentItem.topic}
-                  </p>
-                </div>
-                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded">
-                  CET • REET 2026
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {currentItem.points.map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="text-xs font-bold text-indigo-900 mb-1 flex items-center gap-1.5">
-                      <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">
-                        {idx + 1}
-                      </span>
-                      {item.title}
-                    </div>
-                    <p className="text-[11px] text-slate-700 leading-relaxed pl-5">
-                      {item.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-3 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-600">
-                <div>🚀 <b>पूरा 100 PYQ टेस्ट दें:</b> education-platform-fawn-six.vercel.app/quiz</div>
-                <div className="font-semibold text-indigo-700">@EduAI_RajasthanExam</div>
-              </div>
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2 text-xs">
+            <div>
+              <label className="text-slate-400 font-medium">विषय का नाम:</label>
+              <input
+                type="text"
+                value={customTopic}
+                onChange={(e) => setCustomTopic(e.target.value)}
+                placeholder="उदा. राजस्थान के लोक नृत्य"
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-slate-400 font-medium">प्रश्न लिखें:</label>
+              <textarea
+                value={customQ}
+                onChange={(e) => setCustomQ(e.target.value)}
+                placeholder="यहाँ अपना सवाल टाइप करें..."
+                rows={2}
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="text" value={optA} onChange={(e) => setOptA(e.target.value)} placeholder="(A) पहला विकल्प" className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
+              <input type="text" value={optB} onChange={(e) => setOptB(e.target.value)} placeholder="(B) दूसरा विकल्प" className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
+              <input type="text" value={optC} onChange={(e) => setOptC(e.target.value)} placeholder="(C) तीसरा विकल्प" className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
+              <input type="text" value={optD} onChange={(e) => setOptD(e.target.value)} placeholder="(D) चौथा विकल्प" className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-slate-400">सही उत्तर:</label>
+              <select value={correctOpt} onChange={(e) => setCorrectOpt(Number(e.target.value))} className="bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-white">
+                <option value={0}>Option A</option>
+                <option value={1}>Option B</option>
+                <option value={2}>Option C</option>
+                <option value={3}>Option D</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-slate-400 font-medium">व्याख्या:</label>
+              <input type="text" value={customExp} onChange={(e) => setCustomExp(e.target.value)} placeholder="सही उत्तर की 1 लाइन व्याख्या" className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
             </div>
           </div>
         )}
+
+        {/* Action Buttons */}
+        <div className="space-y-3 pt-2">
+          <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-300">
+            <span className="text-indigo-400 font-bold">🎯 {currentItem.topic}:</span> {currentItem.question}
+          </div>
+          <button
+            onClick={() => generateReelImage(false)}
+            disabled={isProcessing}
+            className="w-full py-3.5 bg-rose-600 active:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+          >
+            📥 1. सवाल इमेज डाउनलोड करें (HD Reel Frame)
+          </button>
+          <button
+            onClick={() => generateReelImage(true)}
+            disabled={isProcessing}
+            className="w-full py-3.5 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+          >
+            📥 2. उत्तर इमेज डाउनलोड करें (HD Reel Frame)
+          </button>
+        </div>
 
       </div>
     </div>
