@@ -10,6 +10,83 @@ import {
   Share2, Layers
 } from "lucide-react";
 
+// 📄 PDF-STYLE ONE-LINER & SMART SHEET RENDERER
+function PDFNotesSheet({ notes, chapterName }) {
+  return (
+    <div className="rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden font-sans text-slate-200">
+
+      {/* 🏷️ Top PDF Header Banner */}
+      <div className="bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase block">
+            EduAI Pro • REET & RPSC SPECIAL
+          </span>
+          <h2 className="text-sm sm:text-base font-black text-white">{chapterName} (Best One-Liners)</h2>
+        </div>
+        <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-full">
+          50 MARKS SHEET
+        </span>
+      </div>
+
+      {/* 📜 Continuous Sheet Body */}
+      <div className="p-4 sm:p-6 space-y-8">
+        {notes.map((note) => {
+          const lines = note.content.split("\n").filter((l) => l.trim().length > 0);
+
+          return (
+            <div key={note.id} className="space-y-4">
+
+              {/* Section Header (भाग 1, भाग 2 आदि) */}
+              <div className="flex items-center gap-2 pb-2 border-b-2 border-indigo-500/40">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <h3 className="text-xs sm:text-sm font-black text-indigo-300 uppercase tracking-wide">
+                  {note.title}
+                </h3>
+              </div>
+
+              {/* 2-Column One-Liners Grid (Like PDF) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {lines.map((line, idx) => {
+                  if (line.includes(" - ") || line.includes("?")) {
+                    const [qPart, aPart] = line.split(/ - | \? - /);
+                    return (
+                      <div 
+                        key={idx} 
+                        className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800/80 flex flex-col justify-between gap-1 shadow-sm hover:border-indigo-500/30 transition"
+                      >
+                        <span className="text-xs font-semibold text-slate-300 leading-snug">
+                          {qPart.replace(/^\d+\.\s*/, "").replace(/^•\s*/, "")}{!qPart.includes("?") ? "?" : ""}
+                        </span>
+                        {aPart && (
+                          <span className="text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg w-fit mt-1">
+                            👉 {aPart.trim()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={idx} className="col-span-full p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-xs text-indigo-200 font-medium">
+                      {line}
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 📌 Bottom PDF Footer */}
+      <div className="bg-slate-900 px-4 py-3 border-t border-slate-800 text-center text-[10px] text-slate-500 font-bold">
+        ✨ सम्पूर्ण परीक्षा-उपयोगी वन-लाइनर शीट समाप्त • EduAI Pro ✨
+      </div>
+
+    </div>
+  );
+}
+
 // 🎯 100% ROBUST & UNIVERSAL QUESTION FORMATTER
 function FormattedQuestionText({ text }) {
   if (!text) return null;
@@ -24,7 +101,6 @@ function FormattedQuestionText({ text }) {
     (/\([A-D]\)/.test(text) && /\((?:i|ii|iii|iv|1|2|3|4)\)/i.test(text));
 
   if (isMatching) {
-    // Universal line/pair parser
     const regex = /\(([A-D])\)\s*([\s\S]*?)\s*\(((?:i|ii|iii|iv|1|2|3|4))\)\s*([\s\S]*?)(?=\([B-D]\)|कूट:|$)/gi;
     const rows = [];
     let match;
@@ -313,7 +389,7 @@ export default function ChapterSingleViewPage() {
         >
           <BookOpen className={`w-4 h-4 ${activeTab === "notes" ? "text-indigo-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">1. स्मार्ट नोट्स</h3>
-          <p className="text-[10px] text-slate-400">{notes.length} नोट्स</p>
+          <p className="text-[10px] text-slate-400">{notes.length} नोट्स शीट</p>
         </button>
 
         <button
@@ -377,23 +453,15 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
-      {/* TAB 1: Smart Notes */}
+      {/* TAB 1: Smart Notes (PDF-Style Continuous Sheet) */}
       {activeTab === "notes" && (
-        <div className="space-y-3 pt-1">
+        <div className="pt-1">
           {notes.length === 0 ? (
             <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400">
               इस अध्याय में नोट्स जल्द जोड़े जा रहे हैं।
             </div>
           ) : (
-            notes.map((n) => (
-              <div key={n.id} className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2 shadow-md">
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  📖 थ्योरी कैप्सूल
-                </span>
-                <h3 className="text-sm font-bold text-white leading-snug">{n.title}</h3>
-                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">{n.content}</p>
-              </div>
-            ))
+            <PDFNotesSheet notes={notes} chapterName={chapter.name} />
           )}
         </div>
       )}
