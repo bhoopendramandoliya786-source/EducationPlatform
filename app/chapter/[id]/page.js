@@ -10,47 +10,56 @@ import {
   Share2, Layers
 } from "lucide-react";
 
-// Pro Exam Question Formatter (Matching Table, Assertion/Reason, Statements)
+// 🎯 100% ROBUST & UNIVERSAL QUESTION FORMATTER
 function FormattedQuestionText({ text }) {
   if (!text) return null;
 
-  // 1. सुमेलित प्रश्न (सूची-I और सूची-II)
-  if (text.includes("सूची-I") || text.includes("सूची - I") || text.includes("सूची-1")) {
-    // Regex parsing for List I & List II pairs
-    const matchA = text.match(/\(A\)\s*([^()]+)\s*\(i\)\s*([^()]+)/i);
-    const matchB = text.match(/\(B\)\s*([^()]+)\s*\(ii\)\s*([^()]+)/i);
-    const matchC = text.match(/\(C\)\s*([^()]+)\s*\(iii\)\s*([^()]+)/i);
-    const matchD = text.match(/\(D\)\s*([^()]+)\s*\(iv\)\s*([^()]+)/i);
+  // 1. सुमेलित प्रश्न (Matching Questions Detection)
+  const isMatching = 
+    text.includes("सुमेलन") || 
+    text.includes("सुमेलित") || 
+    text.includes("सूची-I") || 
+    text.includes("सूची - I") || 
+    text.includes("सूची-1") ||
+    (/\([A-D]\)/.test(text) && /\((?:i|ii|iii|iv|1|2|3|4)\)/i.test(text));
 
-    const titlePart = text.split(/सूची-I|सूची - I|सूची-1/i)[0] || "निम्नलिखित का सही सुमेलन कीजिए:";
+  if (isMatching) {
+    // Universal line/pair parser
+    const regex = /\(([A-D])\)\s*([\s\S]*?)\s*\(((?:i|ii|iii|iv|1|2|3|4))\)\s*([\s\S]*?)(?=\([B-D]\)|कूट:|$)/gi;
+    const rows = [];
+    let match;
 
-    if (matchA && matchB) {
-      const rows = [
-        { label1: "(A) " + matchA[1].trim(), label2: "(i) " + matchA[2].trim() },
-        { label1: "(B) " + matchB[1].trim(), label2: "(ii) " + matchB[2].trim() },
-        matchC ? { label1: "(C) " + matchC[1].trim(), label2: "(iii) " + matchC[2].trim() } : null,
-        matchD ? { label1: "(D) " + matchD[1].trim(), label2: "(iv) " + matchD[2].trim() } : null,
-      ].filter(Boolean);
+    while ((match = regex.exec(text)) !== null) {
+      rows.push({
+        col1: `(${match[1]}) ${match[2].trim()}`,
+        col2: `(${match[3]}) ${match[4].trim()}`
+      });
+    }
 
+    const titlePart = text.split(/\([A-D]\)|सूची-I|सूची - I/)[0] || "निम्नलिखित का सही सुमेलन कीजिए:";
+
+    if (rows.length >= 2) {
       return (
         <div className="space-y-3">
           <p className="text-white text-xs sm:text-sm font-bold leading-relaxed">{titlePart.trim()}</p>
 
-          <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950/90 shadow-md">
-            <div className="grid grid-cols-2 bg-indigo-950/50 border-b border-slate-800 px-3 py-2 text-[11px] font-black text-indigo-300">
+          {/* 2-Column Matching Table */}
+          <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950 shadow-md">
+            <div className="grid grid-cols-2 bg-indigo-950/60 border-b border-slate-800 px-3 py-2 text-[11px] font-black text-indigo-300">
               <span>सूची - I</span>
               <span>सूची - II</span>
             </div>
             <div className="divide-y divide-slate-800/60">
               {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-2 px-3 py-2 text-xs text-slate-200">
-                  <span className="font-medium pr-2 text-slate-300">{r.label1}</span>
-                  <span className="font-semibold text-indigo-300 border-l border-slate-800/80 pl-3">{r.label2}</span>
+                <div key={i} className="grid grid-cols-2 px-3 py-2 text-xs">
+                  <span className="font-medium pr-2 text-slate-300">{r.col1}</span>
+                  <span className="font-bold text-indigo-300 border-l border-slate-800/80 pl-3">{r.col2}</span>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Koot Header */}
           <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5 pt-0.5">
             <span>🎯 सही कूट का चयन कीजिए:</span>
           </div>
@@ -60,8 +69,8 @@ function FormattedQuestionText({ text }) {
   }
 
   // 2. कथन एवं कारण (Assertion - Reason)
-  if (text.includes("कथन (A)") || text.includes("कथन(A)")) {
-    const parts = text.split(/(?=कारण\s*\(R\)|सही\s*विकल्प|उपर्युक्त)/gi);
+  if (text.includes("कथन (A)") || text.includes("कथन(A)") || text.includes("कथन:")) {
+    const parts = text.split(/(?=कारण\s*\(R\)|कारण:|सही\s*विकल्प|उपर्युक्त)/gi);
     return (
       <div className="space-y-2 text-xs sm:text-sm">
         {parts.map((p, idx) => {
@@ -69,16 +78,16 @@ function FormattedQuestionText({ text }) {
           if (str.startsWith("कथन")) {
             return (
               <div key={idx} className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 font-medium">
-                <strong className="text-indigo-400 block mb-0.5 font-bold">📌 {str.slice(0, 9)}</strong>
-                {str.replace(/^कथन\s*\([A-Z]\):?\s*/i, "")}
+                <strong className="text-indigo-400 block mb-0.5 font-bold">📌 कथन (A):</strong>
+                {str.replace(/^कथन\s*(\([A-Z]\)|:)?\s*/i, "")}
               </div>
             );
           }
           if (str.startsWith("कारण")) {
             return (
               <div key={idx} className="p-3 rounded-2xl bg-purple-950/40 border border-purple-500/30 text-purple-200 font-medium">
-                <strong className="text-purple-400 block mb-0.5 font-bold">💡 {str.slice(0, 9)}</strong>
-                {str.replace(/^कारण\s*\([A-Z]\):?\s*/i, "")}
+                <strong className="text-purple-400 block mb-0.5 font-bold">💡 कारण (R):</strong>
+                {str.replace(/^कारण\s*(\([A-Z]\)|:)?\s*/i, "")}
               </div>
             );
           }
@@ -440,8 +449,8 @@ export default function ChapterSingleViewPage() {
                           className={`p-3 rounded-xl border text-left text-xs flex items-center justify-between transition ${style}`}
                         >
                           <span><strong>{opt.key}.</strong> {opt.text}</span>
-                          {isAttempted && opt.key === q.answer && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                          {isAttempted && opt.key === userAnswer && opt.key !== q.answer && <XCircle className="w-4 h-4 text-rose-400" />}
+                          {isAttempted && opt.key === q.answer && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+                          {isAttempted && opt.key === userAnswer && opt.key !== q.answer && <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />}
                         </button>
                       );
                     })}
@@ -480,7 +489,7 @@ export default function ChapterSingleViewPage() {
               </div>
               <button
                 onClick={() => setQuizStarted(true)}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg active:scale-95 transition"
               >
                 <Play className="w-4 h-4 inline-block mr-1" /> Set {selectedSet} टेस्ट शुरू करें
               </button>
@@ -508,13 +517,13 @@ export default function ChapterSingleViewPage() {
               </div>
               <button
                 onClick={shareScoreOnWhatsApp}
-                className="w-full py-3 rounded-xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5"
+                className="w-full py-3 rounded-xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
                 <Share2 className="w-4 h-4" /> WhatsApp पर शेयर करें
               </button>
               <button
                 onClick={resetQuiz}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
                 <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें
               </button>
@@ -542,10 +551,10 @@ export default function ChapterSingleViewPage() {
                   <button
                     key={opt.key}
                     onClick={() => handleQuizAnswer(speedTestQuestions[currentQIndex].id, opt.key)}
-                    className={`p-3 rounded-xl border text-left text-xs ${
+                    className={`p-3 rounded-xl border text-left text-xs transition ${
                       quizAnswers[speedTestQuestions[currentQIndex].id] === opt.key 
-                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" 
-                        : "bg-slate-950/80 border-slate-800 text-slate-300"
+                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold shadow-md shadow-indigo-600/20" 
+                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700"
                     }`}
                   >
                     <strong>{opt.key}.</strong> {opt.text}
@@ -563,14 +572,14 @@ export default function ChapterSingleViewPage() {
                 {currentQIndex === speedTestQuestions.length - 1 ? (
                   <button
                     onClick={() => setQuizSubmitted(true)}
-                    className="px-5 py-2 bg-emerald-600 rounded-xl text-xs font-bold text-white"
+                    className="px-5 py-2 bg-emerald-600 rounded-xl text-xs font-bold text-white active:scale-95 transition shadow-md"
                   >
                     सबमिट करें ✓
                   </button>
                 ) : (
                   <button
                     onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                    className="px-5 py-2 bg-indigo-600 rounded-xl text-xs font-bold text-white"
+                    className="px-5 py-2 bg-indigo-600 rounded-xl text-xs font-bold text-white active:scale-95 transition shadow-md"
                   >
                     अगला →
                   </button>
