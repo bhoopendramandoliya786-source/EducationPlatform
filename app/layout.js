@@ -85,51 +85,49 @@ export default function RootLayout({ children }) {
           `}
         </Script>
       </head>
-      <body className="bg-[#070b14] text-slate-100 min-h-screen antialiased flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+      <body className="bg-[#070b14] text-slate-100 min-h-screen antialiased flex flex-col justify-between selection:bg-indigo-500 selection:text-white font-sans">
 
-        <header className="sticky top-0 z-50 bg-[#070b14]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between gap-3">
+        {/* Modern Compact Header */}
+        <header className="sticky top-0 z-40 bg-[#070b14]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between gap-2.5">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black text-white text-sm shadow-md shadow-indigo-500/30 group-hover:scale-105 transition">
               E
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <span className="font-black text-white text-base tracking-tight">EduAI</span>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">PRO</span>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">PRO</span>
             </div>
           </Link>
 
           <Link
             href="/search"
-            className="flex-1 max-w-sm flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800/90 text-xs text-slate-400 hover:border-indigo-500/50 hover:text-slate-200 transition shadow-inner"
+            className="flex-1 max-w-xs flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400 hover:border-slate-700 transition"
           >
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <span className="truncate text-[11px]">खोजें: विषय, अध्याय या टॉपिक...</span>
+            <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <span className="truncate text-[11px]">खोजें: विषय, अध्याय...</span>
           </Link>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold shadow-sm">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
               <Flame className="w-3.5 h-3.5 fill-current" />
               <span>12</span>
             </div>
-            <Link
-              href="/student"
-              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition flex items-center gap-1"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">प्रोफाइल</span>
-            </Link>
           </div>
         </header>
 
+        {/* Non-intrusive Install PWA Bar */}
         <InstallPWA />
 
-        <main className="flex-1 pb-24 pt-2">
+        {/* Main Content Area */}
+        <main className="flex-1 pb-28 pt-2">
           {children}
         </main>
 
+        {/* Clean Telegram Bar */}
         <TelegramBanner />
 
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around">
+        {/* Modern App Floating Bottom Navigation Bar */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around shadow-2xl">
           <Link href="/" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Home className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">होम</span>
@@ -139,10 +137,10 @@ export default function RootLayout({ children }) {
             <span className="text-[10px] mt-0.5 font-medium">नोट्स</span>
           </Link>
           <Link href="/student" className="flex items-center flex-col -mt-5 group active:scale-95 transition">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/40 group-hover:scale-105 transition">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 group-hover:scale-105 transition">
               <Sparkles className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-bold text-indigo-400 mt-1">AI ट्यूटर</span>
+            <span className="text-[10px] font-bold text-indigo-400 mt-0.5">AI ट्यूटर</span>
           </Link>
           <Link href="/quiz" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Trophy className="w-5 h-5" />
