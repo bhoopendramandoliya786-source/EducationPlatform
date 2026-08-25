@@ -210,7 +210,7 @@ function FormattedQuestionText({ text }) {
 export default function ChapterSingleViewPage() {
   const { id } = useParams();
   const [chapter, setChapter] = useState(null);
-  const [activeTab, setActiveTab] = useState("mcqs");
+  const [activeTab, setActiveTab] = useState("notes");
   const [notes, setNotes] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -225,55 +225,45 @@ export default function ChapterSingleViewPage() {
 
   const supabase = createClient();
 
+  // 🚀 DIRECT FETCH BY CHAPTER_ID (NO TOPICS REQUIRED)
   useEffect(() => {
     async function loadChapterData() {
       if (!id) return;
       setLoading(true);
       try {
-        const { data: chapData } = await supabase
+        // 1. Load Chapter & Subject
+        const { data: chapData, error: chapErr } = await supabase
           .from("chapters")
           .select("*, subjects(id, name)")
           .eq("id", id)
           .single();
-        setChapter(chapData);
 
-        const { data: topList } = await supabase
-          .from("topics")
-          .select("id")
-          .eq("chapter_id", id);
+        if (!chapErr && chapData) {
+          setChapter(chapData);
+        }
 
-        const topicIds = (topList || []).map((t) => t.id);
+        // 2. Load Notes directly by chapter_id
+        const { data: nData, error: nErr } = await supabase
+          .from("notes")
+          .select("*")
+          .eq("chapter_id", id)
+          .eq("is_published", true)
+          .order("sort_order", { ascending: true });
 
-        if (topicIds.length > 0) {
-          const { data: nData } = await supabase
-            .from("notes")
-            .select("*")
-            .in("topic_id", topicIds)
-            .eq("is_published", true)
-            .order("id", { ascending: true });
-          if (nData) setNotes(nData || []);
+        if (!nErr && nData) {
+          setNotes(nData);
+        }
 
-          const { data: qData } = await supabase
-            .from("questions")
-            .select("*")
-            .in("topic_id", topicIds)
-            .eq("is_active", true)
-            .order("id", { ascending: true });
-          if (qData) setQuestions(qData || []);
-        } else {
-          const { data: nData } = await supabase
-            .from("notes")
-            .select("*")
-            .eq("chapter_id", id)
-            .eq("is_published", true);
-          if (nData) setNotes(nData || []);
+        // 3. Load Questions directly by chapter_id
+        const { data: qData, error: qErr } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("chapter_id", id)
+          .eq("is_active", true)
+          .order("id", { ascending: true });
 
-          const { data: qData } = await supabase
-            .from("questions")
-            .select("*")
-            .eq("chapter_id", id)
-            .eq("is_active", true);
-          if (qData) setQuestions(qData || []);
+        if (!qErr && qData) {
+          setQuestions(qData);
         }
       } catch (err) {
         console.error("Chapter load error:", err);
