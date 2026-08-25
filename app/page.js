@@ -110,8 +110,9 @@ export default function HomePage() {
           <p className="text-[10px] text-slate-400">1-क्लिक HD क्विज़ रील्स</p>
         </Link>
 
+        {/* AI Tutor Card - Direct No-Login Route */}
         <Link
-          href="/student"
+          href="/ai-tutor"
           className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-purple-950/30 border border-slate-800/90 hover:border-purple-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
         >
           <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 group-hover:scale-105 transition">
