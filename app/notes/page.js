@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import { 
-  ArrowLeft, BookOpen, Search, Filter, Sparkles, 
-  ChevronRight, Bookmark, ArrowUpRight, HelpCircle
+  ArrowLeft, BookOpen, Search, Sparkles, 
+  ArrowUpRight, Bookmark, Layers, CheckCircle2
 } from "lucide-react";
 
 export default function SmartNotesPage() {
@@ -75,7 +75,6 @@ export default function SmartNotesPage() {
         return;
       }
       try {
-        // Find topics in chapter
         const { data: topList } = await supabase
           .from("topics")
           .select("id")
@@ -139,13 +138,13 @@ export default function SmartNotesPage() {
 
         {/* Search Bar */}
         <div className="relative pt-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="टॉपिक या कीवर्ड खोजें..."
-            className="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+            className="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
           />
         </div>
       </div>
@@ -224,7 +223,7 @@ export default function SmartNotesPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                  {n.topics?.name || "📖 थ्योरी कैप्सूल"}
+                  📖 {n.topics?.name || "थ्योरी कैप्सूल"}
                 </span>
                 <span className="text-[10px] font-bold text-slate-500">
                   भाग #{idx + 1}
@@ -235,7 +234,7 @@ export default function SmartNotesPage() {
                 {n.title}
               </h3>
 
-              <div className="text-xs text-slate-200 leading-relaxed whitespace-pre-line space-y-1 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80">
+              <div className="text-xs text-slate-200 leading-relaxed whitespace-pre-line space-y-1 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80">
                 {n.content}
               </div>
 
