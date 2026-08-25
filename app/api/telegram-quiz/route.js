@@ -3,106 +3,129 @@ import { supabase } from "@/lib/supabase";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = "@EduAI_RajasthanExam";
-const WEBSITE_URL = "https://education-platform-fawn-six.vercel.app/quiz";
+const WEBSITE_URL = "https://education-platform-fawn-six.vercel.app";
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function GET(request) {
   try {
     if (!TELEGRAM_BOT_TOKEN) {
-      return NextResponse.json({ 
-        success: false, 
-        error: "TELEGRAM_BOT_TOKEN is missing in Environment Variables." 
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "TELEGRAM_BOT_TOKEN is missing." },
+        { status: 400 }
+      );
     }
 
-    const fallbackQuestions = [
-      {
-        question: "राजस्थान का राज्य वृक्ष 'खेजड़ी' को राज्य वृक्ष कब घोषित किया गया था?",
-        options: ["1981", "1983", "1985", "1989"],
-        correct_index: 1,
-        explanation: "खेजड़ी (Prosopis cineraria) को 31 अक्टूबर 1983 को राजस्थान का राज्य वृक्ष घोषित किया गया था।"
-      },
-      {
-        question: "पाबूजी की फड़ का वाचन करते समय किस वाद्ययंत्र का मुख्य रूप से प्रयोग किया जाता है?",
-        options: ["जंतर", "रावणहत्था", "सारंगी", "कमायचा"],
-        correct_index: 1,
-        explanation: "पाबूजी की फड़ का वाचन नायक/भील भोपों द्वारा रावणहत्था वाद्ययंत्र से किया जाता है।"
-      },
-      {
-        question: "राजस्थान का नवगठित 'डीडवाना-कुचामन' जिला किस संभाग के अंतर्गत आता है?",
-        options: ["जयपुर", "अजमेर", "बीकानेर", "जोधपुर"],
-        correct_index: 1,
-        explanation: "डीडवाना-कुचामन जिला अजमेर संभाग के अंतर्गत आता है।"
-      }
-    ];
+    let questionsToSend = [];
 
-    let selectedQ = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
-
+    // 1. Fetch questions from database
     if (supabase) {
       try {
-        const { data: questions } = await supabase.from("quiz_questions").select("*").limit(40);
+        const { data: questions, error } = await supabase
+          .from("quiz_questions")
+          .select("*")
+          .limit(100);
+
         if (questions && questions.length > 0) {
-          const q = questions[Math.floor(Math.random() * questions.length)];
-          selectedQ = {
+          // Shuffle array randomly
+          const shuffled = [...questions].sort(() => 0.5 - Math.random());
+          questionsToSend = shuffled.slice(0, 20).map((q) => ({
             question: q.question,
-            options: Array.isArray(q.options) ? q.options.slice(0, 4) : [q.option_a, q.option_b, q.option_c, q.option_d],
-            correct_index: typeof q.correct_index === "number" ? q.correct_index : 0,
-            explanation: q.explanation || "विस्तृत व्याख्या व 100+ PYQ हल करने हेतु EduAI Pro पोर्टल विजिट करें।"
-          };
+            options: Array.isArray(q.options)
+              ? q.options.slice(0, 4)
+              : [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean),
+            correct_index:
+              typeof q.correct_index === "number" ? q.correct_index : 0,
+            explanation:
+              q.explanation ||
+              "विस्तृत व्याख्या व 100+ PYQs हल करने हेतु EduAI Pro विजिट करें।",
+          }));
         }
       } catch (dbErr) {
-        console.log("Using fallback questions...");
+        console.error("Database fetch error:", dbErr);
       }
     }
 
-    // 1. Send Quiz Poll with clickable HTML link in explanation
-    const pollUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPoll`;
-    const cleanExplanation = (selectedQ.explanation || "सही उत्तर!").substring(0, 120);
-    const htmlExplanation = `${cleanExplanation}\n\n👉 <a href="${WEBSITE_URL}">पूरे 100 प्रश्नों का टेस्ट यहाँ दें</a>`;
-
-    const pollRes = await fetch(pollUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        question: `🎯 ${selectedQ.question.substring(0, 280)}`,
-        options: JSON.stringify(selectedQ.options.map(opt => String(opt || "").substring(0, 95))),
-        type: "quiz",
-        correct_option_id: Math.max(0, Math.min(selectedQ.correct_index, selectedQ.options.length - 1)),
-        explanation: htmlExplanation,
-        explanation_parse_mode: "HTML",
-        is_anonymous: true
-      })
-    });
-
-    const pollData = await pollRes.json();
-    if (!pollData.ok) {
-      return NextResponse.json({ success: false, error: pollData.description }, { status: 400 });
+    // 2. Fallback if database has fewer questions
+    if (questionsToSend.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: "No questions found in database to post.",
+      });
     }
 
-    // 2. Send Direct Clickable Button right below the poll
-    const msgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    await fetch(msgUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: `📝 <b>आज के विषय के सभी 100 PYQ व 50 MCQ टेस्ट लाइव हैं!</b>\nअपनी रैंक व स्कोरकार्ड तुरंत देखने के लिए नीचे दिए गए बटन पर क्लिक करें:`,
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "🚀 ऑनलाइन टेस्ट दें (100% Free)",
-                url: WEBSITE_URL
-              }
-            ]
-          ]
-        }
-      })
-    });
+    // 3. Loop through 20 questions and send Telegram Native Polls
+    let sentCount = 0;
+    for (const q of questionsToSend) {
+      if (!q.question || !q.options || q.options.length < 2) continue;
 
-    return NextResponse.json({ success: true, message: "Quiz & clickable button successfully posted to Telegram channel!" });
+      const cleanExplanation = (q.explanation || "सही उत्तर!").substring(0, 120);
+      const htmlExplanation = `${cleanExplanation}\n\n👉 <a href="${WEBSITE_URL}">पूरे 100 प्रश्नों का टेस्ट यहाँ दें</a>`;
+
+      const pollRes = await fetch(
+        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPoll`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: TELEGRAM_CHAT_ID,
+            question: `🎯 [Q.${sentCount + 1}] ${q.question.substring(0, 270)}`,
+            options: JSON.stringify(
+              q.options.map((opt) => String(opt || "").substring(0, 95))
+            ),
+            type: "quiz",
+            correct_option_id: Math.max(
+              0,
+              Math.min(q.correct_index, q.options.length - 1)
+            ),
+            explanation: htmlExplanation,
+            explanation_parse_mode: "HTML",
+            is_anonymous: true,
+          }),
+        }
+      );
+
+      const pollData = await pollRes.json();
+      if (pollData.ok) {
+        sentCount++;
+      }
+
+      // 1.5 second delay between polls to avoid Telegram rate limits
+      await delay(1500);
+    }
+
+    // 4. Send a single Summary Button at the end of the 20-question test round
+    await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: `📊 <b>आज का 20 प्रश्नों का स्पीड टेस्ट राउंड समाप्त!</b>\n\n🎯 अपनी ऑल-राजस्थान रैंक, नेगेटिव मार्किंग स्कोरकार्ड और 100+ PYQs हल करने के लिए नीचे दिए गए बटन पर क्लिक करें:`,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🚀 फुल टेस्ट हल करें (100% Free)",
+                  url: WEBSITE_URL,
+                },
+              ],
+            ],
+          },
+        }),
+      }
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully posted ${sentCount} quiz questions to Telegram!`,
+    });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err.message },
+      { status: 500 }
+    );
   }
 }
