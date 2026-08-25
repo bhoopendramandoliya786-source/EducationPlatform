@@ -1,7 +1,8 @@
 import { supabase } from "../../../lib/supabase";
 
 export async function generateMetadata({ params }) {
-  const { id } = params;
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
 
   try {
     const { data: chapter } = await supabase
@@ -21,21 +22,9 @@ export async function generateMetadata({ params }) {
     const chapterName = chapter.name;
 
     return {
-      title: `${chapterName} Quiz, PYQs & Smart Notes | ${subjectName} - EduAI Pro`,
-      description: `${chapterName} के सम्पूर्ण परीक्षा-उपयोगी नोट्स, विगत 20 वर्षों के RPSC/RSMSSB PYQs एवं 10 मिनट स्पीड टेस्ट हल करें। REET, RAS, CET स्पेशल।`,
-      keywords: [
-        `${chapterName} mcq`,
-        `${chapterName} quiz`,
-        `${chapterName} online test`,
-        `${chapterName} notes in hindi`,
-        `${chapterName} pyq`,
-        `${subjectName} test`,
-      ],
-      openGraph: {
-        title: `${chapterName} - Smart Notes & Speed Quiz | EduAI Pro`,
-        description: `${chapterName} के डिजिटल वन-लाइनर नोट्स और परीक्षा-आधारित ऑनलाइन टेस्ट।`,
-        type: "website",
-      },
+      title: `${chapterName} Quiz, PYQs & Notes | ${subjectName} - EduAI Pro`,
+      description: `${chapterName} के सम्पूर्ण परीक्षा-उपयोगी नोट्स और ऑनलाइन टेस्ट हल करें।`,
+      keywords: [`${chapterName} mcq`, `${chapterName} quiz`, `${chapterName} notes`],
     };
   } catch (err) {
     return {
