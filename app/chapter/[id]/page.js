@@ -10,30 +10,29 @@ import {
   Share2, Layers
 } from "lucide-react";
 
-// 📄 100% PURE PDF-STYLE SMART SHEET RENDERER (INLINE NATURAL READING FLOW)
+// 🌟 100% DYNAMIC & AUTO-ADAPTIVE PDF SHEET RENDERER
 function PDFNotesSheet({ notes, chapterName }) {
   return (
     <div className="rounded-xl bg-[#090d16] border border-slate-800 shadow-xl overflow-hidden font-sans text-slate-200">
 
-      {/* 🏷️ Clean Header Banner */}
+      {/* 🏷️ Dynamic Header Banner */}
       <div className="bg-slate-900 px-3.5 py-2.5 border-b border-slate-800 flex items-center justify-between">
         <div>
           <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
             EduAI Pro • REET & RPSC SPECIAL
           </span>
-          <h2 className="text-xs sm:text-sm font-black text-white">{chapterName} (One-Liners)</h2>
+          <h2 className="text-xs sm:text-sm font-black text-white">{chapterName}</h2>
         </div>
         <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
-          50 MARKS SHEET
+          STUDY SHEET
         </span>
       </div>
 
-      {/* 📜 Continuous Clean Sheet */}
-      <div className="p-3 sm:p-4 space-y-4">
+      {/* 📜 Adaptive Body */}
+      <div className="p-3.5 sm:p-4 space-y-4">
         {notes.map((note) => {
           const rawLines = note.content.split("\n").map((l) => l.trim()).filter(Boolean);
-
-          const elements = [];
+          const blocks = [];
           let currentTable = null;
 
           rawLines.forEach((line) => {
@@ -41,36 +40,38 @@ function PDFNotesSheet({ notes, chapterName }) {
               const cols = line.split("|").map((c) => c.trim()).filter(Boolean);
               if (!currentTable) {
                 currentTable = { type: "table", rows: [] };
-                elements.push(currentTable);
+                blocks.push(currentTable);
               }
               currentTable.rows.push(cols);
             } else {
               currentTable = null;
-              elements.push({ type: "line", text: line });
+              blocks.push({ type: "text", content: line });
             }
           });
 
           return (
-            <div key={note.id} className="space-y-1.5">
+            <div key={note.id} className="space-y-2">
 
-              {/* Section Header */}
-              <div className="text-xs font-bold text-indigo-300 uppercase tracking-wide border-b border-indigo-500/20 pb-1 flex items-center gap-1.5">
-                <span className="text-indigo-400 font-bold">📌</span> {note.title}
-              </div>
+              {/* Note Title */}
+              {note.title && (
+                <div className="text-xs font-bold text-indigo-300 uppercase tracking-wide border-b border-indigo-500/20 pb-1 flex items-center gap-1.5">
+                  <span className="text-indigo-400">📌</span> {note.title}
+                </div>
+              )}
 
-              {/* Clean Rows List */}
-              <div className="divide-y divide-slate-800/40">
-                {elements.map((el, elIdx) => {
-                  // Table Render
-                  if (el.type === "table") {
+              {/* Dynamic Auto-Parser */}
+              <div className="space-y-1.5 text-xs">
+                {blocks.map((b, idx) => {
+                  // 1. Auto Table
+                  if (b.type === "table") {
                     return (
-                      <div key={elIdx} className="overflow-x-auto my-2 rounded border border-slate-800 bg-slate-900/40">
+                      <div key={idx} className="overflow-x-auto my-2 rounded border border-slate-800 bg-slate-900/40">
                         <table className="w-full text-left text-xs border-collapse">
                           <tbody>
-                            {el.rows.map((row, rIdx) => (
+                            {b.rows.map((row, rIdx) => (
                               <tr key={rIdx} className={rIdx === 0 ? "bg-slate-900 font-bold text-indigo-300 border-b border-slate-800 text-[11px]" : "border-b border-slate-800/40"}>
                                 {row.map((col, cIdx) => (
-                                  <td key={cIdx} className={`py-1 px-2 text-xs ${cIdx > 0 ? "border-l border-slate-800/40" : ""}`}>
+                                  <td key={cIdx} className={`py-1.5 px-2.5 ${cIdx > 0 ? "border-l border-slate-800/40" : ""}`}>
                                     {col}
                                   </td>
                                 ))}
@@ -82,12 +83,22 @@ function PDFNotesSheet({ notes, chapterName }) {
                     );
                   }
 
-                  // Inline One-Liner Line (Question followed directly by Answer)
-                  const line = el.text;
-                  if (line.includes(" - ") || line.includes("?")) {
-                    const [qPart, aPart] = line.split(/ - | \? - /);
+                  const line = b.content;
+
+                  // 2. Auto Heading Detection (भाग, सारणी, Chapter आदि)
+                  if (/^(भाग|सारणी|Chapter|Section|विशेष|महत्वपूर्ण)/i.test(line) || line.startsWith("##")) {
                     return (
-                      <div key={elIdx} className="py-1 text-xs leading-relaxed">
+                      <div key={idx} className="pt-2 font-bold text-indigo-300 text-xs border-b border-slate-800/60 pb-0.5">
+                        {line.replace(/^##\s*/, "")}
+                      </div>
+                    );
+                  }
+
+                  // 3. Auto One-Liner Detection (Q - A format)
+                  if (line.includes(" - ") || (line.includes("?") && line.includes(":"))) {
+                    const [qPart, aPart] = line.split(/ - | : /);
+                    return (
+                      <div key={idx} className="py-0.5 leading-relaxed">
                         <span className="text-slate-200 font-medium">
                           {qPart.replace(/^•\s*/, "")}{!qPart.includes("?") && !aPart ? "?" : ""}{" "}
                         </span>
@@ -100,10 +111,21 @@ function PDFNotesSheet({ notes, chapterName }) {
                     );
                   }
 
+                  // 4. Auto Bullet Points
+                  if (line.startsWith("•") || line.startsWith("-") || line.startsWith("*")) {
+                    return (
+                      <div key={idx} className="flex items-start gap-1.5 py-0.5 text-slate-300">
+                        <span className="text-indigo-400 shrink-0">•</span>
+                        <span>{line.replace(/^[•\-*]\s*/, "")}</span>
+                      </div>
+                    );
+                  }
+
+                  // 5. Normal Paragraph / Theory Text
                   return (
-                    <div key={elIdx} className="py-1 text-xs text-indigo-200/90 font-medium leading-relaxed">
+                    <p key={idx} className="text-slate-300 leading-relaxed py-0.5">
                       {line}
-                    </div>
+                    </p>
                   );
                 })}
               </div>
@@ -115,7 +137,7 @@ function PDFNotesSheet({ notes, chapterName }) {
 
       {/* 📌 Clean Footer */}
       <div className="bg-slate-900/60 px-4 py-2 border-t border-slate-800 text-center text-[10px] text-slate-500 font-medium">
-        ✨ सम्पूर्ण परीक्षा-उपयोगी शीट समाप्त • EduAI Pro ✨
+        ✨ सम्पूर्ण अध्ययन सामग्री • EduAI Pro ✨
       </div>
 
     </div>
@@ -433,7 +455,7 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
-      {/* TAB 1: Pure PDF Notes Sheet */}
+      {/* TAB 1: Auto-Adaptive PDF Notes Sheet */}
       {activeTab === "notes" && (
         <div>
           {notes.length === 0 ? (
