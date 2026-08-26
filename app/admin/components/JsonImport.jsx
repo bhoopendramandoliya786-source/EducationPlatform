@@ -64,13 +64,14 @@ export default function JsonImport() {
   // 🚀 Direct PDF Upload & Backend Parsing Handler
   async function handlePdfUpload(file) {
     if (!selectedChapter) {
+      alert("❌ PDF अपलोड करने से पहले ऊपर से Subject और Target Chapter चुनें!");
       setMessage("❌ PDF इम्पोर्ट करने के लिए कृपया पहले ऊपर से Subject और Chapter चुनें!");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     setLoading(true);
-    setMessage("⏳ PDF से नोट्स निकाले और प्रोसेस किए जा रहे हैं...");
+    setMessage("⏳ PDF से डेटा निकाला और प्रोसेस किया जा रहा है...");
 
     try {
       const formData = new FormData();
@@ -86,11 +87,14 @@ export default function JsonImport() {
       const result = await res.json();
       if (result.success) {
         setMessage(`✅ ${result.message}`);
+        alert(`✅ ${result.message}`);
       } else {
         setMessage(`❌ ${result.message}`);
+        alert(`❌ ${result.message}`);
       }
     } catch (err) {
       setMessage(`❌ PDF अपलोड त्रुटि: ${err.message}`);
+      alert(`❌ PDF अपलोड त्रुटि: ${err.message}`);
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -461,7 +465,7 @@ export default function JsonImport() {
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            प्रोसेसिंग चालू है...
+            {progress > 0 ? `इम्पोर्ट हो रहा है... (${progress}%)` : "प्रोसेसिंग चालू है..."}
           </>
         ) : (
           <>

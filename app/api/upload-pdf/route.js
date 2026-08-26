@@ -4,36 +4,35 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 export async function POST(req) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const formData = await req.formData();
     const file = formData.get("file");
     const chapterId = formData.get("chapterId");
-    const title = formData.get("title") || "अध्याय अध्ययन नोट्स (PDF पार्सर)";
+    const title = formData.get("title") || "अध्याय अध्ययन नोट्स";
 
     if (!file || !chapterId) {
       return NextResponse.json(
-        { success: false, message: "PDF फ़ाइल और Chapter चुनना अनिवार्य है।" },
+        { success: false, message: "PDF फ़ाइल या Chapter ID नहीं मिली।" },
         { status: 400 }
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    // PDFParse v2 extract
+    // PDF extraction
     const parser = new PDFParse({ data: buffer });
-    const textResult = await parser.getText();
-    const rawText = textResult?.text || "";
+    const parsedData = await parser.getText();
+    const rawText = parsedData?.text || "";
 
-    if (!rawText || rawText.trim().length === 0) {
+    if (!rawText.trim()) {
       return NextResponse.json(
-        { success: false, message: "PDF से टेक्स्ट नहीं निकाला जा सका।" },
+        { success: false, message: "PDF से टेक्स्ट नहीं निकाला जा सका (खाली या इमेज वाली PDF हो सकती है)।" },
         { status: 400 }
       );
     }
@@ -44,7 +43,7 @@ export async function POST(req) {
     lines.forEach((line) => {
       if (/^\d+[\.\)]/.test(line)) {
         formattedLines.push(line.replace(/\s*—\s*|\s*-\s*|\s*:\s*/, " — "));
-      } else if (/^(भाग|सारणी|Chapter|Section|विशेष|महत्वपूर्ण)/i.test(line)) {
+      } else if (/^(भाग|सारणी|Chapter|अध्याय|Section|विशेष|महत्वपूर्ण)/i.test(line)) {
         formattedLines.push(`📌 ${line}`);
       } else {
         formattedLines.push(line);
@@ -60,14 +59,19 @@ export async function POST(req) {
           chapter_id: chapterId,
           title: title,
           content: finalContent,
-          is_published: true,
-          sort_order: 1
+          note_type: "study",
+          sort_order: 1,
+          is_published: true
         }
       ])
       .select();
 
     if (error) {
-      throw error;
+      console.error("Supabase Note Insert Error:", error);
+      return NextResponse.json(
+        { success: false, message: "डेटाबेस में सेव नहीं हुआ: " + error.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -76,9 +80,9 @@ export async function POST(req) {
       data: dbData
     });
   } catch (err) {
-    console.error("PDF Parse Error:", err);
+    console.error("Upload API Catch Error:", err);
     return NextResponse.json(
-      { success: false, message: err.message || "PDF प्रोसेस करने में त्रुटि हुई।" },
+      { success: false, message: err.message || "सर्वर पर कोई समस्या आई।" },
       { status: 500 }
     );
   }
