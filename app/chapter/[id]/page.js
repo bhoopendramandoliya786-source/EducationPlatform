@@ -7,66 +7,109 @@ import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
   Sparkles, HelpCircle, Trophy, Play, RotateCcw, Timer,
-  Share2, Layers
+  Share2, Layers, Table
 } from "lucide-react";
 
-// 📄 PDF-STYLE ONE-LINER & SMART SHEET RENDERER
+// 📄 COMPACT PDF-STYLE SMART SHEET RENDERER (TABLES + DUAL COLUMN ONE-LINERS)
 function PDFNotesSheet({ notes, chapterName }) {
   return (
-    <div className="rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden font-sans text-slate-200">
+    <div className="rounded-2xl bg-slate-950 border border-slate-800/80 shadow-2xl overflow-hidden font-sans text-slate-200">
 
-      {/* 🏷️ Top PDF Header Banner */}
-      <div className="bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+      {/* 🏷️ Top Header Banner */}
+      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
         <div>
           <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase block">
             EduAI Pro • REET & RPSC SPECIAL
           </span>
-          <h2 className="text-sm sm:text-base font-black text-white">{chapterName} (Best One-Liners)</h2>
+          <h2 className="text-sm sm:text-base font-black text-white">{chapterName} (Smart One-Liners)</h2>
         </div>
-        <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-full">
+        <span className="text-[9px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-md">
           50 MARKS SHEET
         </span>
       </div>
 
       {/* 📜 Continuous Sheet Body */}
-      <div className="p-4 sm:p-6 space-y-8">
+      <div className="p-3 sm:p-4 space-y-6">
         {notes.map((note) => {
-          const lines = note.content.split("\n").filter((l) => l.trim().length > 0);
+          const rawLines = note.content.split("\n").map(l => l.trim()).filter(Boolean);
+
+          // Categorize lines into tables and one-liners
+          const elements = [];
+          let currentTable = null;
+
+          rawLines.forEach((line) => {
+            if (line.includes("|")) {
+              const cols = line.split("|").map(c => c.trim()).filter(Boolean);
+              if (!currentTable) {
+                currentTable = { type: "table", rows: [] };
+                elements.push(currentTable);
+              }
+              currentTable.rows.push(cols);
+            } else {
+              currentTable = null;
+              elements.push({ type: "line", text: line });
+            }
+          });
 
           return (
-            <div key={note.id} className="space-y-4">
+            <div key={note.id} className="space-y-2.5">
 
-              {/* Section Header (भाग 1, भाग 2 आदि) */}
-              <div className="flex items-center gap-2 pb-2 border-b-2 border-indigo-500/40">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+              {/* Section Header (भाग 1, सारणी 1 आदि) */}
+              <div className="flex items-center gap-2 pb-1.5 border-b border-indigo-500/30">
+                <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
                 <h3 className="text-xs sm:text-sm font-black text-indigo-300 uppercase tracking-wide">
                   {note.title}
                 </h3>
               </div>
 
-              {/* 2-Column One-Liners Grid (Like PDF) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {lines.map((line, idx) => {
+              {/* Render Structured Elements */}
+              <div className="space-y-2">
+                {elements.map((el, elIdx) => {
+                  // 1. PDF Style Table (सारणी)
+                  if (el.type === "table") {
+                    return (
+                      <div key={elIdx} className="overflow-x-auto my-2 rounded-xl border border-slate-800 bg-slate-900/60">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <tbody>
+                            {el.rows.map((row, rIdx) => (
+                              <tr key={rIdx} className={rIdx === 0 ? "bg-indigo-950/80 font-bold text-indigo-200 border-b border-slate-800" : "border-b border-slate-800/50 hover:bg-slate-800/30"}>
+                                {row.map((col, cIdx) => (
+                                  <td key={cIdx} className={`py-1.5 px-2.5 ${rIdx === 0 ? "text-indigo-300 font-black text-[11px]" : "text-slate-300 text-xs"} ${cIdx > 0 ? "border-l border-slate-800/50" : ""}`}>
+                                    {col}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  }
+
+                  // 2. One-Liners (Compact Dual-Column / Rows)
+                  const line = el.text;
                   if (line.includes(" - ") || line.includes("?")) {
                     const [qPart, aPart] = line.split(/ - | \? - /);
                     return (
                       <div 
-                        key={idx} 
-                        className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800/80 flex flex-col justify-between gap-1 shadow-sm hover:border-indigo-500/30 transition"
+                        key={elIdx} 
+                        className="py-1.5 px-2.5 rounded-lg bg-slate-900/50 border border-slate-800/60 flex items-baseline justify-between gap-2 hover:bg-slate-900 transition"
                       >
-                        <span className="text-xs font-semibold text-slate-300 leading-snug">
-                          {qPart.replace(/^\d+\.\s*/, "").replace(/^•\s*/, "")}{!qPart.includes("?") ? "?" : ""}
+                        <span className="text-xs font-semibold text-slate-200 leading-snug">
+                          {qPart.replace(/^•\s*/, "")}{!qPart.includes("?") && !aPart ? "?" : ""}
                         </span>
                         {aPart && (
-                          <span className="text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg w-fit mt-1">
+                          <span className="text-xs font-black text-amber-400 shrink-0 text-right">
                             👉 {aPart.trim()}
                           </span>
                         )}
                       </div>
                     );
                   }
+
+                  // Headings or single-line special facts
                   return (
-                    <div key={idx} className="col-span-full p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-xs text-indigo-200 font-medium">
+                    <div key={elIdx} className="py-1 px-2.5 rounded-md bg-indigo-950/40 border-l-2 border-indigo-400 text-xs text-indigo-200 font-medium">
                       {line}
                     </div>
                   );
@@ -78,16 +121,16 @@ function PDFNotesSheet({ notes, chapterName }) {
         })}
       </div>
 
-      {/* 📌 Bottom PDF Footer */}
-      <div className="bg-slate-900 px-4 py-3 border-t border-slate-800 text-center text-[10px] text-slate-500 font-bold">
-        ✨ सम्पूर्ण परीक्षा-उपयोगी वन-लाइनर शीट समाप्त • EduAI Pro ✨
+      {/* 📌 Bottom Sheet Footer */}
+      <div className="bg-slate-900/90 px-4 py-2.5 border-t border-slate-800 text-center text-[10px] text-slate-500 font-bold">
+        ✨ सम्पूर्ण परीक्षा-उपयोगी शीट • EduAI Pro ✨
       </div>
 
     </div>
   );
 }
 
-// 🎯 100% ROBUST & UNIVERSAL QUESTION FORMATTER
+// 🎯 QUESTION FORMATTER (MATCHING & STATEMENTS)
 function FormattedQuestionText({ text }) {
   if (!text) return null;
 
@@ -116,26 +159,24 @@ function FormattedQuestionText({ text }) {
 
     if (rows.length >= 2) {
       return (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <p className="text-white text-xs sm:text-sm font-bold leading-relaxed">{titlePart.trim()}</p>
 
-          {/* 2-Column Matching Table */}
-          <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950 shadow-md">
-            <div className="grid grid-cols-2 bg-indigo-950/60 border-b border-slate-800 px-3 py-2 text-[11px] font-black text-indigo-300">
+          <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-950 shadow-md">
+            <div className="grid grid-cols-2 bg-indigo-950/60 border-b border-slate-800 px-3 py-1.5 text-[11px] font-black text-indigo-300">
               <span>सूची - I</span>
               <span>सूची - II</span>
             </div>
             <div className="divide-y divide-slate-800/60">
               {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-2 px-3 py-2 text-xs">
+                <div key={i} className="grid grid-cols-2 px-3 py-1.5 text-xs">
                   <span className="font-medium pr-2 text-slate-300">{r.col1}</span>
-                  <span className="font-bold text-indigo-300 border-l border-slate-800/80 pl-3">{r.col2}</span>
+                  <span className="font-bold text-indigo-300 border-l border-slate-800/80 pl-2.5">{r.col2}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Koot Header */}
           <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5 pt-0.5">
             <span>🎯 सही कूट का चयन कीजिए:</span>
           </div>
@@ -153,7 +194,7 @@ function FormattedQuestionText({ text }) {
           const str = p.trim();
           if (str.startsWith("कथन")) {
             return (
-              <div key={idx} className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 font-medium">
+              <div key={idx} className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 font-medium">
                 <strong className="text-indigo-400 block mb-0.5 font-bold">📌 कथन (A):</strong>
                 {str.replace(/^कथन\s*(\([A-Z]\)|:)?\s*/i, "")}
               </div>
@@ -161,7 +202,7 @@ function FormattedQuestionText({ text }) {
           }
           if (str.startsWith("कारण")) {
             return (
-              <div key={idx} className="p-3 rounded-2xl bg-purple-950/40 border border-purple-500/30 text-purple-200 font-medium">
+              <div key={idx} className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 font-medium">
                 <strong className="text-purple-400 block mb-0.5 font-bold">💡 कारण (R):</strong>
                 {str.replace(/^कारण\s*(\([A-Z]\)|:)?\s*/i, "")}
               </div>
@@ -169,36 +210,6 @@ function FormattedQuestionText({ text }) {
           }
           return <p key={idx} className="text-slate-300 font-bold pt-1">{str}</p>;
         })}
-      </div>
-    );
-  }
-
-  // 3. बहु-कथन प्रश्न (1. कथन... 2. कथन...)
-  if (text.includes("1.") && text.includes("2.")) {
-    const intro = text.split(/1\./)[0];
-    const rest = text.substring(intro.length);
-    const statements = rest.split(/(?=\d+\.)/g);
-    const lastPart = statements[statements.length - 1];
-    let conclusion = "";
-
-    if (lastPart && (lastPart.includes("उपर्युक्त") || lastPart.includes("उपरोक्त") || lastPart.includes("इनमें से"))) {
-      const splitConc = lastPart.split(/(?=उपर्युक्त|उपरोक्त|इनमें से)/);
-      statements[statements.length - 1] = splitConc[0];
-      conclusion = splitConc[1];
-    }
-
-    return (
-      <div className="space-y-2.5">
-        {intro.trim() && <p className="text-white text-xs sm:text-sm font-bold">{intro.trim()}</p>}
-        <div className="space-y-1.5">
-          {statements.map((s, i) => (
-            <div key={i} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 flex gap-2">
-              <span className="text-indigo-400 font-bold">{s.trim().substring(0, 2)}</span>
-              <span className="leading-relaxed">{s.trim().substring(2)}</span>
-            </div>
-          ))}
-        </div>
-        {conclusion && <p className="text-amber-400 text-xs font-bold pt-1">{conclusion.trim()}</p>}
       </div>
     );
   }
@@ -225,24 +236,19 @@ export default function ChapterSingleViewPage() {
 
   const supabase = createClient();
 
-  // 🚀 DIRECT FETCH BY CHAPTER_ID (NO TOPICS REQUIRED)
   useEffect(() => {
     async function loadChapterData() {
       if (!id) return;
       setLoading(true);
       try {
-        // 1. Load Chapter & Subject
         const { data: chapData, error: chapErr } = await supabase
           .from("chapters")
           .select("*, subjects(id, name)")
           .eq("id", id)
           .single();
 
-        if (!chapErr && chapData) {
-          setChapter(chapData);
-        }
+        if (!chapErr && chapData) setChapter(chapData);
 
-        // 2. Load Notes directly by chapter_id
         const { data: nData, error: nErr } = await supabase
           .from("notes")
           .select("*")
@@ -250,11 +256,8 @@ export default function ChapterSingleViewPage() {
           .eq("is_published", true)
           .order("sort_order", { ascending: true });
 
-        if (!nErr && nData) {
-          setNotes(nData);
-        }
+        if (!nErr && nData) setNotes(nData);
 
-        // 3. Load Questions directly by chapter_id
         const { data: qData, error: qErr } = await supabase
           .from("questions")
           .select("*")
@@ -262,9 +265,7 @@ export default function ChapterSingleViewPage() {
           .eq("is_active", true)
           .order("id", { ascending: true });
 
-        if (!qErr && qData) {
-          setQuestions(qData);
-        }
+        if (!qErr && qData) setQuestions(qData);
       } catch (err) {
         console.error("Chapter load error:", err);
       } finally {
@@ -305,7 +306,7 @@ export default function ChapterSingleViewPage() {
     return (
       <div className="max-w-md mx-auto px-4 pt-6 space-y-4 animate-pulse">
         <div className="h-6 w-32 bg-slate-900 rounded-lg" />
-        <div className="h-28 bg-slate-900 rounded-3xl border border-slate-800" />
+        <div className="h-28 bg-slate-900 rounded-2xl border border-slate-800" />
       </div>
     );
   }
@@ -348,7 +349,7 @@ export default function ChapterSingleViewPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 space-y-4 pb-28 pt-2 font-sans select-none">
+    <div className="max-w-md mx-auto px-3.5 space-y-3.5 pb-28 pt-2 font-sans select-none">
 
       {/* Back Link */}
       <Link 
@@ -359,80 +360,80 @@ export default function ChapterSingleViewPage() {
       </Link>
 
       {/* Hero Card */}
-      <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/70 via-slate-900 to-purple-950/50 border border-slate-800 shadow-xl space-y-1.5 relative overflow-hidden">
+      <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-1">
         <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
           {chapter.subjects?.name} • सम्पूर्ण अध्याय
         </div>
-        <h1 className="text-lg font-black text-white leading-snug">{chapter.name}</h1>
-        <p className="text-xs text-slate-300 leading-relaxed">
+        <h1 className="text-base sm:text-lg font-black text-white leading-snug">{chapter.name}</h1>
+        <p className="text-[11px] text-slate-300">
           {chapter.description || "थ्योरी नोट्स, अभ्यास MCQs एवं विगत वर्ष PYQs"}
         </p>
       </div>
 
       {/* 4 Main Tabs */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => { setActiveTab("notes"); setSelectedSet(1); }}
-          className={`p-3.5 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
-            activeTab === "notes" ? "bg-indigo-600/20 border-indigo-500 shadow-md" : "bg-slate-900/80 border-slate-800"
+          className={`p-2.5 rounded-xl border text-left space-y-0.5 transition ${
+            activeTab === "notes" ? "bg-indigo-600/20 border-indigo-500 shadow" : "bg-slate-900/80 border-slate-800"
           }`}
         >
-          <BookOpen className={`w-4 h-4 ${activeTab === "notes" ? "text-indigo-400" : "text-slate-400"}`} />
+          <BookOpen className={`w-3.5 h-3.5 ${activeTab === "notes" ? "text-indigo-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">1. स्मार्ट नोट्स</h3>
-          <p className="text-[10px] text-slate-400">{notes.length} नोट्स शीट</p>
+          <p className="text-[9px] text-slate-400">{notes.length} नोट्स शीट</p>
         </button>
 
         <button
           onClick={() => { setActiveTab("mcqs"); setSelectedSet(1); }}
-          className={`p-3.5 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
-            activeTab === "mcqs" ? "bg-emerald-600/20 border-emerald-500 shadow-md" : "bg-slate-900/80 border-slate-800"
+          className={`p-2.5 rounded-xl border text-left space-y-0.5 transition ${
+            activeTab === "mcqs" ? "bg-emerald-600/20 border-emerald-500 shadow" : "bg-slate-900/80 border-slate-800"
           }`}
         >
-          <CheckCircle2 className={`w-4 h-4 ${activeTab === "mcqs" ? "text-emerald-400" : "text-slate-400"}`} />
+          <CheckCircle2 className={`w-3.5 h-3.5 ${activeTab === "mcqs" ? "text-emerald-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">2. अभ्यास MCQs</h3>
-          <p className="text-[10px] text-emerald-400 font-bold">{mcqsList.length} प्रश्न ({Math.ceil(mcqsList.length / 20)} Sets)</p>
+          <p className="text-[9px] text-emerald-400 font-bold">{mcqsList.length} प्रश्न ({Math.ceil(mcqsList.length / 20)} Sets)</p>
         </button>
 
         <button
           onClick={() => { setActiveTab("pyqs"); setSelectedSet(1); }}
-          className={`p-3.5 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
-            activeTab === "pyqs" ? "bg-amber-600/20 border-amber-500 shadow-md" : "bg-slate-900/80 border-slate-800"
+          className={`p-2.5 rounded-xl border text-left space-y-0.5 transition ${
+            activeTab === "pyqs" ? "bg-amber-600/20 border-amber-500 shadow" : "bg-slate-900/80 border-slate-800"
           }`}
         >
-          <Sparkles className={`w-4 h-4 ${activeTab === "pyqs" ? "text-amber-400" : "text-slate-400"}`} />
+          <Sparkles className={`w-3.5 h-3.5 ${activeTab === "pyqs" ? "text-amber-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">3. विगत वर्ष PYQs</h3>
-          <p className="text-[10px] text-amber-400 font-bold">{pyqsList.length} प्रश्न ({Math.ceil(pyqsList.length / 20)} Sets)</p>
+          <p className="text-[9px] text-amber-400 font-bold">{pyqsList.length} प्रश्न ({Math.ceil(pyqsList.length / 20)} Sets)</p>
         </button>
 
         <button
           onClick={() => { setActiveTab("quiz"); resetQuiz(); }}
-          className={`p-3.5 rounded-2xl border text-left space-y-1 transition active:scale-[0.98] ${
-            activeTab === "quiz" ? "bg-purple-600/20 border-purple-500 shadow-md" : "bg-slate-900/80 border-slate-800"
+          className={`p-2.5 rounded-xl border text-left space-y-0.5 transition ${
+            activeTab === "quiz" ? "bg-purple-600/20 border-purple-500 shadow" : "bg-slate-900/80 border-slate-800"
           }`}
         >
-          <Trophy className={`w-4 h-4 ${activeTab === "quiz" ? "text-purple-400" : "text-slate-400"}`} />
+          <Trophy className={`w-3.5 h-3.5 ${activeTab === "quiz" ? "text-purple-400" : "text-slate-400"}`} />
           <h3 className="text-xs font-bold text-white">4. स्पीड टेस्ट</h3>
-          <p className="text-[10px] text-purple-300 font-bold">20 Qs • 10 मिनट</p>
+          <p className="text-[9px] text-purple-300 font-bold">20 Qs • 10 मिनट</p>
         </button>
       </div>
 
       {/* Set Selector Bar */}
       {activeTab !== "notes" && totalSets > 1 && !quizStarted && (
-        <div className="space-y-1.5 pt-1">
+        <div className="space-y-1 pt-0.5">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
-            <span className="flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-indigo-400" /> प्रश्न सेट चुनें (20 Qs / Set):
+            <span className="flex items-center gap-1 text-[11px]">
+              <Layers className="w-3 h-3 text-indigo-400" /> सेट चुनें (20 Qs / Set):
             </span>
             <span className="text-[10px] text-indigo-400">Set {selectedSet} of {totalSets}</span>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             {Array.from({ length: totalSets }, (_, i) => i + 1).map((sNum) => (
               <button
                 key={sNum}
                 onClick={() => setSelectedSet(sNum)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition ${
                   selectedSet === sNum
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-105"
+                    ? "bg-indigo-600 text-white shadow"
                     : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
                 }`}
               >
@@ -443,9 +444,9 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
-      {/* TAB 1: Smart Notes (PDF-Style Continuous Sheet) */}
+      {/* TAB 1: Smart Notes Sheet */}
       {activeTab === "notes" && (
-        <div className="pt-1">
+        <div className="pt-0.5">
           {notes.length === 0 ? (
             <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400">
               इस अध्याय में नोट्स जल्द जोड़े जा रहे हैं।
@@ -456,9 +457,9 @@ export default function ChapterSingleViewPage() {
         </div>
       )}
 
-      {/* TAB 2 & 3: MCQs / PYQs Set View */}
+      {/* TAB 2 & 3: MCQs / PYQs */}
       {(activeTab === "mcqs" || activeTab === "pyqs") && (
-        <div className="space-y-3 pt-1">
+        <div className="space-y-2.5 pt-0.5">
           {currentSetQuestions.length === 0 ? (
             <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400">
               प्रश्न जोड़े जा रहे हैं।
@@ -470,22 +471,20 @@ export default function ChapterSingleViewPage() {
               const isAttempted = Boolean(userAnswer);
 
               return (
-                <div key={q.id} className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-lg">
+                <div key={q.id} className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5 shadow">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold px-2.5 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded border bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
                       {q.is_pyq ? `PYQ: ${q.source || "Exam"} ${q.year ? `(${q.year})` : ""}` : "अभ्यास प्रश्न (MCQ)"}
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase">{q.difficulty || "Medium"}</span>
+                    <span className="text-[9px] font-semibold text-slate-500 uppercase">{q.difficulty || "Medium"}</span>
                   </div>
 
-                  {/* Formatted Question Output */}
-                  <div className="space-y-1">
-                    <span className="text-indigo-400 font-black text-xs block mb-1">Q{globalIndex + 1}.</span>
+                  <div className="space-y-0.5">
+                    <span className="text-indigo-400 font-black text-xs block">Q{globalIndex + 1}.</span>
                     <FormattedQuestionText text={q.question} />
                   </div>
 
-                  {/* Options */}
-                  <div className="grid grid-cols-1 gap-2 pt-1">
+                  <div className="grid grid-cols-1 gap-1.5 pt-0.5">
                     {[
                       { key: "A", text: q.option_a },
                       { key: "B", text: q.option_b },
@@ -504,20 +503,20 @@ export default function ChapterSingleViewPage() {
                           key={opt.key}
                           disabled={isAttempted}
                           onClick={() => handleSelectOption(q.id, opt.key)}
-                          className={`p-3 rounded-xl border text-left text-xs flex items-center justify-between transition ${style}`}
+                          className={`py-2 px-2.5 rounded-lg border text-left text-xs flex items-center justify-between transition ${style}`}
                         >
                           <span><strong>{opt.key}.</strong> {opt.text}</span>
-                          {isAttempted && opt.key === q.answer && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
-                          {isAttempted && opt.key === userAnswer && opt.key !== q.answer && <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />}
+                          {isAttempted && opt.key === q.answer && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
+                          {isAttempted && opt.key === userAnswer && opt.key !== q.answer && <XCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />}
                         </button>
                       );
                     })}
                   </div>
 
                   {isAttempted && q.explanation && (
-                    <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-200 space-y-1">
-                      <div className="font-bold text-indigo-300 flex items-center gap-1 text-[11px]">
-                        <HelpCircle className="w-3.5 h-3.5" /> विस्तृत व्याख्या:
+                    <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-200 space-y-0.5">
+                      <div className="font-bold text-indigo-300 flex items-center gap-1 text-[10px]">
+                        <HelpCircle className="w-3 h-3" /> विस्तृत व्याख्या:
                       </div>
                       <p className="text-slate-200 text-[11px] leading-relaxed">{q.explanation}</p>
                     </div>
@@ -531,75 +530,75 @@ export default function ChapterSingleViewPage() {
 
       {/* TAB 4: Speed Test */}
       {activeTab === "quiz" && (
-        <div className="space-y-4 pt-1">
+        <div className="space-y-3 pt-0.5">
           {speedTestQuestions.length === 0 ? (
             <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400">
               प्रश्न जोड़े जा रहे हैं।
             </div>
           ) : !quizStarted ? (
-            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-xl">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto">
-                <Trophy className="w-6 h-6" />
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-3 shadow">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto">
+                <Trophy className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">{chapter.name} - Set {selectedSet}</h3>
-                <p className="text-xs text-slate-400 mt-1">कुल प्रश्न: {speedTestQuestions.length} • समय सीमा: 10 मिनट</p>
+                <p className="text-xs text-slate-400 mt-0.5">कुल प्रश्न: {speedTestQuestions.length} • समय सीमा: 10 मिनट</p>
               </div>
               <button
                 onClick={() => setQuizStarted(true)}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg active:scale-95 transition"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow active:scale-95 transition"
               >
-                <Play className="w-4 h-4 inline-block mr-1" /> Set {selectedSet} टेस्ट शुरू करें
+                <Play className="w-3.5 h-3.5 inline-block mr-1" /> Set {selectedSet} टेस्ट शुरू करें
               </button>
             </div>
           ) : quizSubmitted ? (
-            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-xl">
-              <Trophy className="w-8 h-8 text-amber-400 mx-auto" />
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-3 shadow">
+              <Trophy className="w-7 h-7 text-amber-400 mx-auto" />
               <div>
                 <h3 className="text-xs font-bold text-slate-400">Set {selectedSet} स्कोरकार्ड</h3>
-                <div className="text-4xl font-black text-emerald-400 pt-1">{accuracyPercent}%</div>
+                <div className="text-3xl font-black text-emerald-400 pt-0.5">{accuracyPercent}%</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-slate-800">
-                  <div className="text-base font-black text-emerald-400">{correctCount}</div>
-                  <div className="text-[10px] text-slate-400">सही</div>
+                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <div className="text-sm font-black text-emerald-400">{correctCount}</div>
+                  <div className="text-[9px] text-slate-400">सही</div>
                 </div>
-                <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-slate-800">
-                  <div className="text-base font-black text-rose-400">{wrongCount}</div>
-                  <div className="text-[10px] text-slate-400">गलत</div>
+                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <div className="text-sm font-black text-rose-400">{wrongCount}</div>
+                  <div className="text-[9px] text-slate-400">गलत</div>
                 </div>
-                <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-slate-800">
-                  <div className="text-base font-black text-slate-400">{unattemptedCount}</div>
-                  <div className="text-[10px] text-slate-400">छोड़े गए</div>
+                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <div className="text-sm font-black text-slate-400">{unattemptedCount}</div>
+                  <div className="text-[9px] text-slate-400">छोड़े गए</div>
                 </div>
               </div>
               <button
                 onClick={shareScoreOnWhatsApp}
-                className="w-full py-3 rounded-xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 transition"
+                className="w-full py-2.5 rounded-xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
-                <Share2 className="w-4 h-4" /> WhatsApp पर शेयर करें
+                <Share2 className="w-3.5 h-3.5" /> WhatsApp पर शेयर करें
               </button>
               <button
                 onClick={resetQuiz}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition"
+                className="w-full py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
-                <RotateCcw className="w-4 h-4" /> पुनः टेस्ट दें
+                <RotateCcw className="w-3.5 h-3.5" /> पुनः टेस्ट दें
               </button>
             </div>
           ) : (
-            <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3 shadow">
               <div className="flex items-center justify-between text-xs font-bold text-slate-400">
                 <span>Set {selectedSet}: प्रश्न {currentQIndex + 1} / {speedTestQuestions.length}</span>
-                <span className="text-amber-400 flex items-center gap-1">
-                  <Timer className="w-4 h-4" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+                <span className="text-amber-400 flex items-center gap-1 text-[11px]">
+                  <Timer className="w-3.5 h-3.5" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
                 </span>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <FormattedQuestionText text={speedTestQuestions[currentQIndex].question} />
               </div>
 
-              <div className="grid grid-cols-1 gap-2 pt-1">
+              <div className="grid grid-cols-1 gap-1.5 pt-0.5">
                 {[
                   { key: "A", text: speedTestQuestions[currentQIndex].option_a },
                   { key: "B", text: speedTestQuestions[currentQIndex].option_b },
@@ -609,35 +608,35 @@ export default function ChapterSingleViewPage() {
                   <button
                     key={opt.key}
                     onClick={() => handleQuizAnswer(speedTestQuestions[currentQIndex].id, opt.key)}
-                    className={`p-3 rounded-xl border text-left text-xs transition ${
+                    className={`py-2 px-2.5 rounded-lg border text-left text-xs transition ${
                       quizAnswers[speedTestQuestions[currentQIndex].id] === opt.key 
-                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold shadow-md shadow-indigo-600/20" 
-                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700"
+                        ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" 
+                        : "bg-slate-950/80 border-slate-800 text-slate-300"
                     }`}
                   >
                     <strong>{opt.key}.</strong> {opt.text}
                   </button>
                 ))}
               </div>
-              <div className="flex justify-between items-center pt-2">
+              <div className="flex justify-between items-center pt-1.5">
                 <button
                   disabled={currentQIndex === 0}
                   onClick={() => setCurrentQIndex((prev) => prev - 1)}
-                  className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-bold text-slate-300 disabled:opacity-30"
+                  className="px-3.5 py-1.5 bg-slate-800 rounded-lg text-xs font-bold text-slate-300 disabled:opacity-30"
                 >
                   ← पिछला
                 </button>
                 {currentQIndex === speedTestQuestions.length - 1 ? (
                   <button
                     onClick={() => setQuizSubmitted(true)}
-                    className="px-5 py-2 bg-emerald-600 rounded-xl text-xs font-bold text-white active:scale-95 transition shadow-md"
+                    className="px-4 py-1.5 bg-emerald-600 rounded-lg text-xs font-bold text-white active:scale-95 transition shadow"
                   >
                     सबमिट करें ✓
                   </button>
                 ) : (
                   <button
                     onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                    className="px-5 py-2 bg-indigo-600 rounded-xl text-xs font-bold text-white active:scale-95 transition shadow-md"
+                    className="px-4 py-1.5 bg-indigo-600 rounded-lg text-xs font-bold text-white active:scale-95 transition shadow"
                   >
                     अगला →
                   </button>
