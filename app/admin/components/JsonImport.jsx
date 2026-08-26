@@ -1,13 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../../lib/supabase/client";
+import { FileJson, Upload, CheckCircle2, AlertCircle, Layers } from "lucide-react";
 
 const BATCH_SIZE = 100;
 
 export default function JsonImport() {
   const supabase = createClient();
   const fileInputRef = useRef(null);
+
+  const [subjects, setSubjects] = useState([]);
+  const [chapters, setChapters] = useState([]);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedChapter, setSelectedChapter] = useState("");
 
   const [jsonText, setJsonText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,31 +22,46 @@ export default function JsonImport() {
   const [stats, setStats] = useState({
     subjectsCreated: 0,
     chaptersCreated: 0,
-    topicsCreated: 0,
     notesImported: 0,
     questionsImported: 0,
     skippedDuplicates: 0,
     failed: 0,
   });
 
-  // Auto-link subject to all active exams
-  async function autoMapSubjectToExams(subjectId) {
-    if (!subjectId) return;
-    try {
-      const { data: exams } = await supabase.from("exams").select("id").eq("is_active", true);
-      if (exams && exams.length > 0) {
-        const mappings = exams.map((ex) => ({
-          exam_id: ex.id,
-          subject_id: subjectId,
-        }));
-        await supabase.from("exam_subjects").upsert(mappings, { onConflict: "exam_id,subject_id", ignoreDuplicates: true });
-      }
-    } catch (e) {
-      console.error("Auto exam mapping error:", e);
+  // Load Subjects on mount
+  useEffect(() => {
+    async function loadSubjects() {
+      const { data } = await supabase
+        .from("subjects")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (data) setSubjects(data);
     }
-  }
+    loadSubjects();
+  }, []);
 
-  function normalizeQuestion(q, targetTopicId) {
+  // Load Chapters when Subject changes
+  useEffect(() => {
+    async function loadChapters() {
+      if (!selectedSubject) {
+        setChapters([]);
+        setSelectedChapter("");
+        return;
+      }
+      const { data } = await supabase
+        .from("chapters")
+        .select("id, name")
+        .eq("subject_id", selectedSubject)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (data) setChapters(data);
+    }
+    loadChapters();
+  }, [selectedSubject]);
+
+  function normalizeQuestion(q, targetChapterId) {
     if (!q || typeof q !== "object") throw new Error("Invalid question object");
     if (!q.question?.toString().trim()) throw new Error("Question text missing");
 
@@ -50,7 +71,7 @@ export default function JsonImport() {
     }
 
     return {
-      topic_id: targetTopicId || (q.topic_id ? Number(q.topic_id) : null),
+      chapter_id: targetChapterId || q.chapter_id,
       question: String(q.question).trim(),
       option_a: String(q.option_a || "").trim(),
       option_b: String(q.option_b || "").trim(),
@@ -59,21 +80,19 @@ export default function JsonImport() {
       answer,
       explanation: q.explanation ? String(q.explanation).trim() : "",
       type: ["mcq", "true_false", "multiple"].includes(q.type) ? q.type : "mcq",
-      year: q.year ? Number(q.year) : null,
+      year: q.year ? String(q.year).trim() : null,
       difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
       source: q.source ? String(q.source).trim() : (q.is_pyq ? "PYQ" : null),
       is_pyq: Boolean(q.is_pyq),
-      tags: Array.isArray(q.tags) ? q.tags.map(String) : [],
       is_active: true,
     };
   }
 
-  async function processHierarchyItem(item) {
-    let sCreated = 0, cCreated = 0, tCreated = 0;
-    let subjectId = item.subject_id;
+  async function processHierarchy(item) {
+    let sCreated = 0, cCreated = 0;
+    let subjectId = item.subject_id || selectedSubject;
 
     if (!subjectId && item.subject_name) {
-      const slug = item.subject_slug || item.subject_name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
       const { data: existingSub } = await supabase
         .from("subjects")
         .select("id")
@@ -85,7 +104,7 @@ export default function JsonImport() {
       } else {
         const { data: newSub, error: sErr } = await supabase
           .from("subjects")
-          .insert({ name: item.subject_name.trim(), slug: slug || undefined, is_active: true })
+          .insert({ name: item.subject_name.trim(), is_active: true })
           .select("id")
           .single();
         if (!sErr && newSub) {
@@ -93,14 +112,9 @@ export default function JsonImport() {
           sCreated++;
         }
       }
-
-      // Automatically map subject to all exams
-      if (subjectId) {
-        await autoMapSubjectToExams(subjectId);
-      }
     }
 
-    let chapterId = item.chapter_id;
+    let chapterId = item.chapter_id || selectedChapter;
     if (!chapterId && item.chapter_name && subjectId) {
       const { data: existingChap } = await supabase
         .from("chapters")
@@ -129,69 +143,31 @@ export default function JsonImport() {
       }
     }
 
-    let topicId = item.topic_id;
-    if (!topicId && item.topic_name && chapterId) {
-      const { data: existingTop } = await supabase
-        .from("topics")
-        .select("id")
-        .eq("chapter_id", chapterId)
-        .ilike("name", item.topic_name.trim())
-        .maybeSingle();
-
-      if (existingTop) {
-        topicId = existingTop.id;
-      } else {
-        const { data: newTop, error: tErr } = await supabase
-          .from("topics")
-          .insert({
-            chapter_id: chapterId,
-            name: item.topic_name.trim(),
-            description: item.topic_description || null,
-            is_active: true,
-          })
-          .select("id")
-          .single();
-        if (!tErr && newTop) {
-          topicId = newTop.id;
-          tCreated++;
-        }
-      }
-    }
-
-    return { subjectId, chapterId, topicId, sCreated, cCreated, tCreated };
+    return { subjectId, chapterId, sCreated, cCreated };
   }
 
-  async function processMasterTopic(data) {
+  async function processMasterChapter(data) {
     let nImported = 0, qImported = 0, dupCount = 0, failCount = 0;
-    const { topicId, sCreated, cCreated, tCreated } = await processHierarchyItem(data);
+    const { chapterId, sCreated, cCreated } = await processHierarchy(data);
 
-    let targetTopicId = topicId;
-    if (!targetTopicId) {
-      const { data: fallbackTopic } = await supabase.from("topics").select("id").limit(1).single();
-      targetTopicId = fallbackTopic?.id;
+    const targetChapterId = chapterId || selectedChapter;
+    if (!targetChapterId) {
+      throw new Error("कृपया पहले Subject और Chapter चुनें या JSON में subject_name / chapter_name दें।");
     }
 
-    if (Array.isArray(data.notes) && data.notes.length > 0 && targetTopicId) {
-      const { data: existingNotes } = await supabase
-        .from("notes")
-        .select("title")
-        .eq("topic_id", targetTopicId);
-
-      const existingTitles = new Set((existingNotes || []).map((n) => n.title?.trim().toLowerCase()));
+    // 1. Process Notes
+    if (data.notes || data.content) {
+      const noteItems = Array.isArray(data.notes) ? data.notes : [data];
       const notesToInsert = [];
 
-      for (const n of data.notes) {
-        if (!n.title || !n.content) continue;
-        if (existingTitles.has(n.title.trim().toLowerCase())) {
-          dupCount++;
-          continue;
-        }
+      for (const n of noteItems) {
+        if (!n.content) continue;
         notesToInsert.push({
-          topic_id: targetTopicId,
-          title: String(n.title).trim(),
+          chapter_id: targetChapterId,
+          title: n.title ? String(n.title).trim() : "स्मार्ट नोट्स शीट",
           content: String(n.content).trim(),
-          note_type: ["study", "short", "revision"].includes(n.note_type) ? n.note_type : "study",
-          sort_order: n.sort_order || 0,
+          note_type: n.note_type || "study",
+          sort_order: n.sort_order || 1,
           is_published: true,
         });
       }
@@ -203,24 +179,25 @@ export default function JsonImport() {
       }
     }
 
+    // 2. Process Questions (mcqs, pyqs or questions)
     const rawQuestions = [
       ...(Array.isArray(data.questions) ? data.questions : []),
       ...(Array.isArray(data.mcqs) ? data.mcqs.map((q) => ({ ...q, is_pyq: false })) : []),
       ...(Array.isArray(data.pyqs) ? data.pyqs.map((q) => ({ ...q, is_pyq: true })) : []),
     ];
 
-    if (rawQuestions.length > 0 && targetTopicId) {
+    if (rawQuestions.length > 0) {
       const { data: existingQs } = await supabase
         .from("questions")
         .select("question")
-        .eq("topic_id", targetTopicId);
+        .eq("chapter_id", targetChapterId);
 
       const existingTextSet = new Set((existingQs || []).map((q) => q.question.trim().toLowerCase()));
       const validQuestions = [];
 
       for (const q of rawQuestions) {
         try {
-          const formatted = normalizeQuestion(q, targetTopicId);
+          const formatted = normalizeQuestion(q, targetChapterId);
           if (existingTextSet.has(formatted.question.toLowerCase())) {
             dupCount++;
             continue;
@@ -239,141 +216,91 @@ export default function JsonImport() {
       }
     }
 
-    return { sCreated, cCreated, tCreated, nImported, qImported, dupCount, failCount };
-  }
-
-  async function processBatchChapters(batchData) {
-    const subjectName = batchData.subject_name;
-    const chapters = batchData.chapters_batch || [];
-
-    let totalS = 0, totalC = 0, totalT = 0, totalN = 0, totalQ = 0, totalDup = 0, totalFail = 0;
-
-    for (let i = 0; i < chapters.length; i++) {
-      const chap = chapters[i];
-      const payload = {
-        subject_name: subjectName,
-        chapter_name: chap.chapter_name,
-        chapter_description: chap.chapter_description,
-        topic_name: chap.topic_name || chap.chapter_name,
-        topic_description: chap.topic_description,
-        notes: chap.notes || [],
-        mcqs: chap.mcqs || [],
-        pyqs: chap.pyqs || [],
-        questions: chap.questions || [],
-      };
-
-      const res = await processMasterTopic(payload);
-      totalS += res.sCreated;
-      totalC += res.cCreated;
-      totalT += res.tCreated;
-      totalN += res.nImported;
-      totalQ += res.qImported;
-      totalDup += res.dupCount;
-      totalFail += res.failCount;
-
-      setProgress(Math.round(((i + 1) / chapters.length) * 100));
-    }
-
-    setStats({
-      subjectsCreated: totalS,
-      chaptersCreated: totalC,
-      topicsCreated: totalT,
-      notesImported: totalN,
-      questionsImported: totalQ,
-      skippedDuplicates: totalDup,
-      failed: totalFail,
-    });
-
-    setMessage(`✅ ${chapters.length} अध्याय, ${totalN} नोट्स एवं ${totalQ} प्रश्न सिंक हो गए (सभी परीक्षाओं से ऑटो-मैप हो गए)!`);
+    return { sCreated, cCreated, nImported, qImported, dupCount, failCount };
   }
 
   async function processArrayInput(arr) {
-    let sCreated = 0, cCreated = 0, tCreated = 0;
-    let qImported = 0, failCount = 0, dupCount = 0;
+    let sCreated = 0, cCreated = 0, qImported = 0, nImported = 0, failCount = 0, dupCount = 0;
 
-    const isHierarchyList = arr.some((item) => item.subject_name || item.chapter_name);
-
-    if (isHierarchyList) {
+    // Check if array of chapters / master data
+    if (arr.length > 0 && (arr[0].chapter_name || arr[0].subject_name || arr[0].chapters_batch)) {
       for (let i = 0; i < arr.length; i++) {
-        const res = await processHierarchyItem(arr[i]);
+        const res = await processMasterChapter(arr[i]);
         sCreated += res.sCreated;
         cCreated += res.cCreated;
-        tCreated += res.tCreated;
+        nImported += res.nImported;
+        qImported += res.qImported;
+        dupCount += res.dupCount;
+        failCount += res.failCount;
         setProgress(Math.round(((i + 1) / arr.length) * 100));
       }
-
-      setStats({
-        subjectsCreated: sCreated,
-        chaptersCreated: cCreated,
-        topicsCreated: tCreated,
-        notesImported: 0,
-        questionsImported: 0,
-        skippedDuplicates: 0,
-        failed: 0,
-      });
-      setMessage(`✅ ${sCreated} विषय, ${cCreated} अध्याय और ${tCreated} टॉपिक्स बन गए!`);
-      return;
-    }
-
-    let defaultTopicId = null;
-    const { data: firstTopic } = await supabase.from("topics").select("id").limit(1).single();
-    defaultTopicId = firstTopic?.id;
-
-    const validQuestions = [];
-    for (const q of arr) {
-      try {
-        const targetId = q.topic_id ? Number(q.topic_id) : defaultTopicId;
-        validQuestions.push(normalizeQuestion(q, targetId));
-      } catch {
-        failCount++;
+    } else {
+      // Array of Questions only (linked to selected chapter)
+      if (!selectedChapter) {
+        throw new Error("प्रश्नों की लिस्ट इम्पोर्ट करने के लिए कृपया ऊपर से Subject और Chapter चुनें!");
       }
-    }
 
-    for (let i = 0; i < validQuestions.length; i += BATCH_SIZE) {
-      const batch = validQuestions.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase.from("questions").insert(batch);
-      if (!error) qImported += batch.length;
-      else failCount += batch.length;
-      setProgress(Math.round(((i + batch.length) / validQuestions.length) * 100));
+      const { data: existingQs } = await supabase
+        .from("questions")
+        .select("question")
+        .eq("chapter_id", selectedChapter);
+
+      const existingTextSet = new Set((existingQs || []).map((q) => q.question.trim().toLowerCase()));
+      const validQuestions = [];
+
+      for (const q of arr) {
+        try {
+          const formatted = normalizeQuestion(q, selectedChapter);
+          if (existingTextSet.has(formatted.question.toLowerCase())) {
+            dupCount++;
+            continue;
+          }
+          validQuestions.push(formatted);
+        } catch {
+          failCount++;
+        }
+      }
+
+      for (let i = 0; i < validQuestions.length; i += BATCH_SIZE) {
+        const batch = validQuestions.slice(i, i + BATCH_SIZE);
+        const { error: qErr } = await supabase.from("questions").insert(batch);
+        if (!qErr) qImported += batch.length;
+        else failCount += batch.length;
+        setProgress(Math.round(((i + batch.length) / validQuestions.length) * 100));
+      }
     }
 
     setStats({
-      subjectsCreated: 0,
-      chaptersCreated: 0,
-      topicsCreated: 0,
-      notesImported: 0,
+      subjectsCreated: sCreated,
+      chaptersCreated: cCreated,
+      notesImported: nImported,
       questionsImported: qImported,
       skippedDuplicates: dupCount,
       failed: failCount,
     });
-    setMessage(`✅ ${qImported} प्रश्न इम्पोर्ट हो गए!`);
+    setMessage(`✅ इम्पोर्ट पूर्ण: ${qImported} प्रश्न, ${nImported} नोट्स शीट सेव हुई!`);
   }
 
   async function runImport(parsedJson) {
     setLoading(true);
     setMessage("");
     setProgress(0);
-    setStats({ subjectsCreated: 0, chaptersCreated: 0, topicsCreated: 0, notesImported: 0, questionsImported: 0, skippedDuplicates: 0, failed: 0 });
+    setStats({ subjectsCreated: 0, chaptersCreated: 0, notesImported: 0, questionsImported: 0, skippedDuplicates: 0, failed: 0 });
 
     try {
       if (Array.isArray(parsedJson)) {
         await processArrayInput(parsedJson);
       } else if (typeof parsedJson === "object" && parsedJson !== null) {
-        if (Array.isArray(parsedJson.chapters_batch)) {
-          await processBatchChapters(parsedJson);
-        } else {
-          const res = await processMasterTopic(parsedJson);
-          setStats({
-            subjectsCreated: res.sCreated,
-            chaptersCreated: res.cCreated,
-            topicsCreated: res.tCreated,
-            notesImported: res.nImported,
-            questionsImported: res.qImported,
-            skippedDuplicates: res.dupCount,
-            failed: res.failCount,
-          });
-          setMessage("✅ टॉपिक और सारा कंटेंट सिंक हो गया (ऑटो-मैप सहित)!");
-        }
+        const res = await processMasterChapter(parsedJson);
+        setStats({
+          subjectsCreated: res.sCreated,
+          chaptersCreated: res.cCreated,
+          notesImported: res.nImported,
+          questionsImported: res.qImported,
+          skippedDuplicates: res.dupCount,
+          failed: res.failCount,
+        });
+        setMessage(`✅ चैप्टर डेटा सिंक हो गया (${res.qImported} प्रश्न, ${res.nImported} नोट्स)!`);
       }
       setJsonText("");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -385,17 +312,57 @@ export default function JsonImport() {
   }
 
   return (
-    <section className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-7 space-y-4 text-slate-100 shadow-2xl backdrop-blur-xl">
-      <div className="space-y-1">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-          <span>📦</span> Universal JSON Importer
+    <section className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 text-slate-100 shadow-2xl">
+
+      {/* 🏷️ Title */}
+      <div className="space-y-1 pb-2 border-b border-slate-800">
+        <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+          <FileJson className="w-5 h-5 text-indigo-400" /> 1-Click JSON Importer
         </h2>
         <p className="text-xs text-slate-400">
-          विषय (Subjects), अध्याय (Chapters), टॉपिक्स, नोट्स या 100+ MCQs/PYQs सीधे JSON से सिंक करें (Auto Exam Mapping Enabled)।
+          सीधे Subject ➔ Chapter चुनकर नोट्स या 100+ MCQs/PYQs का JSON 1 सेकंड में अपलोड करें
         </p>
       </div>
 
-      <div className="pt-1">
+      {/* 🎯 Quick Target Selection (Optional if specified in JSON) */}
+      <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+        <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5">
+          <Layers className="w-3.5 h-3.5" /> टारगेट Chapter चुनें (यदि JSON में नहीं दिया है):
+        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <select
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">-- Subject चुनें --</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedChapter}
+            disabled={!selectedSubject}
+            onChange={(e) => setSelectedChapter(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 disabled:opacity-40"
+          >
+            <option value="">
+              {!selectedSubject ? "-- पहले Subject चुनें --" : "-- Chapter चुनें --"}
+            </option>
+            {chapters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 📁 File Upload */}
+      <div>
         <input
           ref={fileInputRef}
           type="file"
@@ -405,8 +372,11 @@ export default function JsonImport() {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (evt) => {
-              try { runImport(JSON.parse(evt.target?.result)); }
-              catch { setMessage("❌ JSON अमान्य है"); }
+              try {
+                runImport(JSON.parse(evt.target?.result));
+              } catch {
+                setMessage("❌ JSON फाइल अमान्य है!");
+              }
             };
             reader.readAsText(file);
           }}
@@ -415,30 +385,44 @@ export default function JsonImport() {
         />
       </div>
 
+      {/* 📝 Raw Textarea */}
       <textarea
-        rows={8}
+        rows={7}
         value={jsonText}
         onChange={(e) => setJsonText(e.target.value)}
         disabled={loading}
-        placeholder="यहाँ JSON पेस्ट करें..."
-        className="w-full bg-[#020617] border border-slate-800 rounded-2xl p-3.5 text-xs text-indigo-200 font-mono focus:border-indigo-500 outline-none leading-relaxed"
+        placeholder='यहाँ JSON पेस्ट करें... (उदा. [{"question": "...", "option_a": "...", "answer": "A"}])'
+        className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3.5 text-xs text-indigo-200 font-mono focus:border-indigo-500 outline-none leading-relaxed"
       />
 
+      {/* 🚀 Upload Button */}
       <button
         type="button"
         onClick={() => {
           if (!jsonText.trim()) return setMessage("❌ पहले JSON पेस्ट करें");
-          try { runImport(JSON.parse(jsonText)); }
-          catch { setMessage("❌ JSON सिंटैक्स गलत है"); }
+          try {
+            runImport(JSON.parse(jsonText));
+          } catch {
+            setMessage("❌ JSON सिंटैक्स गलत है!");
+          }
         }}
         disabled={loading}
-        className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 disabled:opacity-40 text-white text-xs font-bold shadow-lg transition cursor-pointer"
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 disabled:opacity-40 text-white text-xs font-bold shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
       >
-        {loading ? `सिंक हो रहा है... (${progress}%)` : "Upload JSON"}
+        <Upload className="w-4 h-4" />
+        {loading ? `इम्पोर्ट हो रहा है... (${progress}%)` : "Upload & Sync JSON"}
       </button>
 
+      {/* 📊 Status & Message */}
       {message && (
-        <div className="p-3.5 rounded-xl bg-[#020617] border border-slate-800 text-xs font-semibold text-emerald-300">
+        <div
+          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+            message.startsWith("✅")
+              ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-300"
+              : "bg-rose-950/40 border-rose-500/30 text-rose-300"
+          }`}
+        >
+          {message.startsWith("✅") ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
           {message}
         </div>
       )}

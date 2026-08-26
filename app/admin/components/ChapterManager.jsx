@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../../lib/supabase";
+import { Search, Plus, Edit2, Trash2, Eye, EyeOff, BookOpen, Layers } from "lucide-react";
 
 export default function ChapterManager() {
   const [subjects, setSubjects] = useState([]);
   const [chapters, setChapters] = useState([]);
 
+  // Form States
   const [selectedSubject, setSelectedSubject] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
+
+  // Filter & Search States
+  const [filterSubject, setFilterSubject] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -23,19 +29,14 @@ export default function ChapterManager() {
 
   async function loadData() {
     setLoadingData(true);
-
-    await Promise.all([
-      fetchSubjects(),
-      fetchChapters(),
-    ]);
-
+    await Promise.all([fetchSubjects(), fetchChapters()]);
     setLoadingData(false);
   }
 
   async function fetchSubjects() {
     const { data, error } = await supabase
       .from("subjects")
-      .select("id,name")
+      .select("id, name")
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
@@ -44,7 +45,6 @@ export default function ChapterManager() {
       alert("Subject load error: " + error.message);
       return;
     }
-
     setSubjects(data || []);
   }
 
@@ -70,7 +70,6 @@ export default function ChapterManager() {
       alert("Chapter load error: " + error.message);
       return;
     }
-
     setChapters(data || []);
   }
 
@@ -98,7 +97,7 @@ export default function ChapterManager() {
     setLoading(true);
 
     const payload = {
-      subject_id: Number(selectedSubject),
+      subject_id: selectedSubject,
       name: name.trim(),
       slug: makeSlug(name),
       description: description.trim(),
@@ -113,13 +112,11 @@ export default function ChapterManager() {
         .from("chapters")
         .update(payload)
         .eq("id", editId);
-
       error = result.error;
     } else {
       const result = await supabase
         .from("chapters")
         .insert([payload]);
-
       error = result.error;
     }
 
@@ -174,10 +171,7 @@ export default function ChapterManager() {
   }
 
   async function deleteChapter(id) {
-    const ok = confirm(
-      "⚠️ Chapter delete करना है?\n\nअगर इसमें Topics जुड़े हैं तो delete नहीं होगा।"
-    );
-
+    const ok = confirm("⚠️ क्या आप इस Chapter को हटाना चाहते हैं?");
     if (!ok) return;
 
     const { error } = await supabase
@@ -186,318 +180,259 @@ export default function ChapterManager() {
       .eq("id", id);
 
     if (error) {
-      alert(
-        "❌ Delete नहीं हुआ:\n\n" +
-        error.message +
-        "\n\nपहले इसके Topics हटाएँ या deactivate करें।"
-      );
+      alert("❌ Delete नहीं हुआ:\n\n" + error.message);
       return;
     }
 
     await fetchChapters();
   }
 
+  // Filter & Search Logic
+  const filteredChapters = useMemo(() => {
+    return chapters.filter((c) => {
+      const matchesSubject =
+        filterSubject === "ALL" || String(c.subject_id) === String(filterSubject);
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.subjects?.name && c.subjects.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesSubject && matchesSearch;
+    });
+  }, [chapters, filterSubject, searchQuery]);
+
   if (loadingData) {
     return (
-      <div
-        style={{
-          background: "#111827",
-          color: "white",
-          padding: "20px",
-          borderRadius: "16px",
-          marginTop: "20px",
-        }}
-      >
-        📚 Chapters loading...
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 text-xs animate-pulse">
+        📚 Chapters लोड हो रहे हैं...
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        background: "#111827",
-        color: "white",
-        padding: "20px",
-        borderRadius: "16px",
-        marginTop: "20px",
-      }}
-    >
-      <h2>
-        📖 Chapter Manager
-      </h2>
+    <div className="space-y-6 text-slate-200">
 
-      <p
-        style={{
-          color: "#94a3b8",
-          fontSize: "13px",
-        }}
-      >
-        Subject के अंदर Chapters manage करें।
-      </p>
+      {/* 🏷️ Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+        <div>
+          <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-indigo-400" /> Chapter Manager
+          </h2>
+          <p className="text-xs text-slate-400">सीधे Subject के अंदर Chapters बनाएँ और प्रबंधित करें</p>
+        </div>
+        <span className="text-xs font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-3 py-1 rounded-lg self-start sm:self-auto">
+          कुल Chapters: {chapters.length}
+        </span>
+      </div>
 
-      <form onSubmit={saveChapter}>
-        {/* SUBJECT */}
+      {/* 📝 Add / Edit Form */}
+      <form onSubmit={saveChapter} className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+        <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+          {editId ? <Edit2 className="w-3.5 h-3.5 text-amber-400" /> : <Plus className="w-3.5 h-3.5 text-emerald-400" />}
+          {editId ? "Chapter एडिट करें" : "नया Chapter जोड़ें"}
+        </div>
 
-        <select
-          value={selectedSubject}
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "10px",
-            borderRadius: "8px",
-          }}
-        >
-          <option value="">
-            Select Subject
-          </option>
-
-          {subjects.map((subject) => (
-            <option
-              key={subject.id}
-              value={subject.id}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Subject Dropdown */}
+          <div>
+            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Subject चुनें *</label>
+            <select
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
             >
-              {subject.name}
-            </option>
-          ))}
-        </select>
+              <option value="">-- Subject चुनें --</option>
+              {subjects.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* CHAPTER NAME */}
+          {/* Chapter Name */}
+          <div>
+            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Chapter का नाम *</label>
+            <input
+              type="text"
+              placeholder="जैसे: 1. वन्यजीव अभयारण्य"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
 
-        <input
-          placeholder="Chapter name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "10px",
-            borderRadius: "8px",
-          }}
-        />
-
-        {/* DESCRIPTION */}
-
-        <textarea
-          placeholder="Chapter description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "10px",
-            borderRadius: "8px",
-          }}
-        />
-
-        {/* SORT ORDER */}
-
-        <input
-          type="number"
-          placeholder="Sort order"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "10px",
-            borderRadius: "8px",
-          }}
-        />
-
-        {/* ACTIVE */}
-
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "15px",
-          }}
-        >
+        {/* Description */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">विवरण (Description)</label>
           <input
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
+            type="text"
+            placeholder="जैसे: थ्योरी नोट्स, अभ्यास MCQs एवं विगत वर्ष PYQs"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
           />
+        </div>
 
-          Active Chapter
-        </label>
+        <div className="grid grid-cols-2 gap-3 items-center">
+          {/* Sort Order */}
+          <div>
+            <label className="text-[11px] font-semibold text-slate-400 block mb-1">क्रम संख्या (Sort Order)</label>
+            <input
+              type="number"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
 
-        {/* BUTTONS */}
+          {/* Active Checkbox */}
+          <div className="pt-4">
+            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0"
+              />
+              Active रखें
+            </label>
+          </div>
+        </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            background: editId ? "#f59e0b" : "#10b981",
-            color: editId ? "#000" : "#fff",
-            padding: "12px 20px",
-            border: "none",
-            borderRadius: "8px",
-            fontWeight: "bold",
-            marginRight: "8px",
-          }}
-        >
-          {loading
-            ? "Saving..."
-            : editId
-            ? "Update Chapter"
-            : "Add Chapter"}
-        </button>
-
-        {editId && (
+        {/* Form Buttons */}
+        <div className="flex gap-2 pt-2">
           <button
-            type="button"
-            onClick={resetForm}
-            style={{
-              background: "#475569",
-              color: "white",
-              padding: "12px 20px",
-              border: "none",
-              borderRadius: "8px",
-              fontWeight: "bold",
-            }}
+            type="submit"
+            disabled={loading}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              editId
+                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                : "bg-indigo-600 text-white hover:bg-indigo-500"
+            }`}
           >
-            Cancel
+            {loading ? "सेव हो रहा है..." : editId ? "अपडेट करें" : "Chapter जोड़ें"}
           </button>
-        )}
+
+          {editId && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+            >
+              रद्द करें
+            </button>
+          )}
+        </div>
       </form>
 
-      {/* CHAPTER LIST */}
+      {/* 🔍 Search & Filter Bar */}
+      <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row gap-2.5 items-center justify-between">
 
-      <div style={{ marginTop: "25px" }}>
-        <h3>
-          📚 All Chapters ({chapters.length})
-        </h3>
+        {/* Subject Filter */}
+        <div className="w-full sm:w-1/3 flex items-center gap-1.5">
+          <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
+          <select
+            value={filterSubject}
+            onChange={(e) => setFilterSubject(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none"
+          >
+            <option value="ALL">सभी Subjects</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {chapters.length === 0 ? (
-          <p style={{ color: "#94a3b8" }}>
-            अभी कोई Chapter नहीं है।
-          </p>
-        ) : (
-          chapters.map((chapter, index) => (
-            <div
-              key={chapter.id}
-              style={{
-                background: "#1e293b",
-                padding: "15px",
-                borderRadius: "10px",
-                marginBottom: "10px",
-                border: chapter.is_active
-                  ? "1px solid #334155"
-                  : "1px solid #7f1d1d",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "10px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <b>
-                    {index + 1}. {chapter.name}
-                  </b>
-
-                  <p
-                    style={{
-                      margin: "5px 0",
-                      color: "#f59e0b",
-                      fontSize: "13px",
-                    }}
-                  >
-                    📚 {chapter.subjects?.name || "Unknown Subject"}
-                  </p>
-
-                  {chapter.description && (
-                    <p
-                      style={{
-                        color: "#94a3b8",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {chapter.description}
-                    </p>
-                  )}
-
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      color: chapter.is_active
-                        ? "#10b981"
-                        : "#ef4444",
-                    }}
-                  >
-                    {chapter.is_active
-                      ? "● Active"
-                      : "● Inactive"}
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "5px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <button
-                    onClick={() => editChapter(chapter)}
-                    style={{
-                      background: "#f59e0b",
-                      color: "#000",
-                      border: "none",
-                      padding: "7px 10px",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    onClick={() => toggleActive(chapter)}
-                    style={{
-                      background: chapter.is_active
-                        ? "#3b82f6"
-                        : "#10b981",
-                      color: "white",
-                      border: "none",
-                      padding: "7px 10px",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    {chapter.is_active
-                      ? "Hide"
-                      : "Activate"}
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      deleteChapter(chapter.id)
-                    }
-                    style={{
-                      background: "#ef4444",
-                      color: "white",
-                      border: "none",
-                      padding: "7px 10px",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
+        {/* Search Bar */}
+        <div className="w-full sm:w-2/3 relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            placeholder="Chapter नाम से खोजें..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
       </div>
+
+      {/* 📋 Compact Chapter List Table */}
+      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/50">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="bg-slate-950 border-b border-slate-800 text-indigo-300 font-bold text-[11px]">
+              <th className="py-2.5 px-3">#</th>
+              <th className="py-2.5 px-3">Chapter का नाम</th>
+              <th className="py-2.5 px-3">Subject</th>
+              <th className="py-2.5 px-3">स्थिति</th>
+              <th className="py-2.5 px-3 text-right">एक्शन</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/60">
+            {filteredChapters.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">
+                  कोई Chapter नहीं मिला।
+                </td>
+              </tr>
+            ) : (
+              filteredChapters.map((chapter, index) => (
+                <tr key={chapter.id} className="hover:bg-slate-800/30 transition">
+                  <td className="py-2 px-3 text-slate-500 font-bold">{index + 1}</td>
+                  <td className="py-2 px-3">
+                    <div className="font-semibold text-slate-200">{chapter.name}</div>
+                    {chapter.description && (
+                      <div className="text-[10px] text-slate-400 line-clamp-1">{chapter.description}</div>
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-amber-400 font-medium">
+                    {chapter.subjects?.name || "—"}
+                  </td>
+                  <td className="py-2 px-3">
+                    <span
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                        chapter.is_active
+                          ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                          : "bg-rose-500/10 text-rose-300 border-rose-500/20"
+                      }`}
+                    >
+                      {chapter.is_active ? "Active" : "Hidden"}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => editChapter(chapter)}
+                        className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => toggleActive(chapter)}
+                        className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition"
+                        title={chapter.is_active ? "Hide" : "Show"}
+                      >
+                        {chapter.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => deleteChapter(chapter.id)}
+                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }

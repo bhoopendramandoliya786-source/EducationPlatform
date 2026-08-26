@@ -15,20 +15,21 @@ import QuizManager from "./components/QuizManager";
 import BannerManager from "./components/BannerManager";
 import JsonImport from "./components/JsonImport";
 
+import { BookOpen, FileText, HelpCircle, Trophy, Layers } from "lucide-react";
+
 export default function AdminPage() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkingAdmin, setCheckingAdmin] = useState(false);
 
-  // 🎯 Clean Active Tab State (structure | notes | questions | quizzes)
+  // 🎯 Active Tab State (structure | notes | questions | tests)
   const [activeTab, setActiveTab] = useState("structure");
 
   /*
    * ---------------------------------------------------------
-   * VERIFY ADMIN
+   * VERIFY ADMIN SESSION
    * ---------------------------------------------------------
    */
-
   const verifyAdminSession = useCallback(async () => {
     setCheckingAdmin(true);
 
@@ -38,13 +39,7 @@ export default function AdminPage() {
         error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        setSession(null);
-        return false;
-      }
-
-      if (!currentSession?.user) {
+      if (sessionError || !currentSession?.user) {
         setSession(null);
         return false;
       }
@@ -55,14 +50,8 @@ export default function AdminPage() {
         .eq("id", currentSession.user.id)
         .maybeSingle();
 
-      if (profileError) {
-        console.error("Admin profile verification error:", profileError);
-        setSession(null);
-        return false;
-      }
-
-      if (!profile || profile.role !== "admin") {
-        console.warn("Non-admin attempted admin access.");
+      if (profileError || !profile || profile.role !== "admin") {
+        console.warn("Non-admin attempted access.");
         await supabase.auth.signOut();
         setSession(null);
         return false;
@@ -80,34 +69,24 @@ export default function AdminPage() {
     }
   }, []);
 
-  /*
-   * ---------------------------------------------------------
-   * INITIAL SESSION CHECK & AUTH LISTENER
-   * ---------------------------------------------------------
-   */
-
   useEffect(() => {
     let mounted = true;
-
     async function initialize() {
       if (!mounted) return;
       await verifyAdminSession();
     }
-
     initialize();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!mounted) return;
-
       if (event === "SIGNED_OUT" || !currentSession) {
         setSession(null);
         setLoading(false);
         setCheckingAdmin(false);
         return;
       }
-
       setTimeout(() => {
         if (!mounted) return;
         verifyAdminSession();
@@ -120,18 +99,9 @@ export default function AdminPage() {
     };
   }, [verifyAdminSession]);
 
-  /*
-   * ---------------------------------------------------------
-   * LOGOUT
-   * ---------------------------------------------------------
-   */
-
   const handleLogout = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-      }
+      await supabase.auth.signOut();
     } catch (error) {
       console.error("Logout exception:", error);
     } finally {
@@ -139,243 +109,145 @@ export default function AdminPage() {
     }
   }, []);
 
-  /*
-   * ---------------------------------------------------------
-   * LOADING SCREEN
-   * ---------------------------------------------------------
-   */
-
   if (loading || checkingAdmin) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#020617",
-          color: "#fff",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "20px",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "380px",
-            boxSizing: "border-box",
-            background: "#0f172a",
-            border: "1px solid #1e293b",
-            borderRadius: "18px",
-            padding: "30px",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: "38px", marginBottom: "10px" }}>🔐</div>
-          <h2 style={{ margin: 0, fontSize: "22px" }}>Admin Panel</h2>
-          <p style={{ color: "#94a3b8", marginTop: "10px", marginBottom: 0, fontSize: "14px" }}>
-            Admin access verify किया जा रहा है...
-          </p>
+      <main className="min-h-screen bg-[#020617] text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-3">
+          <div className="text-3xl animate-bounce">🔐</div>
+          <h2 className="text-base font-bold text-white">EduAI Pro Control</h2>
+          <p className="text-xs text-slate-400">Admin access verify किया जा रहा है...</p>
         </div>
       </main>
     );
   }
 
-  /*
-   * ---------------------------------------------------------
-   * NOT ADMIN / NOT LOGGED IN
-   * ---------------------------------------------------------
-   */
-
   if (!session) {
     return <AdminLogin onSuccess={verifyAdminSession} />;
   }
 
-  /*
-   * ---------------------------------------------------------
-   * ADMIN DASHBOARD (CLEAN TABBED ARCHITECTURE)
-   * ---------------------------------------------------------
-   */
-
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "#fff",
-        padding: "16px",
-        paddingBottom: "80px",
-        boxSizing: "border-box",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        maxWidth: "1000px",
-        margin: "0 auto",
-      }}
-    >
-      {/* HEADER */}
-      <DashboardHeader onLogout={handleLogout} />
+    <main className="min-h-screen bg-[#020617] text-slate-100 font-sans pb-24">
+      <div className="max-w-5xl mx-auto px-3.5 sm:px-6 pt-4 space-y-5">
 
-      {/* ADMIN STATUS BAR */}
-      <section
-        style={{
-          marginTop: "16px",
-          background: "#0f172a",
-          border: "1px solid #1e293b",
-          borderRadius: "18px",
-          padding: "16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "10px",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>
-            ⚙️ EduAI Pro Control Center
-          </h1>
-          <p style={{ color: "#94a3b8", margin: 0, fontSize: "12px", marginTop: "2px" }}>
-            Clean Modular Architecture (Subject ➔ Chapter ➔ Content)
-          </p>
-        </div>
-        <div
-          style={{
-            color: "#10b981",
-            fontSize: "12px",
-            fontWeight: "bold",
-            background: "rgba(16, 185, 129, 0.1)",
-            padding: "4px 10px",
-            borderRadius: "20px",
-            border: "1px solid rgba(16, 185, 129, 0.2)",
-          }}
-        >
-          ● Admin Active
-        </div>
-      </section>
+        {/* HEADER */}
+        <DashboardHeader onLogout={handleLogout} />
 
-      {/* 🚀 4 CLEAN NAVIGATION TABS (NO CLUTTER) */}
-      <nav
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-          gap: "8px",
-          marginTop: "20px",
-          marginBottom: "24px",
-        }}
-      >
-        <button
-          onClick={() => setActiveTab("structure")}
-          style={{
-            padding: "12px 8px",
-            borderRadius: "14px",
-            border: activeTab === "structure" ? "1px solid #6366f1" : "1px solid #1e293b",
-            background: activeTab === "structure" ? "rgba(99, 102, 241, 0.2)" : "#0f172a",
-            color: activeTab === "structure" ? "#818cf8" : "#94a3b8",
-            fontWeight: "bold",
-            fontSize: "13px",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-        >
-          🏛️ स्ट्रक्चर (Exams/Subjects)
-        </button>
+        {/* STATUS BANNER */}
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h1 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+              ⚙️ EduAI Pro Control Center
+            </h1>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Direct Flow: Subject ➔ Chapter ➔ Smart Notes & Question Bank
+            </p>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+            ● Admin Active
+          </span>
+        </section>
 
-        <button
-          onClick={() => setActiveTab("notes")}
-          style={{
-            padding: "12px 8px",
-            borderRadius: "14px",
-            border: activeTab === "notes" ? "1px solid #10b981" : "1px solid #1e293b",
-            background: activeTab === "notes" ? "rgba(16, 185, 129, 0.2)" : "#0f172a",
-            color: activeTab === "notes" ? "#34d399" : "#94a3b8",
-            fontWeight: "bold",
-            fontSize: "13px",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-        >
-          📖 नोट्स (Notes Sheet)
-        </button>
+        {/* 🚀 4 CLEAN NAVIGATION TABS */}
+        <nav className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button
+            onClick={() => setActiveTab("structure")}
+            className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 ${
+              activeTab === "structure"
+                ? "bg-indigo-600/20 border-indigo-500 text-white shadow-lg"
+                : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+            }`}
+          >
+            <Layers className={`w-4 h-4 ${activeTab === "structure" ? "text-indigo-400" : "text-slate-500"}`} />
+            <div>
+              <div className="text-xs font-bold leading-tight">1. विषय एवं अध्याय</div>
+              <div className="text-[9px] text-slate-500">Subjects & Chapters</div>
+            </div>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("questions")}
-          style={{
-            padding: "12px 8px",
-            borderRadius: "14px",
-            border: activeTab === "questions" ? "1px solid #f59e0b" : "1px solid #1e293b",
-            background: activeTab === "questions" ? "rgba(245, 158, 11, 0.2)" : "#0f172a",
-            color: activeTab === "questions" ? "#fbbf24" : "#94a3b8",
-            fontWeight: "bold",
-            fontSize: "13px",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-        >
-          ❓ प्रश्न बैंक (MCQ/JSON)
-        </button>
+          <button
+            onClick={() => setActiveTab("notes")}
+            className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 ${
+              activeTab === "notes"
+                ? "bg-emerald-600/20 border-emerald-500 text-white shadow-lg"
+                : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+            }`}
+          >
+            <FileText className={`w-4 h-4 ${activeTab === "notes" ? "text-emerald-400" : "text-slate-500"}`} />
+            <div>
+              <div className="text-xs font-bold leading-tight">2. स्मार्ट नोट्स</div>
+              <div className="text-[9px] text-slate-500">Booklet Sheets</div>
+            </div>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("quizzes")}
-          style={{
-            padding: "12px 8px",
-            borderRadius: "14px",
-            border: activeTab === "quizzes" ? "1px solid #ec4899" : "1px solid #1e293b",
-            background: activeTab === "quizzes" ? "rgba(236, 72, 153, 0.2)" : "#0f172a",
-            color: activeTab === "quizzes" ? "#f472b6" : "#94a3b8",
-            fontWeight: "bold",
-            fontSize: "13px",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-        >
-          🏆 टेस्ट मैनेजर (Quizzes)
-        </button>
-      </nav>
+          <button
+            onClick={() => setActiveTab("questions")}
+            className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 ${
+              activeTab === "questions"
+                ? "bg-amber-600/20 border-amber-500 text-white shadow-lg"
+                : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+            }`}
+          >
+            <HelpCircle className={`w-4 h-4 ${activeTab === "questions" ? "text-amber-400" : "text-slate-500"}`} />
+            <div>
+              <div className="text-xs font-bold leading-tight">3. प्रश्न बैंक & JSON</div>
+              <div className="text-[9px] text-slate-500">MCQs & 1-Click Import</div>
+            </div>
+          </button>
 
-      {/* ----------------- TAB 1: STRUCTURE (EXAMS, SUBJECTS, CHAPTERS) ----------------- */}
-      {activeTab === "structure" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <BannerManager />
-          <ExamManager />
-          <SubjectManager />
-          <ChapterManager />
-        </div>
-      )}
+          <button
+            onClick={() => setActiveTab("tests")}
+            className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 ${
+              activeTab === "tests"
+                ? "bg-purple-600/20 border-purple-500 text-white shadow-lg"
+                : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+            }`}
+          >
+            <Trophy className={`w-4 h-4 ${activeTab === "tests" ? "text-purple-400" : "text-slate-500"}`} />
+            <div>
+              <div className="text-xs font-bold leading-tight">4. टेस्ट एवं बैनर</div>
+              <div className="text-[9px] text-slate-500">Quizzes, Exams & Ads</div>
+            </div>
+          </button>
+        </nav>
 
-      {/* ----------------- TAB 2: NOTES MANAGER ----------------- */}
-      {activeTab === "notes" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <NotesManager />
-        </div>
-      )}
+        {/* ----------------- TAB 1: STRUCTURE (SUBJECTS & CHAPTERS) ----------------- */}
+        {activeTab === "structure" && (
+          <div className="space-y-6">
+            <SubjectManager />
+            <ChapterManager />
+          </div>
+        )}
 
-      {/* ----------------- TAB 3: QUESTIONS & BULK JSON IMPORTER ----------------- */}
-      {activeTab === "questions" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <JsonImport />
-          <QuestionManager />
-        </div>
-      )}
+        {/* ----------------- TAB 2: NOTES MANAGER ----------------- */}
+        {activeTab === "notes" && (
+          <div className="space-y-6">
+            <NotesManager />
+          </div>
+        )}
 
-      {/* ----------------- TAB 4: QUIZZES / SPEED TESTS ----------------- */}
-      {activeTab === "quizzes" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <QuizManager />
-        </div>
-      )}
+        {/* ----------------- TAB 3: QUESTIONS & JSON IMPORTER ----------------- */}
+        {activeTab === "questions" && (
+          <div className="space-y-6">
+            <JsonImport />
+            <QuestionManager />
+          </div>
+        )}
 
-      {/* FOOTER */}
-      <footer
-        style={{
-          marginTop: "40px",
-          padding: "20px",
-          textAlign: "center",
-          color: "#64748b",
-          borderTop: "1px solid #1e293b",
-          fontSize: "12px",
-        }}
-      >
-        EduAI Pro Control Dashboard • Zero Clutter Architecture
-      </footer>
+        {/* ----------------- TAB 4: QUIZZES, EXAMS & BANNERS ----------------- */}
+        {activeTab === "tests" && (
+          <div className="space-y-6">
+            <ExamManager />
+            <QuizManager />
+            <BannerManager />
+          </div>
+        )}
+
+        {/* FOOTER */}
+        <footer className="pt-8 pb-4 text-center text-[11px] text-slate-600 border-t border-slate-800/80">
+          EduAI Pro Control Dashboard • Fast & Clean Multi-Source Engine
+        </footer>
+
+      </div>
     </main>
   );
 }
