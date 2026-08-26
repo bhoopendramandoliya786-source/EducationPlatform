@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import pdf from "pdf-parse";
+import { PDFExtract } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
+
+export const runtime = "nodejs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -23,8 +25,17 @@ export async function POST(req) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const pdfData = await pdf(buffer);
-    const rawText = pdfData.text;
+
+    // PDFParse v2 Compatible extraction
+    const pdfExtract = new PDFExtract();
+    const data = await pdfExtract.extractBuffer(buffer);
+
+    let rawText = "";
+    if (data && data.pages) {
+      rawText = data.pages
+        .map((p) => p.content.map((item) => item.str).join(" "))
+        .join("\n");
+    }
 
     if (!rawText || rawText.trim().length === 0) {
       return NextResponse.json(
@@ -48,7 +59,7 @@ export async function POST(req) {
 
     const finalContent = formattedLines.join("\n");
 
-    const { data, error } = await supabase
+    const { data: dbData, error } = await supabase
       .from("notes")
       .insert([
         {
@@ -68,7 +79,7 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       message: "PDF सफलतापूर्वक पार्स होकर नोट्स में जुड़ गई!",
-      data
+      data: dbData
     });
   } catch (err) {
     console.error("PDF Parse Error:", err);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../../lib/supabase/client";
-import { FileJson, Upload, CheckCircle2, AlertCircle, Layers } from "lucide-react";
+import { FileJson, Upload, CheckCircle2, AlertCircle, Layers, FileText, Loader2 } from "lucide-react";
 
 const BATCH_SIZE = 100;
 
@@ -40,7 +40,7 @@ export default function JsonImport() {
       if (data) setSubjects(data);
     }
     loadSubjects();
-  }, []);
+  }, [supabase]);
 
   // Load Chapters when Subject changes
   useEffect(() => {
@@ -59,7 +59,43 @@ export default function JsonImport() {
       if (data) setChapters(data);
     }
     loadChapters();
-  }, [selectedSubject]);
+  }, [selectedSubject, supabase]);
+
+  // 🚀 Direct PDF Upload & Backend Parsing Handler
+  async function handlePdfUpload(file) {
+    if (!selectedChapter) {
+      setMessage("❌ PDF इम्पोर्ट करने के लिए कृपया पहले ऊपर से Subject और Chapter चुनें!");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setLoading(true);
+    setMessage("⏳ PDF से नोट्स निकाले और प्रोसेस किए जा रहे हैं...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("chapterId", selectedChapter);
+      formData.append("title", `${file.name.replace(".pdf", "")} नोट्स`);
+
+      const res = await fetch("/api/upload-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setMessage(`✅ ${result.message}`);
+      } else {
+        setMessage(`❌ ${result.message}`);
+      }
+    } catch (err) {
+      setMessage(`❌ PDF अपलोड त्रुटि: ${err.message}`);
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   function normalizeQuestion(q, targetChapterId) {
     if (!q || typeof q !== "object") throw new Error("Invalid question object");
@@ -222,7 +258,6 @@ export default function JsonImport() {
   async function processArrayInput(arr) {
     let sCreated = 0, cCreated = 0, qImported = 0, nImported = 0, failCount = 0, dupCount = 0;
 
-    // Check if array of chapters / master data
     if (arr.length > 0 && (arr[0].chapter_name || arr[0].subject_name || arr[0].chapters_batch)) {
       for (let i = 0; i < arr.length; i++) {
         const res = await processMasterChapter(arr[i]);
@@ -235,7 +270,6 @@ export default function JsonImport() {
         setProgress(Math.round(((i + 1) / arr.length) * 100));
       }
     } else {
-      // Array of Questions only (linked to selected chapter)
       if (!selectedChapter) {
         throw new Error("प्रश्नों की लिस्ट इम्पोर्ट करने के लिए कृपया ऊपर से Subject और Chapter चुनें!");
       }
@@ -315,19 +349,21 @@ export default function JsonImport() {
     <section className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 text-slate-100 shadow-2xl">
 
       {/* 🏷️ Title */}
-      <div className="space-y-1 pb-2 border-b border-slate-800">
-        <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-          <FileJson className="w-5 h-5 text-indigo-400" /> 1-Click JSON Importer
-        </h2>
-        <p className="text-xs text-slate-400">
-          सीधे Subject ➔ Chapter चुनकर नोट्स या 100+ MCQs/PYQs का JSON 1 सेकंड में अपलोड करें
-        </p>
+      <div className="space-y-1 pb-2 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <FileJson className="w-5 h-5 text-indigo-400" /> 1-Click Importer (PDF & JSON)
+          </h2>
+          <p className="text-xs text-slate-400">
+            सीधे PDF अपलोड करके या JSON पेस्ट करके 1 सेकंड में नोट्स व MCQs सिंक करें
+          </p>
+        </div>
       </div>
 
-      {/* 🎯 Quick Target Selection (Optional if specified in JSON) */}
+      {/* 🎯 Target Selection */}
       <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
         <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5">
-          <Layers className="w-3.5 h-3.5" /> टारगेट Chapter चुनें (यदि JSON में नहीं दिया है):
+          <Layers className="w-3.5 h-3.5" /> टारगेट Chapter चुनें (PDF एवं JSON दोनों के लिए आवश्यक):
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <select
@@ -361,24 +397,37 @@ export default function JsonImport() {
         </div>
       </div>
 
-      {/* 📁 File Upload */}
-      <div>
+      {/* 📁 File Upload Box (PDF + JSON Supported) */}
+      <div className="bg-slate-950 p-4 rounded-2xl border border-dashed border-indigo-500/30 hover:border-indigo-500/60 transition space-y-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <FileText className="w-4 h-4 text-indigo-400" />
+            <span className="text-xs font-bold text-slate-200">फ़ाइल चुनें (PDF या JSON)</span>
+          </div>
+          <span className="text-[10px] text-slate-500">PDF ऑटो-पार्स होकर नोट्स में सेव होगी</span>
+        </div>
+
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json,application/json"
+          accept=".json,application/json,.pdf,application/pdf"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-              try {
-                runImport(JSON.parse(evt.target?.result));
-              } catch {
-                setMessage("❌ JSON फाइल अमान्य है!");
-              }
-            };
-            reader.readAsText(file);
+
+            if (file.name.endsWith(".pdf") || file.type === "application/pdf") {
+              handlePdfUpload(file);
+            } else {
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                try {
+                  runImport(JSON.parse(evt.target?.result));
+                } catch {
+                  setMessage("❌ JSON फाइल अमान्य है!");
+                }
+              };
+              reader.readAsText(file);
+            }
           }}
           disabled={loading}
           className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white cursor-pointer"
@@ -387,11 +436,11 @@ export default function JsonImport() {
 
       {/* 📝 Raw Textarea */}
       <textarea
-        rows={7}
+        rows={6}
         value={jsonText}
         onChange={(e) => setJsonText(e.target.value)}
         disabled={loading}
-        placeholder='यहाँ JSON पेस्ट करें... (उदा. [{"question": "...", "option_a": "...", "answer": "A"}])'
+        placeholder='यहाँ JSON पेस्ट करें... (उदा. {"chapter_name": "...", "notes": [...]})'
         className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3.5 text-xs text-indigo-200 font-mono focus:border-indigo-500 outline-none leading-relaxed"
       />
 
@@ -409,8 +458,17 @@ export default function JsonImport() {
         disabled={loading}
         className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 disabled:opacity-40 text-white text-xs font-bold shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
       >
-        <Upload className="w-4 h-4" />
-        {loading ? `इम्पोर्ट हो रहा है... (${progress}%)` : "Upload & Sync JSON"}
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            प्रोसेसिंग चालू है...
+          </>
+        ) : (
+          <>
+            <Upload className="w-4 h-4" />
+            Upload & Sync JSON
+          </>
+        )}
       </button>
 
       {/* 📊 Status & Message */}
@@ -419,10 +477,14 @@ export default function JsonImport() {
           className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
             message.startsWith("✅")
               ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-300"
+              : message.startsWith("⏳")
+              ? "bg-amber-950/40 border-amber-500/30 text-amber-300"
               : "bg-rose-950/40 border-rose-500/30 text-rose-300"
           }`}
         >
-          {message.startsWith("✅") ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+          {message.startsWith("✅") && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+          {message.startsWith("❌") && <AlertCircle className="w-4 h-4 shrink-0" />}
+          {message.startsWith("⏳") && <Loader2 className="w-4 h-4 shrink-0 animate-spin" />}
           {message}
         </div>
       )}
