@@ -4,12 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
 export async function POST(req) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const formData = await req.formData();
     const file = formData.get("file");
     const chapterId = formData.get("chapterId");
@@ -25,14 +26,13 @@ export async function POST(req) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // PDF extraction
     const parser = new PDFParse({ data: buffer });
     const parsedData = await parser.getText();
     const rawText = parsedData?.text || "";
 
-    if (!rawText.trim()) {
+    if (!rawText || rawText.trim().length === 0) {
       return NextResponse.json(
-        { success: false, message: "PDF से टेक्स्ट नहीं निकाला जा सका (खाली या इमेज वाली PDF हो सकती है)।" },
+        { success: false, message: "PDF से टेक्स्ट नहीं निकला। यह स्कैन की हुई इमेज PDF हो सकती है।" },
         { status: 400 }
       );
     }
@@ -52,7 +52,7 @@ export async function POST(req) {
 
     const finalContent = formattedLines.join("\n");
 
-    const { data: dbData, error } = await supabase
+    const { data, error } = await supabase
       .from("notes")
       .insert([
         {
@@ -67,22 +67,20 @@ export async function POST(req) {
       .select();
 
     if (error) {
-      console.error("Supabase Note Insert Error:", error);
       return NextResponse.json(
-        { success: false, message: "डेटाबेस में सेव नहीं हुआ: " + error.message },
+        { success: false, message: "डेटाबेस एरर: " + error.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "PDF सफलतापूर्वक पार्स होकर नोट्स में जुड़ गई!",
-      data: dbData
+      message: "PDF नोट्स सफलतापूर्वक डेटाबेस में सेव हो गए!",
+      data
     });
   } catch (err) {
-    console.error("Upload API Catch Error:", err);
     return NextResponse.json(
-      { success: false, message: err.message || "सर्वर पर कोई समस्या आई।" },
+      { success: false, message: err.message || "प्रोसेसिंग विफल रही" },
       { status: 500 }
     );
   }
