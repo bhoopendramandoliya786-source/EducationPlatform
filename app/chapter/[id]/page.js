@@ -10,7 +10,7 @@ import {
   Share2, Layers
 } from "lucide-react";
 
-// 📄 100% PURE PDF-STYLE SMART SHEET RENDERER (NO GLASS BOXES, COMPACT CLEAN LIST)
+// 📄 100% PURE PDF-STYLE SMART SHEET RENDERER (INLINE NATURAL READING FLOW)
 function PDFNotesSheet({ notes, chapterName }) {
   return (
     <div className="rounded-xl bg-[#090d16] border border-slate-800 shadow-xl overflow-hidden font-sans text-slate-200">
@@ -28,7 +28,7 @@ function PDFNotesSheet({ notes, chapterName }) {
         </span>
       </div>
 
-      {/* 📜 Continuous Clean Sheet (Zero Heavy Card Blocks) */}
+      {/* 📜 Continuous Clean Sheet */}
       <div className="p-3 sm:p-4 space-y-4">
         {notes.map((note) => {
           const rawLines = note.content.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -53,7 +53,7 @@ function PDFNotesSheet({ notes, chapterName }) {
           return (
             <div key={note.id} className="space-y-1.5">
 
-              {/* Section Header (भाग 1, भाग 2 आदि) */}
+              {/* Section Header */}
               <div className="text-xs font-bold text-indigo-300 uppercase tracking-wide border-b border-indigo-500/20 pb-1 flex items-center gap-1.5">
                 <span className="text-indigo-400 font-bold">📌</span> {note.title}
               </div>
@@ -82,18 +82,18 @@ function PDFNotesSheet({ notes, chapterName }) {
                     );
                   }
 
-                  // Plain One-Liner Line
+                  // Inline One-Liner Line (Question followed directly by Answer)
                   const line = el.text;
                   if (line.includes(" - ") || line.includes("?")) {
                     const [qPart, aPart] = line.split(/ - | \? - /);
                     return (
-                      <div key={elIdx} className="py-1 flex items-baseline justify-between gap-3 text-xs leading-snug">
-                        <span className="text-slate-300 font-normal">
-                          {qPart.replace(/^•\s*/, "")}{!qPart.includes("?") && !aPart ? "?" : ""}
+                      <div key={elIdx} className="py-1 text-xs leading-relaxed">
+                        <span className="text-slate-200 font-medium">
+                          {qPart.replace(/^•\s*/, "")}{!qPart.includes("?") && !aPart ? "?" : ""}{" "}
                         </span>
                         {aPart && (
-                          <span className="text-amber-400 font-bold shrink-0 text-right">
-                            - {aPart.trim()}
+                          <span className="text-amber-400 font-bold ml-1">
+                            — {aPart.trim()}
                           </span>
                         )}
                       </div>
@@ -101,7 +101,7 @@ function PDFNotesSheet({ notes, chapterName }) {
                   }
 
                   return (
-                    <div key={elIdx} className="py-1 text-xs text-indigo-200/90 font-medium">
+                    <div key={elIdx} className="py-1 text-xs text-indigo-200/90 font-medium leading-relaxed">
                       {line}
                     </div>
                   );
