@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { PDFExtract } from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -26,16 +26,10 @@ export async function POST(req) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // PDFParse v2 Compatible extraction
-    const pdfExtract = new PDFExtract();
-    const data = await pdfExtract.extractBuffer(buffer);
-
-    let rawText = "";
-    if (data && data.pages) {
-      rawText = data.pages
-        .map((p) => p.content.map((item) => item.str).join(" "))
-        .join("\n");
-    }
+    // PDFParse v2 extract
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    const rawText = textResult?.text || "";
 
     if (!rawText || rawText.trim().length === 0) {
       return NextResponse.json(
