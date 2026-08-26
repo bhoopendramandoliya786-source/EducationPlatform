@@ -7,29 +7,29 @@ import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
   Sparkles, HelpCircle, Trophy, Play, RotateCcw, Timer,
-  Share2, Layers
+  Share2, Layers, BookmarkCheck
 } from "lucide-react";
 
-// 🌟 100% DYNAMIC & AUTO-ADAPTIVE PDF SHEET RENDERER
+// 🌟 100% SMART & PREMIUM BOOKLET STYLED RENDERER
 function PDFNotesSheet({ notes, chapterName }) {
   return (
-    <div className="rounded-xl bg-[#090d16] border border-slate-800 shadow-xl overflow-hidden font-sans text-slate-200">
+    <div className="rounded-2xl bg-[#090d16] border border-slate-800 shadow-2xl overflow-hidden font-sans text-slate-200">
 
-      {/* 🏷️ Dynamic Header Banner */}
-      <div className="bg-slate-900 px-3.5 py-2.5 border-b border-slate-800 flex items-center justify-between">
+      {/* 🏷️ Modern Header Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
-            EduAI Pro • REET & RPSC SPECIAL
+          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-400" /> EduAI Pro • REET & RPSC SPECIAL
           </span>
-          <h2 className="text-xs sm:text-sm font-black text-white">{chapterName}</h2>
+          <h2 className="text-xs sm:text-sm font-black text-white mt-0.5">{chapterName}</h2>
         </div>
-        <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
-          STUDY SHEET
+        <span className="text-[10px] font-extrabold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg shadow-sm">
+          SMART BOOKLET
         </span>
       </div>
 
-      {/* 📜 Adaptive Body */}
-      <div className="p-3.5 sm:p-4 space-y-4">
+      {/* 📜 Styled Booklet Body */}
+      <div className="p-3 sm:p-4 space-y-4">
         {notes.map((note) => {
           const rawLines = note.content.split("\n").map((l) => l.trim()).filter(Boolean);
           const blocks = [];
@@ -50,28 +50,41 @@ function PDFNotesSheet({ notes, chapterName }) {
           });
 
           return (
-            <div key={note.id} className="space-y-2">
+            <div key={note.id} className="space-y-3">
 
               {/* Note Title */}
               {note.title && (
-                <div className="text-xs font-bold text-indigo-300 uppercase tracking-wide border-b border-indigo-500/20 pb-1 flex items-center gap-1.5">
-                  <span className="text-indigo-400">📌</span> {note.title}
+                <div className="text-xs font-black text-amber-400 uppercase tracking-wide border-b border-slate-800 pb-2 flex items-center gap-1.5">
+                  <BookmarkCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{note.title}</span>
                 </div>
               )}
 
               {/* Dynamic Auto-Parser */}
-              <div className="space-y-1.5 text-xs">
+              <div className="space-y-2">
                 {blocks.map((b, idx) => {
-                  // 1. Auto Table
+                  // 1. 📊 Modern Glassmorphism Table
                   if (b.type === "table") {
                     return (
-                      <div key={idx} className="overflow-x-auto my-2 rounded border border-slate-800 bg-slate-900/40">
+                      <div key={idx} className="overflow-x-auto my-3 rounded-xl border border-slate-800 bg-slate-950/70 shadow-lg">
                         <table className="w-full text-left text-xs border-collapse">
                           <tbody>
                             {b.rows.map((row, rIdx) => (
-                              <tr key={rIdx} className={rIdx === 0 ? "bg-slate-900 font-bold text-indigo-300 border-b border-slate-800 text-[11px]" : "border-b border-slate-800/40"}>
+                              <tr
+                                key={rIdx}
+                                className={
+                                  rIdx === 0
+                                    ? "bg-indigo-950/60 font-black text-indigo-300 border-b border-slate-800 text-[11px]"
+                                    : "border-b border-slate-800/40 hover:bg-slate-900/40 transition"
+                                }
+                              >
                                 {row.map((col, cIdx) => (
-                                  <td key={cIdx} className={`py-1.5 px-2.5 ${cIdx > 0 ? "border-l border-slate-800/40" : ""}`}>
+                                  <td
+                                    key={cIdx}
+                                    className={`py-2 px-3 text-[11px] leading-relaxed ${
+                                      cIdx > 0 ? "border-l border-slate-800/40" : ""
+                                    } ${rIdx === 0 ? "text-indigo-300" : "text-slate-300 font-medium"}`}
+                                  >
                                     {col}
                                   </td>
                                 ))}
@@ -85,45 +98,55 @@ function PDFNotesSheet({ notes, chapterName }) {
 
                   const line = b.content;
 
-                  // 2. Auto Heading Detection (भाग, सारणी, Chapter आदि)
-                  if (/^(भाग|सारणी|Chapter|Section|विशेष|महत्वपूर्ण)/i.test(line) || line.startsWith("##")) {
+                  // 2. 📌 Gradient Section Headings (भाग, सारणी आदि)
+                  if (/^(📌|\#\#|भाग|सारणी|Chapter|Section|विशेष|महत्वपूर्ण)/i.test(line)) {
                     return (
-                      <div key={idx} className="pt-2 font-bold text-indigo-300 text-xs border-b border-slate-800/60 pb-0.5">
-                        {line.replace(/^##\s*/, "")}
+                      <div
+                        key={idx}
+                        className="mt-3 mb-1.5 p-2 rounded-xl bg-gradient-to-r from-indigo-950/80 via-slate-900 to-transparent border border-indigo-500/30 text-indigo-200 text-xs font-black flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span className="w-1.5 h-3.5 bg-indigo-500 rounded-full inline-block"></span>
+                        {line.replace(/^(\#\#\s*|📌\s*)/, "")}
                       </div>
                     );
                   }
 
-                  // 3. Auto One-Liner Detection (Q - A format)
-                  if (line.includes(" - ") || (line.includes("?") && line.includes(":"))) {
-                    const [qPart, aPart] = line.split(/ - | : /);
+                  // 3. 💡 High-Contrast One-Liner (Question & Answer Card)
+                  if (line.includes(" — ") || line.includes(" - ") || line.includes("?")) {
+                    const parts = line.split(/\s*—\s*|\s*-\s*/);
+                    const qText = parts[0];
+                    const aText = parts.slice(1).join(" — ");
+
                     return (
-                      <div key={idx} className="py-0.5 leading-relaxed">
-                        <span className="text-slate-200 font-medium">
-                          {qPart.replace(/^•\s*/, "")}{!qPart.includes("?") && !aPart ? "?" : ""}{" "}
-                        </span>
-                        {aPart && (
-                          <span className="text-amber-400 font-bold ml-1">
-                            — {aPart.trim()}
-                          </span>
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 hover:border-slate-700 transition"
+                      >
+                        <div className="text-xs text-slate-100 font-semibold leading-relaxed">
+                          {qText.replace(/^[•\*]\s*/, "")}
+                        </div>
+                        {aText && (
+                          <div className="self-start sm:self-auto shrink-0 px-2 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/30 text-amber-300 font-black text-[11px]">
+                            {aText.trim()}
+                          </div>
                         )}
                       </div>
                     );
                   }
 
-                  // 4. Auto Bullet Points
+                  // 4. 🔹 Bullet Points
                   if (line.startsWith("•") || line.startsWith("-") || line.startsWith("*")) {
                     return (
-                      <div key={idx} className="flex items-start gap-1.5 py-0.5 text-slate-300">
-                        <span className="text-indigo-400 shrink-0">•</span>
+                      <div key={idx} className="flex items-start gap-2 py-1 px-1 text-xs text-slate-300 leading-relaxed">
+                        <span className="text-indigo-400 font-bold shrink-0">•</span>
                         <span>{line.replace(/^[•\-*]\s*/, "")}</span>
                       </div>
                     );
                   }
 
-                  // 5. Normal Paragraph / Theory Text
+                  // 5. Normal Text
                   return (
-                    <p key={idx} className="text-slate-300 leading-relaxed py-0.5">
+                    <p key={idx} className="text-xs text-slate-300 leading-relaxed py-1 px-1">
                       {line}
                     </p>
                   );
@@ -136,8 +159,8 @@ function PDFNotesSheet({ notes, chapterName }) {
       </div>
 
       {/* 📌 Clean Footer */}
-      <div className="bg-slate-900/60 px-4 py-2 border-t border-slate-800 text-center text-[10px] text-slate-500 font-medium">
-        ✨ सम्पूर्ण अध्ययन सामग्री • EduAI Pro ✨
+      <div className="bg-slate-900/80 px-4 py-2.5 border-t border-slate-800 text-center text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-1">
+        <Sparkles className="w-3 h-3 text-indigo-400" /> सम्पूर्ण अध्ययन सामग्री • EduAI Pro
       </div>
 
     </div>
