@@ -24,15 +24,13 @@ export default function HomePage() {
         const [subsRes, bannersRes, notesRes, quizRes] = await Promise.all([
           supabase
             .from("subjects")
-            .select("id, name, icon, is_active")
-            .eq("is_active", true)
-            .order("sort_order", { ascending: true })
+            .select("id, name, icon")
             .order("id", { ascending: true }),
           supabase
             .from("banners")
             .select("id, title, badge_text, link")
             .order("created_at", { ascending: false })
-            .limit(3),
+            .limit(2),
           supabase.from("notes").select("id", { count: "exact", head: true }),
           supabase.from("quizzes").select("id", { count: "exact", head: true })
         ]);
@@ -64,16 +62,14 @@ export default function HomePage() {
   return (
     <main className="max-w-md mx-auto px-4 space-y-4 pb-28 pt-1 font-sans select-none">
 
-      {/* 1. Hero Spotlight Banner */}
-      <section className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 space-y-2 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
+      {/* 1. Hero Spotlight Banner (LCP Optimized) */}
+      <section className="p-5 rounded-3xl bg-slate-900 border border-indigo-500/20 space-y-2 shadow-2xl relative overflow-hidden">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider uppercase flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-indigo-400" /> Rajasthan Exam Prep 2026
           </span>
           <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" /> {counts.subjects} विषय उपलब्ध
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" /> {counts.subjects || "सभी"} विषय उपलब्ध
           </span>
         </div>
 
@@ -91,7 +87,7 @@ export default function HomePage() {
         <Link
           href="/notes"
           aria-label="स्मार्ट नोट्स सेक्शन खोलें"
-          className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-indigo-950/30 border border-slate-800/90 hover:border-indigo-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
+          className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
         >
           <div className="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition">
             <BookOpen className="w-4 h-4" />
@@ -103,7 +99,7 @@ export default function HomePage() {
         <Link
           href="/quiz"
           aria-label="स्पीड टेस्ट और मॉक टेस्ट सेक्शन खोलें"
-          className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-emerald-950/30 border border-slate-800/90 hover:border-emerald-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
+          className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
         >
           <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
             <Trophy className="w-4 h-4" />
@@ -115,7 +111,7 @@ export default function HomePage() {
         <Link
           href="/creator"
           aria-label="क्विज़ रील्स क्रिएटर खोलें"
-          className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-rose-950/30 border border-slate-800/90 hover:border-rose-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
+          className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-rose-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
         >
           <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-400 group-hover:scale-105 transition">
             <Sparkles className="w-4 h-4" />
@@ -127,7 +123,7 @@ export default function HomePage() {
         <Link
           href="/ai-tutor"
           aria-label="AI ट्यूटर डाउट सॉल्व खोलें"
-          className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-purple-950/30 border border-slate-800/90 hover:border-purple-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
+          className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 space-y-1.5 transition active:scale-[0.98] shadow-md group"
         >
           <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 group-hover:scale-105 transition">
             <Zap className="w-4 h-4" />
@@ -143,7 +139,7 @@ export default function HomePage() {
           banners.map((b) => (
             <div
               key={b.id}
-              className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/90 via-slate-900 to-purple-950/80 border border-indigo-500/30 flex items-center justify-between gap-2 shadow-md"
+              className="p-3.5 rounded-2xl bg-slate-900 border border-indigo-500/30 flex items-center justify-between gap-2 shadow-md"
             >
               <div className="flex items-center gap-2.5">
                 <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
@@ -180,12 +176,12 @@ export default function HomePage() {
       </section>
 
       {/* 4. Syllabus Subjects Accordion & List */}
-      <section aria-label="Syllabus Subjects" className="rounded-3xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-2xl transition">
+      <section aria-label="Syllabus Subjects" className="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl transition">
         <button
           onClick={() => setIsOpenSubjects(!isOpenSubjects)}
           aria-expanded={isOpenSubjects}
           aria-label="पाठ्यक्रम विषय सूची टॉगल करें"
-          className="w-full p-4 flex items-center justify-between bg-slate-900/90 hover:bg-slate-800/80 transition cursor-pointer"
+          className="w-full p-4 flex items-center justify-between bg-slate-900 hover:bg-slate-800/80 transition cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
@@ -209,10 +205,6 @@ export default function HomePage() {
                   <div key={i} className="h-14 bg-slate-950/60 rounded-2xl border border-slate-800 animate-pulse" />
                 ))}
               </div>
-            ) : subjects.length === 0 ? (
-              <div className="p-4 text-center text-xs text-amber-400">
-                कोई सक्रिय विषय उपलब्ध नहीं है।
-              </div>
             ) : (
               subjects.map((sub) => (
                 <Link
@@ -222,7 +214,7 @@ export default function HomePage() {
                   className="p-3.5 rounded-2xl bg-slate-950/70 hover:bg-indigo-950/40 border border-slate-800/80 hover:border-indigo-500/40 flex items-center justify-between group transition active:scale-[0.99] mt-2 shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-black text-sm group-hover:scale-105 transition">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-black text-sm group-hover:scale-105 transition">
                       {sub.icon || sub.name?.charAt(0) || "S"}
                     </div>
                     <div>
