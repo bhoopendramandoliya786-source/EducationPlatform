@@ -143,7 +143,7 @@ function FormattedQuestionText({ text }) {
 export default function ChapterSingleViewPage() {
   const { id } = useParams();
   const [chapter, setChapter] = useState(null);
-  const [activeTab, setActiveTab] = useState("quiz"); // Default quiz view
+  const [activeTab, setActiveTab] = useState("quiz");
   const [notes, setNotes] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -154,7 +154,7 @@ export default function ChapterSingleViewPage() {
   const [userAnswers, setUserAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
-  const [isOpenReview, setIsOpenReview] = useState(false); // Dropdown Accordion State
+  const [isOpenReview, setIsOpenReview] = useState(false);
 
   const supabase = createClient();
 
@@ -200,14 +200,18 @@ export default function ChapterSingleViewPage() {
     return () => { isMounted = false; };
   }, [id, supabase]);
 
-  // Timer Countdown (Active during Quiz)
+  // Timer Countdown (Active only during Quiz)
   useEffect(() => {
     if (activeTab !== "quiz" || quizSubmitted || timeLeft <= 0) return;
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [activeTab, quizSubmitted, timeLeft]);
 
+  // ✅ Fixed Selection Logic: Locked in Practice Mode, Changeable in Quiz Mode
   const handleSelectOption = (qId, optKey) => {
+    const isPracticeMode = activeTab !== "quiz";
+    if (isPracticeMode && userAnswers[qId]) return; // एक बार चुनने के बाद लॉक
+
     setUserAnswers((prev) => ({ ...prev, [qId]: optKey }));
   };
 
@@ -383,7 +387,7 @@ export default function ChapterSingleViewPage() {
         <PDFNotesSheet notes={notes} chapterName={chapter.name} />
       )}
 
-      {/* 🎯 TAB 2, 3 & 4 (MCQs, PYQs, Quiz - ALL IN UNIFIED DARK CARD MODE) */}
+      {/* 🎯 TAB 2, 3 & 4 (MCQs, PYQs, Quiz) */}
       {activeTab !== "notes" && (
         <section className="space-y-4">
           {(!quizSubmitted || activeTab !== "quiz") ? (
@@ -426,7 +430,7 @@ export default function ChapterSingleViewPage() {
                     const isPracticeMode = activeTab !== "quiz";
                     const isAnswered = isPracticeMode && !!userAnswers[currentQ.id];
 
-                    let optClass = "bg-slate-950/60 border-slate-800/80 text-slate-300";
+                    let optClass = "bg-slate-950/60 border-slate-800/80 text-slate-300 hover:border-slate-700";
 
                     if (isPracticeMode && isAnswered) {
                       if (opt.key === currentQ.answer) {
@@ -444,6 +448,7 @@ export default function ChapterSingleViewPage() {
                       <button
                         key={opt.key}
                         type="button"
+                        disabled={isPracticeMode && isAnswered}
                         onClick={() => handleSelectOption(currentQ.id, opt.key)}
                         className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between gap-3 transition cursor-pointer ${optClass}`}
                       >
@@ -570,7 +575,7 @@ export default function ChapterSingleViewPage() {
                 </div>
               </div>
 
-              {/* 🔻 DROP-DOWN ACCORDION BUTTON FOR ANSWERS & EXPLANATIONS */}
+              {/* 🔻 DROP-DOWN ACCORDION FOR ANSWERS & EXPLANATIONS */}
               <div className="rounded-3xl bg-[#0e131f] border border-slate-800 overflow-hidden shadow-xl">
                 <button
                   type="button"
@@ -588,7 +593,6 @@ export default function ChapterSingleViewPage() {
                   </div>
                 </button>
 
-                {/* Collapsible Content */}
                 {isOpenReview && (
                   <div className="p-3.5 space-y-3 divide-y divide-slate-800/40">
                     {currentSetQuestions.map((q, idx) => {
