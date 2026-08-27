@@ -6,15 +6,15 @@ import { useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
-  Sparkles, HelpCircle, Trophy, Play, RotateCcw,
-  Share2, Layers, BookmarkCheck, ChevronRight, ChevronLeft, Clock,
-  Eye, Check, X
+  Sparkles, HelpCircle, Trophy, RotateCcw,
+  Share2, BookmarkCheck, ChevronRight, ChevronLeft, Clock,
+  ChevronDown, Check, X
 } from "lucide-react";
 
 // 🌟 1. SMART RESPONSIVE BOOKLET RENDERER
 function PDFNotesSheet({ notes, chapterName }) {
   return (
-    <div className="rounded-3xl bg-[#0e131f] border border-slate-800 shadow-2xl overflow-hidden font-sans text-slate-200">
+    <div className="rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl overflow-hidden font-sans text-slate-200">
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-purple-950/40 px-4 py-3.5 border-b border-slate-800 flex items-center justify-between">
         <div>
           <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1">
@@ -139,23 +139,22 @@ function FormattedQuestionText({ text }) {
   return <p className="text-white text-xs sm:text-sm font-bold leading-relaxed whitespace-pre-line">{text}</p>;
 }
 
-// 🚀 3. MAIN PAGE COMPONENT
+// 🚀 3. MAIN INTERACTIVE PAGE
 export default function ChapterSingleViewPage() {
   const { id } = useParams();
   const [chapter, setChapter] = useState(null);
-  const [activeTab, setActiveTab] = useState("quiz");
+  const [activeTab, setActiveTab] = useState("quiz"); // Default quiz view
   const [notes, setNotes] = useState([]);
   const [questions, setQuestions] = useState([]);
-  const [selectedInstantAnswers, setSelectedInstantAnswers] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Set & Quiz States
   const [selectedSet, setSelectedSet] = useState(1);
   const [qIndex, setQIndex] = useState(0);
-  const [quizAnswers, setQuizAnswers] = useState({});
+  const [userAnswers, setUserAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
-  const [showReview, setShowReview] = useState(false);
+  const [isOpenReview, setIsOpenReview] = useState(false); // Dropdown Accordion State
 
   const supabase = createClient();
 
@@ -201,27 +200,22 @@ export default function ChapterSingleViewPage() {
     return () => { isMounted = false; };
   }, [id, supabase]);
 
-  // Timer
+  // Timer Countdown (Active during Quiz)
   useEffect(() => {
-    if (quizSubmitted || timeLeft <= 0) return;
+    if (activeTab !== "quiz" || quizSubmitted || timeLeft <= 0) return;
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
-  }, [quizSubmitted, timeLeft]);
+  }, [activeTab, quizSubmitted, timeLeft]);
 
-  const handleInstantSelect = (qId, optKey) => {
-    if (selectedInstantAnswers[qId]) return;
-    setSelectedInstantAnswers((prev) => ({ ...prev, [qId]: optKey }));
-  };
-
-  const handleQuizAnswer = (qId, optKey) => {
-    setQuizAnswers((prev) => ({ ...prev, [qId]: optKey }));
+  const handleSelectOption = (qId, optKey) => {
+    setUserAnswers((prev) => ({ ...prev, [qId]: optKey }));
   };
 
   const resetQuiz = () => {
     setQuizSubmitted(false);
-    setShowReview(false);
+    setIsOpenReview(false);
     setQIndex(0);
-    setQuizAnswers({});
+    setUserAnswers({});
     setTimeLeft(600);
   };
 
@@ -251,13 +245,13 @@ export default function ChapterSingleViewPage() {
   const currentSetQuestions = currentTabList.slice(startIndex, startIndex + 20);
   const currentQ = currentSetQuestions[qIndex] || currentSetQuestions[0];
 
-  // Results calculation
+  // Results calculation for Speed Test
   let correctCount = 0;
   let wrongCount = 0;
   let unattemptedCount = 0;
 
   currentSetQuestions.forEach((q) => {
-    const ans = quizAnswers[q.id];
+    const ans = userAnswers[q.id];
     if (!ans) unattemptedCount++;
     else if (ans === q.answer) correctCount++;
     else wrongCount++;
@@ -283,6 +277,7 @@ export default function ChapterSingleViewPage() {
       <div className="flex items-center justify-between">
         <Link 
           href={chapter.subjects ? `/subject/${chapter.subjects.id}` : "/"} 
+          aria-label="वापस विषय सूची पर जाएँ"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> वापस विषय ({chapter.subjects?.name || "विषय"})
@@ -293,7 +288,7 @@ export default function ChapterSingleViewPage() {
       </div>
 
       {/* Hero Card */}
-      <section className="p-3.5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-purple-500/20 shadow-xl space-y-1 relative overflow-hidden">
+      <section aria-label="अध्याय विवरण" className="p-3.5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-purple-500/20 shadow-xl space-y-1 relative overflow-hidden">
         <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
           {chapter.subjects?.name} • सम्पूर्ण मास्टरक्लास
         </div>
@@ -304,7 +299,7 @@ export default function ChapterSingleViewPage() {
       </section>
 
       {/* 4 Main Tabs */}
-      <section className="grid grid-cols-2 gap-2">
+      <section aria-label="मुख्य सेशन्स" className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => { setActiveTab("notes"); setSelectedSet(1); setQIndex(0); }}
@@ -356,7 +351,7 @@ export default function ChapterSingleViewPage() {
 
       {/* Practice Sets Selector */}
       {activeTab !== "notes" && (
-        <section className="space-y-1.5 pt-0.5">
+        <section aria-label="सेट चयन" className="space-y-1.5 pt-0.5">
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
             <span className="flex items-center gap-1 text-purple-400">
               <Sparkles className="w-3.5 h-3.5" /> प्रैक्टिस सेट्स
@@ -388,98 +383,30 @@ export default function ChapterSingleViewPage() {
         <PDFNotesSheet notes={notes} chapterName={chapter.name} />
       )}
 
-      {/* 🎯 TAB 2 & 3: MCQs / PYQs */}
-      {(activeTab === "mcqs" || activeTab === "pyqs") && (
-        <section className="space-y-3">
-          {currentSetQuestions.length === 0 ? (
-            <div className="p-8 rounded-3xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
-              इस सेक्शन में प्रश्न जल्द जोड़े जा रहे हैं।
-            </div>
-          ) : (
-            currentSetQuestions.map((q, idx) => {
-              const userAns = selectedInstantAnswers[q.id];
-              const isAnswered = !!userAns;
-
-              return (
-                <article key={q.id} className="p-4 rounded-3xl bg-[#0e131f] border border-slate-800 space-y-3 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-300">
-                      प्रश्न #{startIndex + idx + 1}
-                    </span>
-                    {q.is_pyq && (
-                      <span className="text-[9px] font-extrabold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        {q.exam_tag || "RPSC PYQ"}
-                      </span>
-                    )}
-                  </div>
-
-                  <FormattedQuestionText text={q.question} />
-
-                  <div className="space-y-2 pt-1">
-                    {[
-                      { key: "A", text: q.option_a },
-                      { key: "B", text: q.option_b },
-                      { key: "C", text: q.option_c },
-                      { key: "D", text: q.option_d }
-                    ].map((opt) => {
-                      let btnStyle = "bg-slate-950/60 border-slate-800 text-slate-300";
-                      if (isAnswered) {
-                        if (opt.key === q.answer) btnStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold";
-                        else if (userAns === opt.key) btnStyle = "bg-rose-500/20 border-rose-500 text-rose-300 line-through";
-                        else btnStyle = "opacity-50 border-slate-900";
-                      }
-
-                      return (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          disabled={isAnswered}
-                          onClick={() => handleInstantSelect(q.id, opt.key)}
-                          className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${btnStyle}`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300">
-                              {opt.key}
-                            </span>
-                            <span className="text-xs">{opt.text}</span>
-                          </div>
-                          {isAnswered && opt.key === q.answer && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                          {isAnswered && userAns === opt.key && opt.key !== q.answer && <XCircle className="w-4 h-4 text-rose-400" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {isAnswered && q.explanation && (
-                    <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
-                      <div className="font-bold flex items-center gap-1 text-indigo-300">
-                        <HelpCircle className="w-3.5 h-3.5" /> विस्तृत व्याख्या:
-                      </div>
-                      <p className="text-[11px] leading-relaxed whitespace-pre-line text-slate-200">{q.explanation}</p>
-                    </div>
-                  )}
-                </article>
-              );
-            })
-          )}
-        </section>
-      )}
-
-      {/* 🏆 TAB 4: SPEED TEST & ANSWERS REVIEW */}
-      {activeTab === "quiz" && (
+      {/* 🎯 TAB 2, 3 & 4 (MCQs, PYQs, Quiz - ALL IN UNIFIED DARK CARD MODE) */}
+      {activeTab !== "notes" && (
         <section className="space-y-4">
-          {!quizSubmitted ? (
-            currentQ && (
+          {(!quizSubmitted || activeTab !== "quiz") ? (
+            currentQ ? (
               <div className="p-5 rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl space-y-4">
+
+                {/* Header: Hard/PYQ Badge + Timer or Instant Tag */}
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
                     {currentQ.is_pyq ? (currentQ.exam_tag || "PYQ") : "HARD"}
                   </span>
-                  <div className="flex items-center gap-1 text-xs font-mono font-bold text-slate-300">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" /> {formatTime(timeLeft)}
-                  </div>
+                  {activeTab === "quiz" ? (
+                    <div className="flex items-center gap-1 text-xs font-mono font-bold text-slate-300">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" /> {formatTime(timeLeft)}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
+                      अभ्यास मोड
+                    </span>
+                  )}
                 </div>
 
+                {/* Question Info */}
                 <div>
                   <span className="text-[10px] font-bold text-purple-400 block mb-1">
                     प्रश्न {qIndex + 1} / {currentSetQuestions.length}
@@ -487,6 +414,7 @@ export default function ChapterSingleViewPage() {
                   <FormattedQuestionText text={currentQ.question} />
                 </div>
 
+                {/* Options List */}
                 <div className="space-y-2 pt-1">
                   {[
                     { key: "A", text: currentQ.option_a },
@@ -494,60 +422,111 @@ export default function ChapterSingleViewPage() {
                     { key: "C", text: currentQ.option_c },
                     { key: "D", text: currentQ.option_d }
                   ].map((opt) => {
-                    const isSelected = quizAnswers[currentQ.id] === opt.key;
+                    const isSelected = userAnswers[currentQ.id] === opt.key;
+                    const isPracticeMode = activeTab !== "quiz";
+                    const isAnswered = isPracticeMode && !!userAnswers[currentQ.id];
+
+                    let optClass = "bg-slate-950/60 border-slate-800/80 text-slate-300";
+
+                    if (isPracticeMode && isAnswered) {
+                      if (opt.key === currentQ.answer) {
+                        optClass = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold";
+                      } else if (isSelected) {
+                        optClass = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
+                      } else {
+                        optClass = "bg-slate-950/30 border-slate-900 text-slate-500 opacity-60";
+                      }
+                    } else if (isSelected) {
+                      optClass = "bg-purple-600/20 border-purple-500 text-white font-semibold";
+                    }
+
                     return (
                       <button
                         key={opt.key}
                         type="button"
-                        onClick={() => handleQuizAnswer(currentQ.id, opt.key)}
-                        className={`w-full p-3 rounded-2xl border text-left flex items-center gap-3 transition cursor-pointer ${
-                          isSelected ? "bg-purple-600/20 border-purple-500 text-white font-semibold" : "bg-slate-950/60 border-slate-800/80 text-slate-300"
-                        }`}
+                        onClick={() => handleSelectOption(currentQ.id, opt.key)}
+                        className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between gap-3 transition cursor-pointer ${optClass}`}
                       >
-                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
-                          isSelected ? "bg-purple-600 text-white" : "bg-slate-800/90 text-slate-400"
-                        }`}>
-                          {opt.key}
-                        </span>
-                        <span className="text-xs leading-relaxed">{opt.text || `विकल्प ${opt.key}`}</span>
+                        <div className="flex items-center gap-3">
+                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                            isSelected ? "bg-purple-600 text-white" : "bg-slate-800/90 text-slate-400"
+                          }`}>
+                            {opt.key}
+                          </span>
+                          <span className="text-xs leading-relaxed">{opt.text || `विकल्प ${opt.key}`}</span>
+                        </div>
+                        {isPracticeMode && isAnswered && opt.key === currentQ.answer && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        )}
+                        {isPracticeMode && isAnswered && isSelected && opt.key !== currentQ.answer && (
+                          <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                        )}
                       </button>
                     );
                   })}
                 </div>
 
+                {/* Practice Mode Instant Explanation */}
+                {activeTab !== "quiz" && userAnswers[currentQ.id] && currentQ.explanation && (
+                  <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1 animate-fadeIn">
+                    <div className="font-bold flex items-center gap-1 text-indigo-300">
+                      <HelpCircle className="w-3.5 h-3.5" /> विस्तृत व्याख्या:
+                    </div>
+                    <p className="text-[11px] leading-relaxed whitespace-pre-line text-slate-200">
+                      {currentQ.explanation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Prev & Next / Submit Action Buttons */}
                 <div className="flex items-center justify-between pt-2 gap-3">
                   <button
                     type="button"
                     disabled={qIndex === 0}
                     onClick={() => setQIndex((prev) => prev - 1)}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-800/90 text-slate-300 font-bold text-xs disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800/90 text-slate-300 font-bold text-xs disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
                   >
                     <ChevronLeft className="w-4 h-4" /> पिछला
                   </button>
 
                   {qIndex === currentSetQuestions.length - 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => setQuizSubmitted(true)}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      सबमिट करें
-                    </button>
+                    activeTab === "quiz" ? (
+                      <button
+                        type="button"
+                        onClick={() => setQuizSubmitted(true)}
+                        className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
+                      >
+                        सबमिट करें
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setQIndex(0)}
+                        className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        शुरू से अभ्यास करें
+                      </button>
+                    )
                   ) : (
                     <button
                       type="button"
                       onClick={() => setQIndex((prev) => prev + 1)}
-                      className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1 cursor-pointer"
+                      className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
                     >
                       अगला <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
                 </div>
               </div>
+            ) : (
+              <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center text-xs text-slate-400">
+                इस सेट में प्रश्न उपलब्ध नहीं हैं।
+              </div>
             )
           ) : (
-            /* 🏆 100% VISIBLE RESULT & FULL EXPLANATION REVIEW */
+            /* 🏆 RESULTS SCREEN WITH ACCORDION / DROPDOWN */
             <div className="space-y-4 animate-fadeIn">
+
               {/* Score Card */}
               <div className="p-6 rounded-3xl bg-[#0e131f] border border-slate-800 text-center space-y-4 shadow-2xl">
                 <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
@@ -591,86 +570,100 @@ export default function ChapterSingleViewPage() {
                 </div>
               </div>
 
-              {/* 🔍 DETAILED ANSWER & EXPLANATION REVIEW */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-300 px-1">
-                  <span className="flex items-center gap-1 text-purple-400">
-                    <Eye className="w-4 h-4" /> सभी प्रश्नों के सही उत्तर एवं व्याख्या ({currentSetQuestions.length})
-                  </span>
-                </div>
+              {/* 🔻 DROP-DOWN ACCORDION BUTTON FOR ANSWERS & EXPLANATIONS */}
+              <div className="rounded-3xl bg-[#0e131f] border border-slate-800 overflow-hidden shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => setIsOpenReview(!isOpenReview)}
+                  className="w-full p-4 flex items-center justify-between bg-slate-900/90 hover:bg-slate-800/80 transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <HelpCircle className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-bold text-white">
+                      {isOpenReview ? "उत्तर व व्याख्या छिपाएँ" : "🔍 सभी प्रश्नों के उत्तर व व्याख्या देखें"}
+                    </span>
+                  </div>
+                  <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpenReview ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
 
-                {currentSetQuestions.map((q, idx) => {
-                  const userAns = quizAnswers[q.id];
-                  const isCorrect = userAns === q.answer;
-                  const isUnattempted = !userAns;
+                {/* Collapsible Content */}
+                {isOpenReview && (
+                  <div className="p-3.5 space-y-3 divide-y divide-slate-800/40">
+                    {currentSetQuestions.map((q, idx) => {
+                      const userAns = userAnswers[q.id];
+                      const isCorrect = userAns === q.answer;
+                      const isUnattempted = !userAns;
 
-                  return (
-                    <div key={q.id} className="p-4 rounded-3xl bg-[#0e131f] border border-slate-800 space-y-3 shadow-lg">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                          प्रश्न #{idx + 1}
-                        </span>
-                        {isUnattempted ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                            अनुत्तरित (Unattempted)
-                          </span>
-                        ) : isCorrect ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                            <Check className="w-3 h-3" /> सही उत्तर (+1)
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
-                            <X className="w-3 h-3" /> गलत उत्तर (-0.33)
-                          </span>
-                        )}
-                      </div>
-
-                      <FormattedQuestionText text={q.question} />
-
-                      {/* Options with Answer Highlight */}
-                      <div className="space-y-1.5 pt-1">
-                        {[
-                          { key: "A", text: q.option_a },
-                          { key: "B", text: q.option_b },
-                          { key: "C", text: q.option_c },
-                          { key: "D", text: q.option_d }
-                        ].map((opt) => {
-                          let optStyle = "bg-slate-950/40 border-slate-800/80 text-slate-400";
-
-                          if (opt.key === q.answer) {
-                            optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold";
-                          } else if (userAns === opt.key && !isCorrect) {
-                            optStyle = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
-                          }
-
-                          return (
-                            <div key={opt.key} className={`p-2.5 rounded-2xl border text-xs flex items-center justify-between ${optStyle}`}>
-                              <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-md bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-300">
-                                  {opt.key}
-                                </span>
-                                <span>{opt.text}</span>
-                              </div>
-                              {opt.key === q.answer && <span className="text-[10px] text-emerald-400 font-bold">✓ सही उत्तर</span>}
-                              {userAns === opt.key && !isCorrect && <span className="text-[10px] text-rose-400 font-bold">✗ आपका चयन</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Explanation */}
-                      {q.explanation && (
-                        <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
-                          <div className="font-bold flex items-center gap-1 text-indigo-300">
-                            <HelpCircle className="w-3.5 h-3.5" /> व्याख्या (Explanation):
+                      return (
+                        <div key={q.id} className="pt-3 first:pt-0 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                              प्रश्न #{idx + 1}
+                            </span>
+                            {isUnattempted ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                                अनुत्तरित
+                              </span>
+                            ) : isCorrect ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                <Check className="w-3 h-3" /> सही (+1)
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                                <X className="w-3 h-3" /> गलत (-0.33)
+                              </span>
+                            )}
                           </div>
-                          <p className="text-[11px] leading-relaxed whitespace-pre-line text-slate-200">{q.explanation}</p>
+
+                          <FormattedQuestionText text={q.question} />
+
+                          <div className="space-y-1.5 pt-1">
+                            {[
+                              { key: "A", text: q.option_a },
+                              { key: "B", text: q.option_b },
+                              { key: "C", text: q.option_c },
+                              { key: "D", text: q.option_d }
+                            ].map((opt) => {
+                              let optStyle = "bg-slate-950/40 border-slate-800/80 text-slate-400";
+
+                              if (opt.key === q.answer) {
+                                optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold";
+                              } else if (userAns === opt.key && !isCorrect) {
+                                optStyle = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
+                              }
+
+                              return (
+                                <div key={opt.key} className={`p-2.5 rounded-2xl border text-xs flex items-center justify-between ${optStyle}`}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-md bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-300">
+                                      {opt.key}
+                                    </span>
+                                    <span>{opt.text}</span>
+                                  </div>
+                                  {opt.key === q.answer && <span className="text-[10px] text-emerald-400 font-bold">✓ सही उत्तर</span>}
+                                  {userAns === opt.key && !isCorrect && <span className="text-[10px] text-rose-400 font-bold">✗ आपका चयन</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {q.explanation && (
+                            <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
+                              <div className="font-bold flex items-center gap-1 text-indigo-300">
+                                <HelpCircle className="w-3.5 h-3.5" /> व्याख्या (Explanation):
+                              </div>
+                              <p className="text-[11px] leading-relaxed whitespace-pre-line text-slate-200">{q.explanation}</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+
             </div>
           )}
         </section>
