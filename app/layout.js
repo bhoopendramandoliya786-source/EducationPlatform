@@ -5,6 +5,13 @@ import { Home, BookOpen, Sparkles, Trophy, User, Search, Flame } from "lucide-re
 import TelegramBanner from "../components/TelegramBanner";
 import InstallPWA from "../components/InstallPWA";
 
+export const viewport = {
+  themeColor: "#070b14",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata = {
   metadataBase: new URL("https://education-platform-fawn-six.vercel.app"),
   title: {
@@ -13,7 +20,6 @@ export const metadata = {
   },
   description: "RPSC, RSMSSB, CET, REET Mains 2026 हेतु राजस्थान का इतिहास, कला, संस्कृति, भूगोल, अर्थव्यवस्था एवं राजव्यवस्था के टॉपिकवाइज़ 100 PYQ, 50 MCQ व स्मार्ट नोट्स।",
   manifest: "/manifest.json",
-  themeColor: "#070b14",
   keywords: [
     "Rajasthan GK in Hindi",
     "Disha 2020 Rajasthan GK",
@@ -63,17 +69,18 @@ export default function RootLayout({ children }) {
   return (
     <html lang="hi" className="dark">
       <head>
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <Script
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           src="https://www.googletagmanager.com/gtag/js?id=G-9DVDLMZYJM"
         />
         <Script
           id="google-analytics"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         >
           {`
             window.dataLayer = window.dataLayer || [];
@@ -89,7 +96,7 @@ export default function RootLayout({ children }) {
 
         {/* Modern Compact Header */}
         <header className="sticky top-0 z-40 bg-[#070b14]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between gap-2.5">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0 group">
+          <Link href="/" aria-label="EduAI Pro होमपेज पर जाएँ" className="flex items-center gap-2 flex-shrink-0 group">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black text-white text-sm shadow-md shadow-indigo-500/30 group-hover:scale-105 transition">
               E
             </div>
@@ -101,6 +108,7 @@ export default function RootLayout({ children }) {
 
           <Link
             href="/search"
+            aria-label="विषय या अध्याय खोजें"
             className="flex-1 max-w-xs flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400 hover:border-slate-700 transition"
           >
             <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
@@ -108,7 +116,7 @@ export default function RootLayout({ children }) {
           </Link>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
+            <div aria-label="डेली स्ट्रीक स्कोर 12 दिन" className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
               <Flame className="w-3.5 h-3.5 fill-current" />
               <span>12</span>
             </div>
@@ -119,39 +127,38 @@ export default function RootLayout({ children }) {
         <InstallPWA />
 
         {/* Main Body Content */}
-        <main className="flex-1 pb-28 pt-2">
+        <div className="flex-1 pb-28 pt-2">
           {children}
-        </main>
+        </div>
 
         {/* Telegram Banner */}
         <TelegramBanner />
 
-        {/* 5 Bottom Nav Items (Home, Notes, AI Tutor, Tests, Profile) */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around shadow-2xl">
-          <Link href="/" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
+        {/* 5 Bottom Nav Items */}
+        <nav aria-label="मुख्य नेविगेशन बार" className="fixed bottom-0 left-0 right-0 z-40 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around shadow-2xl">
+          <Link href="/" aria-label="होम पेज" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Home className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">होम</span>
           </Link>
 
-          <Link href="/notes" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
+          <Link href="/notes" aria-label="स्मार्ट नोट्स पेज" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <BookOpen className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">नोट्स</span>
           </Link>
 
-          {/* AI Tutor - Direct Public Chat (No Login) */}
-          <Link href="/ai-tutor" className="flex items-center flex-col -mt-5 group active:scale-95 transition">
+          <Link href="/ai-tutor" aria-label="AI ट्यूटर चैट" className="flex items-center flex-col -mt-5 group active:scale-95 transition">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 group-hover:scale-105 transition">
               <Sparkles className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-bold text-indigo-400 mt-0.5">AI ट्यूटर</span>
           </Link>
 
-          <Link href="/quiz" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
+          <Link href="/quiz" aria-label="टेस्ट और क्विज़ पेज" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Trophy className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">टेस्ट</span>
           </Link>
 
-          <Link href="/student" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
+          <Link href="/student" aria-label="यूज़र प्रोफाइल पेज" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <User className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">प्रोफाइल</span>
           </Link>

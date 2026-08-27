@@ -1,7 +1,8 @@
 "use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Sparkles, Send, ArrowLeft, Bot, User, BookOpen, Flame } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Bot, User } from "lucide-react";
 
 export default function AITutorPage() {
   const [messages, setMessages] = useState([
@@ -48,10 +49,7 @@ export default function AITutorPage() {
           ...prev,
           {
             role: "assistant",
-            text: `${userMessage} से संबंधित मुख्य परीक्षा बिंदु:
-
-• यह राजस्थान प्रतियोगी परीक्षाओं (RAS/REET/CET) के लिए महत्वपूर्ण टॉपिक है।
-• कृपया विस्तृत जानकारी के लिए होमपेज पर संबंधित विषय के स्मार्ट नोट्स देखें।`
+            text: `${userMessage} से संबंधित मुख्य परीक्षा बिंदु:\n\n• यह राजस्थान प्रतियोगी परीक्षाओं (RAS/REET/CET) के लिए महत्वपूर्ण टॉपिक है।\n• कृपया विस्तृत जानकारी के लिए होमपेज पर संबंधित विषय के स्मार्ट नोट्स देखें।`
           }
         ]);
       }
@@ -60,9 +58,7 @@ export default function AITutorPage() {
         ...prev,
         {
           role: "assistant",
-          text: `${userMessage} का मुख्य सारांश:
-
-यह टॉपिक परीक्षा में बार-बार पूछा जाता है। इस विषय के सभी अध्यायों और 50 MCQs के लिए होमपेज से विषय सूची देखें।`
+          text: `${userMessage} का मुख्य सारांश:\n\nयह टॉपिक परीक्षा में बार-बार पूछा जाता है। इस विषय के सभी अध्यायों और 50 MCQs के लिए होमपेज से विषय सूची देखें।`
         }
       ]);
     } finally {
@@ -71,10 +67,14 @@ export default function AITutorPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 flex flex-col h-[calc(100vh-135px)] justify-between space-y-3">
+    <main className="max-w-md mx-auto px-4 flex flex-col h-[calc(100vh-140px)] justify-between space-y-3 pb-2 font-sans select-none">
       {/* Top Breadcrumb */}
       <div className="flex items-center justify-between pt-1">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+        <Link 
+          href="/" 
+          aria-label="होमपेज पर वापस जाएँ"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300"
+        >
           <ArrowLeft className="w-3.5 h-3.5" /> होम
         </Link>
         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-1">
@@ -83,19 +83,25 @@ export default function AITutorPage() {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+      <section 
+        aria-label="AI चैट वार्तालाप" 
+        className="flex-1 overflow-y-auto space-y-3 pr-1"
+      >
         {messages.map((m, idx) => (
           <div
             key={idx}
             className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}
           >
             {m.role === "assistant" && (
-              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-md shadow-indigo-500/30">
+              <div 
+                aria-hidden="true" 
+                className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-md shadow-indigo-500/30"
+              >
                 <Bot className="w-4 h-4" />
               </div>
             )}
             <div
-              className={`p-4 rounded-3xl text-xs leading-relaxed max-w-[85%] whitespace-pre-line shadow-sm ${
+              className={`p-3.5 sm:p-4 rounded-3xl text-xs leading-relaxed max-w-[85%] whitespace-pre-line shadow-sm break-words ${
                 m.role === "user"
                   ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-none"
                   : "bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none"
@@ -104,7 +110,10 @@ export default function AITutorPage() {
               {m.text}
             </div>
             {m.role === "user" && (
-              <div className="w-7 h-7 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 flex-shrink-0 mt-0.5">
+              <div 
+                aria-hidden="true" 
+                className="w-7 h-7 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 flex-shrink-0 mt-0.5"
+              >
                 <User className="w-4 h-4" />
               </div>
             )}
@@ -119,26 +128,33 @@ export default function AITutorPage() {
           </div>
         )}
         <div ref={chatEndRef} />
-      </div>
+      </section>
 
       {/* Input Bar */}
-      <div className="pt-2 flex gap-2">
+      <form 
+        onSubmit={(e) => { e.preventDefault(); handleSend(); }} 
+        className="pt-2 flex gap-2 items-center"
+      >
+        <label htmlFor="doubt-input" className="sr-only">
+          अपना सवाल या डाउट लिखें
+        </label>
         <input
+          id="doubt-input"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="डाउट या सवाल यहाँ लिखें (उदा. 1857 की क्रांति के कारण)..."
-          className="flex-1 px-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 shadow-inner"
+          className="flex-1 px-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 shadow-inner transition"
         />
         <button
-          onClick={handleSend}
+          type="submit"
           disabled={!input.trim() || loading}
-          className="px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold active:scale-95 disabled:opacity-50 transition shadow-lg shadow-indigo-500/25 flex items-center justify-center"
+          aria-label="सवाल भेजें"
+          className="px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold active:scale-95 disabled:opacity-50 transition shadow-lg shadow-indigo-500/25 flex items-center justify-center cursor-pointer flex-shrink-0"
         >
           <Send className="w-4 h-4" />
         </button>
-      </div>
-    </div>
+      </form>
+    </main>
   );
 }
