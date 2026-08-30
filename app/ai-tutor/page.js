@@ -14,36 +14,26 @@ import {
   Send,
   Sparkles,
   User,
-  Image as ImageIcon,
 } from "lucide-react";
 
-/* -------------------------------------------------------
+/* =======================================================
    QUIZ CARD
-------------------------------------------------------- */
+======================================================= */
 
 function QuizCard({ quiz }) {
   const [selected, setSelected] = useState({});
-  const [submitted, setSubmitted] =
-    useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const questions = Array.isArray(
-    quiz?.questions
-  )
-    ? quiz.questions
+  const questions = Array.isArray(quiz?.questions)
+    ? quiz.questions.slice(0, 20)
     : [];
 
-  const score = questions.reduce(
-    (total, q) => {
-      return (
-        total +
-        (selected[q.id] ===
-        q.correctIndex
-          ? 1
-          : 0)
-      );
-    },
-    0
-  );
+  const score = questions.reduce((total, q) => {
+    return (
+      total +
+      (selected[q.id] === q.correctIndex ? 1 : 0)
+    );
+  }, 0);
 
   if (!questions.length) {
     return (
@@ -53,37 +43,54 @@ function QuizCard({ quiz }) {
     );
   }
 
+  const answeredCount = Object.keys(selected).length;
+
   return (
     <div className="space-y-4">
-      <div className="text-base font-bold text-white">
-        {quiz.quiz_title ||
-          "📝 EduAI Quiz"}
-      </div>
+      {/* Quiz Header */}
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 p-4">
+        <div className="text-base font-bold text-white">
+          {quiz.quiz_title || "📝 EduAI Quiz"}
+        </div>
 
-      <div className="text-xs text-slate-400">
-        कुल {questions.length} प्रश्न
-      </div>
+        <div className="text-xs text-slate-400 mt-1">
+          कुल {questions.length} प्रश्न
+        </div>
 
-      {questions.map((q, index) => (
-        <div
-          key={q.id || index}
-          className="
-            rounded-2xl
-            bg-slate-950/80
-            border
-            border-slate-700
-            p-3
-          "
-        >
-          <div className="text-sm font-semibold text-slate-100 mb-3">
-            {index + 1}. {q.question}
+        {!submitted && (
+          <div className="text-xs text-indigo-300 mt-2">
+            चुने गए उत्तर: {answeredCount}/{questions.length}
           </div>
+        )}
+      </div>
 
-          <div className="space-y-2">
-            {(q.options || []).map(
-              (option, optionIndex) => {
+      {/* Questions */}
+      {questions.map((q, index) => {
+        const questionId =
+          q.id ?? index;
+
+        return (
+          <div
+            key={questionId}
+            className="
+              rounded-2xl
+              bg-slate-950/90
+              border
+              border-slate-700
+              p-3
+            "
+          >
+            <div className="text-sm font-semibold text-slate-100 mb-3 leading-relaxed">
+              {index + 1}. {q.question}
+            </div>
+
+            <div className="space-y-2">
+              {(Array.isArray(q.options)
+                ? q.options
+                : []
+              ).map((option, optionIndex) => {
                 const isSelected =
-                  selected[q.id] ===
+                  selected[questionId] ===
                   optionIndex;
 
                 const isCorrect =
@@ -103,13 +110,11 @@ function QuizCard({ quiz }) {
                     type="button"
                     disabled={submitted}
                     onClick={() =>
-                      setSelected(
-                        (prev) => ({
-                          ...prev,
-                          [q.id]:
-                            optionIndex,
-                        })
-                      )
+                      setSelected((prev) => ({
+                        ...prev,
+                        [questionId]:
+                          optionIndex,
+                      }))
                     }
                     className={`
                       w-full
@@ -130,40 +135,45 @@ function QuizCard({ quiz }) {
                       }
                     `}
                   >
-                    {String.fromCharCode(
-                      65 + optionIndex
-                    )}
-                    . {option}
+                    <span className="font-bold mr-1">
+                      {String.fromCharCode(
+                        65 + optionIndex
+                      )}.
+                    </span>
+
+                    {option}
                   </button>
                 );
-              }
-            )}
-          </div>
+              })}
+            </div>
 
-          {submitted &&
-            q.explanation && (
+            {/* Explanation */}
+            {submitted && q.explanation && (
               <div
                 className="
                   mt-3
                   rounded-xl
                   bg-slate-900
+                  border
+                  border-slate-800
                   p-3
                   text-xs
                   text-slate-400
+                  leading-relaxed
                 "
               >
                 💡 {q.explanation}
               </div>
             )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
 
+      {/* Submit / Score */}
       {!submitted ? (
         <button
           type="button"
-          onClick={() =>
-            setSubmitted(true)
-          }
+          onClick={() => setSubmitted(true)}
           className="
             w-full
             py-3
@@ -173,6 +183,10 @@ function QuizCard({ quiz }) {
             to-purple-600
             text-white
             font-bold
+            shadow-lg
+            shadow-indigo-500/20
+            active:scale-[0.98]
+            transition
           "
         >
           ✅ उत्तर जमा करें
@@ -180,39 +194,58 @@ function QuizCard({ quiz }) {
       ) : (
         <div
           className="
-            text-center
-            p-4
-            rounded-xl
-            bg-indigo-500/10
+            rounded-2xl
+            bg-gradient-to-r
+            from-indigo-500/10
+            to-purple-500/10
             border
             border-indigo-500/20
-            text-indigo-300
-            font-bold
+            p-4
+            text-center
           "
         >
-          🎯 आपका स्कोर:{" "}
-          {score}/{questions.length}
+          <div className="text-lg font-black text-white">
+            🎯 आपका स्कोर
+          </div>
+
+          <div className="text-2xl font-black text-indigo-300 mt-1">
+            {score}/{questions.length}
+          </div>
+
+          <div className="text-xs text-slate-400 mt-1">
+            {score === questions.length
+              ? "🔥 शानदार! सभी उत्तर सही हैं।"
+              : score >=
+                Math.ceil(
+                  questions.length * 0.7
+                )
+              ? "👏 बहुत बढ़िया!"
+              : "💪 अभ्यास करते रहें, अगली बार और बेहतर होगा।"}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-/* -------------------------------------------------------
+/* =======================================================
    MESSAGE CONTENT
-------------------------------------------------------- */
+   - Normal text
+   - Markdown image
+   - Direct image URL
+======================================================= */
 
-function MessageContent({
-  text,
-  image,
-}) {
+function MessageContent({ text, image }) {
+  /* Direct image */
   if (image) {
     return (
       <div className="space-y-3">
         <img
           src={image}
           alt="EduAI Generated Image"
+          loading="lazy"
           className="
+            block
             w-full
             max-w-xl
             mx-auto
@@ -222,11 +255,14 @@ function MessageContent({
             shadow-lg
             object-contain
           "
-          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display =
+              "none";
+          }}
         />
 
         {text && (
-          <div className="text-xs text-slate-400">
+          <div className="whitespace-pre-wrap break-words text-xs text-slate-400">
             {text}
           </div>
         )}
@@ -239,13 +275,12 @@ function MessageContent({
   }
 
   /*
-    Backend अगर Markdown image भेजे:
-    ![alt](url)
-    तो उसे सीधे image में बदलेंगे।
+    Markdown image:
+    ![alt](https://example.com/image.jpg)
   */
 
   const imageRegex =
-    /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
+    /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
   const parts = [];
   let lastIndex = 0;
@@ -255,11 +290,10 @@ function MessageContent({
     (match = imageRegex.exec(text)) !==
     null
   ) {
-    const before =
-      text.slice(
-        lastIndex,
-        match.index
-      );
+    const before = text.slice(
+      lastIndex,
+      match.index
+    );
 
     if (before) {
       parts.push({
@@ -301,25 +335,34 @@ function MessageContent({
       {parts.map((part, index) => {
         if (part.type === "image") {
           return (
-            <img
+            <div
               key={index}
-              src={part.url}
-              alt={
-                part.alt ||
-                "EduAI Generated Image"
-              }
-              loading="lazy"
-              className="
-                w-full
-                max-w-xl
-                mx-auto
-                rounded-2xl
-                border
-                border-slate-700
-                shadow-lg
-                object-contain
-              "
-            />
+              className="space-y-2"
+            >
+              <img
+                src={part.url}
+                alt={
+                  part.alt ||
+                  "EduAI Generated Image"
+                }
+                loading="lazy"
+                className="
+                  block
+                  w-full
+                  max-w-xl
+                  mx-auto
+                  rounded-2xl
+                  border
+                  border-slate-700
+                  shadow-lg
+                  object-contain
+                "
+                onError={(e) => {
+                  e.currentTarget.style.display =
+                    "none";
+                }}
+              />
+            </div>
           );
         }
 
@@ -339,9 +382,9 @@ function MessageContent({
   );
 }
 
-/* -------------------------------------------------------
-   MAIN PAGE
-------------------------------------------------------- */
+/* =======================================================
+   MAIN AI TUTOR PAGE
+======================================================= */
 
 export default function AITutorPage() {
   const [messages, setMessages] =
@@ -349,7 +392,7 @@ export default function AITutorPage() {
       {
         role: "assistant",
         text:
-          "नमस्ते! 👋\n\nमैं EduAI हूँ। आप मुझसे किसी भी विषय, सवाल, पढ़ाई, गणित, विज्ञान, इतिहास, तकनीक या सामान्य जानकारी के बारे में पूछ सकते हैं।\n\nआप अपना सवाल नीचे लिखिए।",
+          "नमस्ते! 👋\n\nमैं EduAI हूँ। आप मुझसे किसी भी विषय, सवाल, पढ़ाई, गणित, विज्ञान, इतिहास, तकनीक, सामान्य ज्ञान या रोज़मर्रा की जानकारी के बारे में पूछ सकते हैं।\n\n📝 Quiz चाहिए तो बोलिए: \"भारत पर quiz बनाओ\"\n🖼️ Image चाहिए तो बोलिए: \"राजस्थान का किला बनाओ\"\n\nअपना सवाल नीचे लिखिए।",
       },
     ]);
 
@@ -365,11 +408,20 @@ export default function AITutorPage() {
   const inputRef =
     useRef(null);
 
+  /* ---------------------------------------------------
+     AUTO SCROLL
+  --------------------------------------------------- */
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth",
+      block: "end",
     });
   }, [messages, loading]);
+
+  /* ---------------------------------------------------
+     INPUT FOCUS
+  --------------------------------------------------- */
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -379,6 +431,10 @@ export default function AITutorPage() {
     return () =>
       clearTimeout(timer);
   }, []);
+
+  /* ---------------------------------------------------
+     ADD MESSAGE
+  --------------------------------------------------- */
 
   const addMessage = (
     role,
@@ -396,7 +452,7 @@ export default function AITutorPage() {
   };
 
   /* ---------------------------------------------------
-     SEND
+     SEND MESSAGE
   --------------------------------------------------- */
 
   const handleSend = async (e) => {
@@ -412,8 +468,10 @@ export default function AITutorPage() {
       return;
     }
 
+    /* Clear input */
     setInput("");
 
+    /* Show user message immediately */
     addMessage(
       "user",
       question
@@ -427,10 +485,15 @@ export default function AITutorPage() {
           .slice(-8)
           .map((message) => ({
             role:
-              message.role,
+              message.role ===
+              "user"
+                ? "user"
+                : "assistant",
             text:
-              message.text ||
-              "",
+              typeof message.text ===
+              "string"
+                ? message.text
+                : "",
           }));
 
       const res =
@@ -438,10 +501,12 @@ export default function AITutorPage() {
           "/api/doubt",
           {
             method: "POST",
+
             headers: {
               "Content-Type":
                 "application/json",
             },
+
             body: JSON.stringify({
               question,
               messagesHistory:
@@ -460,11 +525,16 @@ export default function AITutorPage() {
         );
       }
 
-      /* QUIZ */
+      /* ------------------------------------------------
+         QUIZ RESPONSE
+      ------------------------------------------------ */
 
       if (
-        data?.quiz?.questions
-          ?.length
+        data?.quiz &&
+        Array.isArray(
+          data.quiz.questions
+        ) &&
+        data.quiz.questions.length
       ) {
         addMessage(
           "assistant",
@@ -478,12 +548,14 @@ export default function AITutorPage() {
         return;
       }
 
-      /* IMAGE */
+      /* ------------------------------------------------
+         IMAGE RESPONSE
+      ------------------------------------------------ */
 
       if (data?.image) {
         addMessage(
           "assistant",
-          "",
+          data?.answer || "",
           {
             image:
               data.image,
@@ -493,9 +565,15 @@ export default function AITutorPage() {
         return;
       }
 
-      /* NORMAL */
+      /* ------------------------------------------------
+         NORMAL RESPONSE
+      ------------------------------------------------ */
 
-      if (data?.answer) {
+      if (
+        typeof data?.answer ===
+          "string" &&
+        data.answer.trim()
+      ) {
         addMessage(
           "assistant",
           data.answer
@@ -526,6 +604,10 @@ export default function AITutorPage() {
     }
   };
 
+  /* =====================================================
+     UI
+  ===================================================== */
+
   return (
     <main
       className="
@@ -536,7 +618,9 @@ export default function AITutorPage() {
         flex-col
       "
     >
-      {/* HEADER */}
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
       <header
         className="
@@ -553,6 +637,7 @@ export default function AITutorPage() {
           border-slate-800
           bg-slate-950/95
           backdrop-blur-md
+          shrink-0
         "
       >
         <Link
@@ -564,6 +649,8 @@ export default function AITutorPage() {
             text-sm
             text-slate-300
             hover:text-white
+            active:scale-95
+            transition
           "
         >
           <ArrowLeft className="w-4 h-4" />
@@ -582,6 +669,8 @@ export default function AITutorPage() {
               flex
               items-center
               justify-center
+              shadow-lg
+              shadow-indigo-500/20
             "
           >
             <Sparkles className="w-5 h-5" />
@@ -599,21 +688,30 @@ export default function AITutorPage() {
         </div>
       </header>
 
-      {/* CHAT */}
+      {/* =================================================
+          CHAT AREA
+      ================================================= */}
 
       <section
         aria-label="AI चैट"
         className="
           flex-1
+          min-h-0
           overflow-y-auto
           py-4
           px-3
           sm:px-4
-          space-y-4
-          pb-40
+          pb-48
+          overscroll-contain
         "
       >
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div
+          className="
+            max-w-3xl
+            mx-auto
+            space-y-4
+          "
+        >
           {messages.map(
             (message, index) => {
               const isUser =
@@ -626,6 +724,7 @@ export default function AITutorPage() {
                   className={`
                     flex
                     gap-2
+                    items-end
                     ${
                       isUser
                         ? "justify-end"
@@ -633,6 +732,7 @@ export default function AITutorPage() {
                     }
                   `}
                 >
+                  {/* AI ICON */}
                   {!isUser && (
                     <div
                       className="
@@ -646,12 +746,14 @@ export default function AITutorPage() {
                         flex
                         items-center
                         justify-center
+                        shadow-md
                       "
                     >
                       <Bot className="w-4 h-4" />
                     </div>
                   )}
 
+                  {/* MESSAGE */}
                   <div
                     className={`
                       max-w-[90%]
@@ -659,10 +761,11 @@ export default function AITutorPage() {
                       p-3.5
                       text-sm
                       leading-relaxed
+                      shadow-sm
                       ${
                         isUser
-                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 rounded-br-sm"
-                          : "bg-slate-900 border border-slate-800 rounded-bl-sm"
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-sm"
+                          : "bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-sm"
                       }
                     `}
                   >
@@ -684,6 +787,7 @@ export default function AITutorPage() {
                     )}
                   </div>
 
+                  {/* USER ICON */}
                   {isUser && (
                     <div
                       className="
@@ -707,12 +811,14 @@ export default function AITutorPage() {
             }
           )}
 
+          {/* LOADING */}
           {loading && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-end gap-2">
               <div
                 className="
                   w-8
                   h-8
+                  shrink-0
                   rounded-xl
                   bg-indigo-600/20
                   flex
@@ -740,11 +846,18 @@ export default function AITutorPage() {
             </div>
           )}
 
-          <div ref={chatEndRef} />
+          {/* Scroll target */}
+          <div
+            ref={chatEndRef}
+            className="h-1"
+          />
         </div>
       </section>
 
-      {/* INPUT */}
+      {/* =================================================
+          FIXED INPUT
+          Chat के नीचे पर्याप्त padding ऊपर रखी गई है
+      ================================================= */}
 
       <div
         className="
@@ -752,19 +865,22 @@ export default function AITutorPage() {
           left-0
           right-0
           bottom-0
-          z-50
+          z-[60]
           px-3
           pb-3
           pt-2
           bg-slate-950/95
-          backdrop-blur-md
+          backdrop-blur-xl
           border-t
           border-slate-900
         "
       >
         <form
           onSubmit={handleSend}
-          className="max-w-3xl mx-auto"
+          className="
+            max-w-3xl
+            mx-auto
+          "
         >
           <div
             className="
@@ -777,6 +893,7 @@ export default function AITutorPage() {
               border
               border-slate-700
               shadow-2xl
+              shadow-black/30
             "
           >
             <input
@@ -827,6 +944,8 @@ export default function AITutorPage() {
                 disabled:opacity-40
                 active:scale-95
                 transition
+                shadow-lg
+                shadow-indigo-500/20
               "
             >
               <Send className="w-4 h-4" />
