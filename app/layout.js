@@ -5,6 +5,7 @@ import { Search, Flame } from "lucide-react";
 import TelegramBanner from "../components/TelegramBanner";
 import InstallPWA from "../components/InstallPWA";
 import BottomNavigation from "../components/BottomNavigation";
+import Footer from "../components/Footer";
 
 export const viewport = {
   themeColor: "#070b14",
@@ -134,6 +135,7 @@ export default function RootLayout({ children }) {
         <TelegramBanner />
 
         {/* Bottom Navigation */}
+        <Footer />
         <BottomNavigation />
       </body>
     </html>
