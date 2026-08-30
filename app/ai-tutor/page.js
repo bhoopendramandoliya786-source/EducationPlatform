@@ -162,7 +162,6 @@ export default function AITutorPage() {
     if (!question || loading) return;
 
     setInput("");
-
     addMessage("user", question);
     setLoading(true);
 
@@ -197,7 +196,6 @@ export default function AITutorPage() {
         addMessage("assistant", "", {
           quiz: data.quiz,
         });
-
         return;
       }
 
@@ -235,6 +233,7 @@ export default function AITutorPage() {
 
   return (
     <main
+      data-page="ai-tutor"
       className="
         min-h-[calc(100vh-80px)]
         max-w-3xl
@@ -243,7 +242,6 @@ export default function AITutorPage() {
         sm:px-4
         flex
         flex-col
-        pb-28
       "
     >
       {/* Header */}
@@ -257,20 +255,7 @@ export default function AITutorPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <div
-            className="
-              w-9 h-9
-              rounded-xl
-              bg-gradient-to-br
-              from-indigo-500
-              to-purple-600
-              flex
-              items-center
-              justify-center
-              shadow-lg
-              shadow-indigo-500/20
-            "
-          >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
 
@@ -306,46 +291,21 @@ export default function AITutorPage() {
             <div
               key={index}
               className={`flex gap-2 ${
-                isUser
-                  ? "justify-end"
-                  : "justify-start"
+                isUser ? "justify-end" : "justify-start"
               }`}
             >
-              {/* AI Icon */}
               {!isUser && (
-                <div
-                  className="
-                    w-8 h-8
-                    shrink-0
-                    rounded-xl
-                    bg-gradient-to-br
-                    from-indigo-600
-                    to-purple-600
-                    flex
-                    items-center
-                    justify-center
-                    shadow-md
-                  "
-                >
+                <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
               )}
 
-              {/* Message */}
               <div
-                className={`
-                  max-w-[88%]
-                  rounded-2xl
-                  p-3.5
-                  text-sm
-                  leading-relaxed
-                  shadow-sm
-                  ${
-                    isUser
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-sm"
-                      : "bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-sm"
-                  }
-                `}
+                className={`max-w-[88%] rounded-2xl p-3.5 text-sm leading-relaxed shadow-sm ${
+                  isUser
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-sm"
+                    : "bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-sm"
+                }`}
               >
                 {message.quiz ? (
                   <QuizCard quiz={message.quiz} />
@@ -354,21 +314,8 @@ export default function AITutorPage() {
                 )}
               </div>
 
-              {/* User Icon */}
               {isUser && (
-                <div
-                  className="
-                    w-8 h-8
-                    shrink-0
-                    rounded-xl
-                    bg-slate-800
-                    border
-                    border-slate-700
-                    flex
-                    items-center
-                    justify-center
-                  "
-                >
+                <div className="w-8 h-8 shrink-0 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
                   <User className="w-4 h-4 text-indigo-400" />
                 </div>
               )}
@@ -376,34 +323,13 @@ export default function AITutorPage() {
           );
         })}
 
-        {/* Loading */}
         {loading && (
           <div className="flex items-center gap-2">
-            <div
-              className="
-                w-8 h-8
-                rounded-xl
-                bg-indigo-600/20
-                flex
-                items-center
-                justify-center
-              "
-            >
+            <div className="w-8 h-8 rounded-xl bg-indigo-600/20 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
             </div>
 
-            <div
-              className="
-                px-4
-                py-3
-                rounded-2xl
-                bg-slate-900
-                border
-                border-slate-800
-                text-sm
-                text-slate-400
-              "
-            >
+            <div className="px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-slate-400">
               AI सोच रहा है...
             </div>
           </div>
@@ -413,79 +339,26 @@ export default function AITutorPage() {
       </section>
 
       {/* Input Area */}
-      <div
-        className="
-          sticky
-          bottom-0
-          z-30
-          pt-2
-          pb-3
-          bg-slate-950
-        "
-      >
+      <div className="sticky bottom-0 z-30 pt-2 pb-3 bg-slate-950">
         <form onSubmit={handleSend}>
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-              p-2
-              rounded-2xl
-              bg-slate-900
-              border
-              border-slate-700
-              shadow-2xl
-              shadow-black/30
-            "
-          >
+          <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl shadow-black/30">
             <input
               ref={inputRef}
               type="text"
               value={input}
-              onChange={(e) =>
-                setInput(e.target.value)
-              }
+              onChange={(e) => setInput(e.target.value)}
               disabled={loading}
               autoComplete="off"
               enterKeyHint="send"
               placeholder="कुछ भी पूछिए..."
-              className="
-                flex-1
-                min-w-0
-                h-11
-                bg-transparent
-                px-3
-                text-sm
-                text-white
-                placeholder:text-slate-500
-                outline-none
-              "
+              className="flex-1 min-w-0 h-11 bg-transparent px-3 text-sm text-white placeholder:text-slate-500 outline-none"
             />
 
             <button
               type="submit"
-              disabled={
-                !input.trim() || loading
-              }
+              disabled={!input.trim() || loading}
               aria-label="सवाल भेजें"
-              className="
-                w-11
-                h-11
-                shrink-0
-                rounded-xl
-                bg-gradient-to-r
-                from-indigo-600
-                to-purple-600
-                text-white
-                flex
-                items-center
-                justify-center
-                disabled:opacity-40
-                active:scale-95
-                transition
-                shadow-lg
-                shadow-indigo-500/20
-              "
+              className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition shadow-lg shadow-indigo-500/20"
             >
               <Send className="w-4 h-4" />
             </button>

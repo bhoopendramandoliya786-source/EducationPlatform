@@ -77,4 +77,7 @@ a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}/* AI Tutor page पर bottom navigation hide करें */
+body:has(main[data-page="ai-tutor"]) .bottom-navigation {
+  display: none !important;
 }

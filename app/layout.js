@@ -133,7 +133,10 @@ export default function RootLayout({ children }) {
         <TelegramBanner />
 
         {/* 5 Bottom Nav Items */}
-        <nav aria-label="मुख्य नेविगेशन बार" className="fixed bottom-0 left-0 right-0 z-40 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around shadow-2xl">
+        <nav
+  aria-label="मुख्य नेविगेशन बार"
+  className="bottom-navigation fixed bottom-0 left-0 right-0 z-40 bg-[#090e1a]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 flex items-center justify-around shadow-2xl"
+>
           <Link href="/" aria-label="होम पेज" className="flex items-center flex-col text-slate-400 hover:text-indigo-400 active:scale-95 transition">
             <Home className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">होम</span>
