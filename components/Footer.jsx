@@ -10,10 +10,11 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="border-t border-slate-800 bg-[#070b14] px-4 pt-8 pb-56">
+    <footer className="border-t border-slate-800 bg-[#070b14] px-4 pt-8 pb-36">
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
           <h2 className="text-lg font-black text-white">EduAI Pro</h2>
+
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">
             राजस्थान की प्रतियोगी परीक्षाओं की बेहतर तैयारी के लिए नोट्स,
             प्रश्न, PYQ और अभ्यास सामग्री।
