@@ -413,88 +413,16 @@ export default function AITutorPage() {
       </section>
 
       {/* Input Area */}
-<div
-  className="
-    fixed
-    left-0
-    right-0
-    bottom-[72px]
-    z-[60]
-    px-3
-    pb-2
-    bg-slate-950/95
-    backdrop-blur-md
-  "
->
-  <form
-    onSubmit={handleSend}
-    className="max-w-3xl mx-auto"
-  >
-    <div
-      className="
-        flex
-        items-center
-        gap-2
-        p-2
-        rounded-2xl
-        bg-slate-900
-        border
-        border-slate-700
-        shadow-2xl
-      "
-    >
-      <input
-        ref={inputRef}
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        disabled={loading}
-        autoComplete="off"
-        enterKeyHint="send"
-        placeholder="कुछ भी पूछिए..."
+      <div
         className="
-          flex-1
-          min-w-0
-          h-11
-          bg-transparent
-          px-3
-          text-sm
-          text-white
-          placeholder:text-slate-500
-          outline-none
-        "
-      />
-
-      <button
-        type="submit"
-        disabled={!input.trim() || loading}
-        aria-label="सवाल भेजें"
-        className="
-          w-11
-          h-11
-          shrink-0
-          rounded-xl
-          bg-gradient-to-r
-          from-indigo-600
-          to-purple-600
-          text-white
-          flex
-          items-center
-          justify-center
-          disabled:opacity-40
-          active:scale-95
-          transition
+          sticky
+          bottom-0
+          z-30
+          pt-2
+          pb-3
+          bg-slate-950
         "
       >
-        <Send className="w-4 h-4" />
-      </button>
-    </div>
-
-    <div className="text-center text-[10px] text-slate-600 mt-1">
-      EduAI • किसी भी विषय पर सवाल पूछिए
-    </div>
-  </form>
-</div>
         <form onSubmit={handleSend}>
           <div
             className="
