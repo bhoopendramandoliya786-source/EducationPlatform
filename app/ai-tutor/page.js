@@ -1,28 +1,46 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import Link from "next/link";
+
 import {
   ArrowLeft,
   Bot,
   Send,
   Sparkles,
   User,
+  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
+
+/* =======================================================
+   QUIZ CARD
+======================================================= */
 
 function QuizCard({ quiz }) {
   const [selected, setSelected] = useState({});
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] =
+    useState(false);
 
-  const questions = Array.isArray(quiz?.questions)
+  const questions = Array.isArray(
+    quiz?.questions
+  )
     ? quiz.questions
     : [];
 
-  const score = questions.reduce((total, q) => {
-    return total + (
-      selected[q.id] === q.correctIndex ? 1 : 0
-    );
-  }, 0);
+  const score = questions.reduce(
+    (total, q) =>
+      total +
+      (selected[q.id] === q.correctIndex
+        ? 1
+        : 0),
+    0
+  );
 
   if (!questions.length) {
     return (
@@ -35,7 +53,7 @@ function QuizCard({ quiz }) {
   return (
     <div className="space-y-4">
       <div className="text-base font-bold text-white">
-        {quiz.quiz_title || "📝 Quiz"}
+        {quiz.quiz_title || "📝 EduAI Quiz"}
       </div>
 
       {questions.map((q, index) => (
@@ -48,86 +66,113 @@ function QuizCard({ quiz }) {
           </div>
 
           <div className="space-y-2">
-            {(q.options || []).map((option, optionIndex) => {
-              const isSelected =
-                selected[q.id] === optionIndex;
+            {(q.options || []).map(
+              (option, optionIndex) => {
+                const isSelected =
+                  selected[q.id] ===
+                  optionIndex;
 
-              const isCorrect =
-                submitted &&
-                optionIndex === q.correctIndex;
+                const isCorrect =
+                  submitted &&
+                  optionIndex ===
+                    q.correctIndex;
 
-              const isWrong =
-                submitted &&
-                isSelected &&
-                optionIndex !== q.correctIndex;
+                const isWrong =
+                  submitted &&
+                  isSelected &&
+                  optionIndex !==
+                    q.correctIndex;
 
-              return (
-                <button
-                  key={optionIndex}
-                  type="button"
-                  disabled={submitted}
-                  onClick={() =>
-                    setSelected((prev) => ({
-                      ...prev,
-                      [q.id]: optionIndex,
-                    }))
-                  }
-                  className={`w-full text-left p-3 rounded-xl border text-sm transition ${
-                    isCorrect
-                      ? "bg-green-500/20 border-green-500 text-green-300"
-                      : isWrong
-                      ? "bg-red-500/20 border-red-500 text-red-300"
-                      : isSelected
-                      ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
-                      : "bg-slate-900 border-slate-700 text-slate-300 hover:border-indigo-500"
-                  }`}
-                >
-                  {String.fromCharCode(65 + optionIndex)}.{" "}
-                  {option}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={optionIndex}
+                    type="button"
+                    disabled={submitted}
+                    onClick={() =>
+                      setSelected((prev) => ({
+                        ...prev,
+                        [q.id]:
+                          optionIndex,
+                      }))
+                    }
+                    className={`w-full text-left p-3 rounded-xl border text-sm transition ${
+                      isCorrect
+                        ? "bg-green-500/20 border-green-500 text-green-300"
+                        : isWrong
+                        ? "bg-red-500/20 border-red-500 text-red-300"
+                        : isSelected
+                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                        : "bg-slate-900 border-slate-700 text-slate-300 hover:border-indigo-500"
+                    }`}
+                  >
+                    {String.fromCharCode(
+                      65 + optionIndex
+                    )}
+                    . {option}
+                  </button>
+                );
+              }
+            )}
           </div>
 
-          {submitted && q.explanation && (
-            <div className="mt-3 rounded-xl bg-slate-900 p-3 text-xs text-slate-400">
-              💡 {q.explanation}
-            </div>
-          )}
+          {submitted &&
+            q.explanation && (
+              <div className="mt-3 rounded-xl bg-slate-900 p-3 text-xs text-slate-400">
+                💡 {q.explanation}
+              </div>
+            )}
         </div>
       ))}
 
       {!submitted ? (
         <button
           type="button"
-          onClick={() => setSubmitted(true)}
+          onClick={() =>
+            setSubmitted(true)
+          }
           className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold"
         >
           ✅ उत्तर जमा करें
         </button>
       ) : (
         <div className="text-center p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold">
-          🎯 स्कोर: {score}/{questions.length}
+          🎯 स्कोर: {score}/
+          {questions.length}
         </div>
       )}
     </div>
   );
 }
 
+/* =======================================================
+   MAIN PAGE
+======================================================= */
+
 export default function AITutorPage() {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      text:
-        "नमस्ते! 👋\n\nमैं EduAI हूँ। आप मुझसे किसी भी विषय, सवाल, जानकारी, पढ़ाई, तकनीक, गणित, विज्ञान, इतिहास, सामान्य ज्ञान या रोज़मर्रा की किसी भी चीज़ के बारे में पूछ सकते हैं।\n\nअपना सवाल नीचे लिखिए।",
-    },
-  ]);
+  const [messages, setMessages] =
+    useState([
+      {
+        role: "assistant",
+        text:
+          "नमस्ते! 👋\n\nमैं EduAI हूँ। आप मुझसे किसी भी विषय, पढ़ाई, गणित, विज्ञान, इतिहास, तकनीक, सामान्य ज्ञान या रोज़मर्रा की जानकारी के बारे में पूछ सकते हैं।\n\nआप चाहें तो Quiz भी बनवा सकते हैं। जैसे: **20 सवालों का विज्ञान Quiz बनाओ**।",
+      },
+    ]);
 
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [input, setInput] =
+    useState("");
 
-  const chatEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const [loading, setLoading] =
+    useState(false);
+
+  const chatEndRef =
+    useRef(null);
+
+  const inputRef =
+    useRef(null);
+
+  /* =====================================================
+     AUTO SCROLL
+  ===================================================== */
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({
@@ -135,15 +180,28 @@ export default function AITutorPage() {
     });
   }, [messages, loading]);
 
+  /* =====================================================
+     FOCUS
+  ===================================================== */
+
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus();
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () =>
+      clearTimeout(timer);
   }, []);
 
-  const addMessage = (role, text, extra = {}) => {
+  /* =====================================================
+     ADD MESSAGE
+  ===================================================== */
+
+  function addMessage(
+    role,
+    text,
+    extra = {}
+  ) {
     setMessages((prev) => [
       ...prev,
       {
@@ -152,17 +210,29 @@ export default function AITutorPage() {
         ...extra,
       },
     ]);
-  };
+  }
 
-  const handleSend = async (e) => {
+  /* =====================================================
+     SEND
+  ===================================================== */
+
+  async function handleSend(e) {
     e?.preventDefault();
 
-    const question = input.trim();
+    const question =
+      input.trim();
 
-    if (!question || loading) return;
+    if (!question || loading) {
+      return;
+    }
 
     setInput("");
-    addMessage("user", question);
+
+    addMessage(
+      "user",
+      question
+    );
+
     setLoading(true);
 
     try {
@@ -173,40 +243,64 @@ export default function AITutorPage() {
           text: message.text || "",
         }));
 
-      const res = await fetch("/api/doubt", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question,
-          messagesHistory: history,
-        }),
-      });
+      const res = await fetch(
+        "/api/doubt",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            question,
+            messagesHistory:
+              history,
+          }),
+        }
+      );
 
-      const data = await res.json();
+      const data =
+        await res.json();
 
       if (!res.ok) {
         throw new Error(
-          data?.error || "AI उत्तर नहीं दे पाया।"
+          data?.error ||
+            "AI उत्तर नहीं दे पाया।"
         );
       }
 
-      if (data?.quiz?.questions?.length) {
-        addMessage("assistant", "", {
-          quiz: data.quiz,
-        });
+      if (
+        data?.quiz?.questions
+          ?.length
+      ) {
+        addMessage(
+          "assistant",
+          "",
+          {
+            quiz: data.quiz,
+          }
+        );
+
         return;
       }
 
       if (data?.answer) {
-        addMessage("assistant", data.answer);
+        addMessage(
+          "assistant",
+          data.answer
+        );
+
         return;
       }
 
-      throw new Error("AI से खाली उत्तर मिला।");
+      throw new Error(
+        "AI से खाली उत्तर मिला।"
+      );
     } catch (error) {
-      console.error("AI Tutor Error:", error);
+      console.error(
+        "AI Tutor Error:",
+        error
+      );
 
       addMessage(
         "assistant",
@@ -219,9 +313,13 @@ export default function AITutorPage() {
         inputRef.current?.focus();
       }, 100);
     }
-  };
+  }
 
-  const renderText = (text) => {
+  /* =====================================================
+     TEXT RENDER
+  ===================================================== */
+
+  function renderText(text) {
     if (!text) return null;
 
     return (
@@ -229,7 +327,11 @@ export default function AITutorPage() {
         {text}
       </div>
     );
-  };
+  }
+
+  /* =====================================================
+     UI
+  ===================================================== */
 
   return (
     <main
@@ -244,7 +346,8 @@ export default function AITutorPage() {
         flex-col
       "
     >
-      {/* Header */}
+      {/* HEADER */}
+
       <header className="flex items-center justify-between py-3 border-b border-slate-800 shrink-0">
         <Link
           href="/"
@@ -271,7 +374,8 @@ export default function AITutorPage() {
         </div>
       </header>
 
-      {/* Chat Area */}
+      {/* CHAT */}
+
       <section
         aria-label="AI चैट"
         className="
@@ -284,44 +388,58 @@ export default function AITutorPage() {
           scrollbar-thumb-slate-700
         "
       >
-        {messages.map((message, index) => {
-          const isUser = message.role === "user";
+        {messages.map(
+          (message, index) => {
+            const isUser =
+              message.role ===
+              "user";
 
-          return (
-            <div
-              key={index}
-              className={`flex gap-2 ${
-                isUser ? "justify-end" : "justify-start"
-              }`}
-            >
-              {!isUser && (
-                <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-              )}
-
+            return (
               <div
-                className={`max-w-[88%] rounded-2xl p-3.5 text-sm leading-relaxed shadow-sm ${
+                key={index}
+                className={`flex gap-2 ${
                   isUser
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-sm"
-                    : "bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-sm"
+                    ? "justify-end"
+                    : "justify-start"
                 }`}
               >
-                {message.quiz ? (
-                  <QuizCard quiz={message.quiz} />
-                ) : (
-                  renderText(message.text)
+                {!isUser && (
+                  <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                )}
+
+                <div
+                  className={`max-w-[90%] rounded-2xl p-3.5 text-sm leading-relaxed shadow-sm ${
+                    isUser
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-sm"
+                      : "bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-sm"
+                  }`}
+                >
+                  {message.quiz ? (
+                    <QuizCard
+                      quiz={
+                        message.quiz
+                      }
+                    />
+                  ) : (
+                    renderText(
+                      message.text
+                    )
+                  )}
+                </div>
+
+                {isUser && (
+                  <div className="w-8 h-8 shrink-0 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                    <User className="w-4 h-4 text-indigo-400" />
+                  </div>
                 )}
               </div>
+            );
+          }
+        )}
 
-              {isUser && (
-                <div className="w-8 h-8 shrink-0 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-                  <User className="w-4 h-4 text-indigo-400" />
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {/* LOADING */}
 
         {loading && (
           <div className="flex items-center gap-2">
@@ -338,15 +456,22 @@ export default function AITutorPage() {
         <div ref={chatEndRef} />
       </section>
 
-      {/* Input Area */}
+      {/* INPUT */}
+
       <div className="sticky bottom-0 z-30 pt-2 pb-3 bg-slate-950">
-        <form onSubmit={handleSend}>
-          <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl shadow-black/30">
+        <form
+          onSubmit={handleSend}
+        >
+          <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl">
             <input
               ref={inputRef}
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) =>
+                setInput(
+                  e.target.value
+                )
+              }
               disabled={loading}
               autoComplete="off"
               enterKeyHint="send"
@@ -356,7 +481,10 @@ export default function AITutorPage() {
 
             <button
               type="submit"
-              disabled={!input.trim() || loading}
+              disabled={
+                !input.trim() ||
+                loading
+              }
               aria-label="सवाल भेजें"
               className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition shadow-lg shadow-indigo-500/20"
             >
@@ -366,7 +494,7 @@ export default function AITutorPage() {
         </form>
 
         <div className="text-center text-[10px] text-slate-600 mt-2">
-          EduAI • आप किसी भी विषय पर सवाल पूछ सकते हैं
+          EduAI • सवाल पूछें या Quiz बनवाएँ
         </div>
       </div>
     </main>
