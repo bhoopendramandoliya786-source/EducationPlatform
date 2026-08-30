@@ -10,7 +10,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="border-t border-slate-800 bg-[#070b14] px-4 pt-8 pb-24">
+    <footer className="border-t border-slate-800 bg-[#070b14] px-4 pt-8 pb-56">
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
           <h2 className="text-lg font-black text-white">EduAI Pro</h2>
