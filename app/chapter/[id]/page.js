@@ -8,7 +8,7 @@ import {
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
   Sparkles, HelpCircle, Trophy, RotateCcw,
   Share2, BookmarkCheck, ChevronRight, ChevronLeft, Clock,
-  ChevronDown, Check, X, Layers, Play
+  ChevronDown, Check, X, Layers, Play, FastForward
 } from "lucide-react";
 
 // 🌟 1. SMART BOOKLET RENDERER
@@ -232,6 +232,24 @@ export default function ChapterSingleViewPage() {
     setUserAnswers({});
   };
 
+  const mcqsList = questions.filter((q) => !q.is_pyq);
+  const pyqsList = questions.filter((q) => q.is_pyq);
+  const currentTabList = activeTab === "mcqs" ? mcqsList : activeTab === "pyqs" ? pyqsList : questions;
+
+  const totalSets = Math.max(1, Math.ceil(currentTabList.length / 20));
+  const startIndex = (selectedSet - 1) * 20;
+  const currentSetQuestions = currentTabList.slice(startIndex, startIndex + 20);
+  const currentQ = currentSetQuestions[qIndex] || currentSetQuestions[0];
+
+  // ➡️ Handle Next Set Transition
+  const handleGoToNextSet = () => {
+    if (selectedSet < totalSets) {
+      openSetArena(selectedSet + 1);
+    } else {
+      closeArena();
+    }
+  };
+
   if (loading) {
     return (
       <main className="max-w-md mx-auto px-4 pt-6 space-y-4 animate-pulse">
@@ -248,15 +266,6 @@ export default function ChapterSingleViewPage() {
       </main>
     );
   }
-
-  const mcqsList = questions.filter((q) => !q.is_pyq);
-  const pyqsList = questions.filter((q) => q.is_pyq);
-  const currentTabList = activeTab === "mcqs" ? mcqsList : activeTab === "pyqs" ? pyqsList : questions;
-
-  const totalSets = Math.max(1, Math.ceil(currentTabList.length / 20));
-  const startIndex = (selectedSet - 1) * 20;
-  const currentSetQuestions = currentTabList.slice(startIndex, startIndex + 20);
-  const currentQ = currentSetQuestions[qIndex] || currentSetQuestions[0];
 
   // Result Calculation
   let correctCount = 0;
@@ -295,12 +304,12 @@ export default function ChapterSingleViewPage() {
             <button
               type="button"
               onClick={closeArena}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-2 py-1 rounded-lg bg-slate-800 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl bg-slate-800 cursor-pointer transition active:scale-95"
             >
               <ArrowLeft className="w-4 h-4" /> बाहर निकलें
             </button>
             <span className="text-xs font-black text-purple-400">
-              {activeTab === "quiz" ? "स्पीड टेस्ट" : activeTab === "pyqs" ? "PYQs अभ्यास" : "MCQs अभ्यास"} • Set {selectedSet}
+              {activeTab === "quiz" ? "स्पीड टेस्ट" : activeTab === "pyqs" ? "PYQs अभ्यास" : "MCQs अभ्यास"} • Set {selectedSet}/{totalSets}
             </span>
           </div>
 
@@ -395,7 +404,7 @@ export default function ChapterSingleViewPage() {
                   </div>
                 )}
 
-                {/* Navigation Buttons: पिछला / अगला */}
+                {/* Navigation Buttons: पिछला / अगला / अगला सेट */}
                 <div className="flex items-center justify-between pt-2 gap-3">
                   <button
                     type="button"
@@ -418,10 +427,14 @@ export default function ChapterSingleViewPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setQIndex(0)}
-                        className="flex-1 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1 cursor-pointer"
+                        onClick={handleGoToNextSet}
+                        className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
                       >
-                        शुरू से अभ्यास करें
+                        {selectedSet < totalSets ? (
+                          <>अगला सेट {selectedSet + 1} <FastForward className="w-4 h-4 fill-current" /></>
+                        ) : (
+                          <>अभ्यास समाप्त • सेट्स देखें <Check className="w-4 h-4" /></>
+                        )}
                       </button>
                     )
                   ) : (
@@ -474,10 +487,10 @@ export default function ChapterSingleViewPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={shareScoreOnWhatsApp}
-                    className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                    onClick={handleGoToNextSet}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Share2 className="w-4 h-4" /> WhatsApp शेयर
+                    {selectedSet < totalSets ? `सेट ${selectedSet + 1} टेस्ट ➡️` : "अन्य सेट्स देखें"}
                   </button>
                 </div>
               </div>
@@ -518,11 +531,11 @@ export default function ChapterSingleViewPage() {
                                 अनुत्तरित
                               </span>
                             ) : isCorrect ? (
-                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                                 <Check className="w-3 h-3" /> सही (+1)
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
                                 <X className="w-3 h-3" /> गलत (-0.33)
                               </span>
                             )}
