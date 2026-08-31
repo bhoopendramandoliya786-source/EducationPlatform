@@ -127,15 +127,20 @@ export default function RootLayout({ children }) {
         <InstallPWA />
 
         {/* Main Body Content */}
-        <div className="flex-1 pb-28 pt-2">
+        <main className="flex-1 pt-2">
           {children}
-        </div>
+        </main>
 
         {/* Telegram Banner */}
         <TelegramBanner />
 
-        {/* Bottom Navigation */}
+        {/* Footer */}
         <Footer />
+
+        {/* Safe space for fixed mobile UI */}
+        <div className="h-36" aria-hidden="true" />
+
+        {/* Bottom Navigation */}
         <BottomNavigation />
       </body>
     </html>
