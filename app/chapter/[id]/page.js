@@ -11,44 +11,87 @@ import {
   ChevronDown, Check, X, Layers, Play, FastForward
 } from "lucide-react";
 
-// 🌟 1. SMART BOOKLET RENDERER
+// 🌟 1. SMART BOOKLET RENDERER (BIGGER & HIGH-READABILITY FORMAT)
 function PDFNotesSheet({ notes, chapterName }) {
+  // लाइन को अलग-अलग रंगों में हाइलाइट करने का स्मार्ट फ़ंक्शन
+  const renderFormattedLine = (line, idx) => {
+    if (line.startsWith("📌") || line.startsWith("⚡") || line.startsWith("💡")) {
+      return (
+        <div key={idx} className="p-3 rounded-2xl bg-indigo-950/60 border border-indigo-500/40 text-sm font-bold text-indigo-200 mb-2">
+          {line}
+        </div>
+      );
+    }
+
+    // अगर सवाल-जवाब प्रारूप (— या -) में है
+    if (line.includes("—") || line.includes(" - ")) {
+      const parts = line.split(/—| - /);
+      const questionPart = parts[0]?.trim();
+      const answerWithExam = parts.slice(1).join("—").trim();
+
+      // एग्जाम टैग (ब्रैकेट) को अलग करना
+      const examMatch = answerWithExam.match(/\(([^)]+)\)$/);
+      const examTag = examMatch ? examMatch[1] : null;
+      const cleanAnswer = examTag ? answerWithExam.replace(/\([^)]+\)$/, "").trim() : answerWithExam;
+
+      return (
+        <div key={idx} className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition space-y-1.5">
+          <p className="text-sm sm:text-base font-bold text-white leading-relaxed">
+            {questionPart}
+          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <span className="text-sm font-black text-emerald-400 flex items-center gap-1.5">
+              <span className="text-slate-400 font-normal text-xs">उत्तर:</span> {cleanAnswer}
+            </span>
+            {examTag && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                {examTag}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <p key={idx} className="text-sm sm:text-base text-slate-200 leading-relaxed py-1 break-words font-medium">
+        {line}
+      </p>
+    );
+  };
+
   return (
     <div className="rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl overflow-hidden font-sans text-slate-200">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-purple-950/40 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-purple-950/50 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
         <div>
-          <span className="text-[11px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" /> EduAI Pro • नोट्स
+          <span className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-amber-400" /> EduAI Pro • नोट्स
           </span>
-          <h2 className="text-sm sm:text-base font-black text-white mt-0.5">{chapterName}</h2>
+          <h2 className="text-base sm:text-lg font-black text-white mt-0.5">{chapterName}</h2>
         </div>
-        <span className="text-[10px] font-extrabold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-lg">
+        <span className="text-[11px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-xl">
           SMART BOOKLET
         </span>
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className="p-4 sm:p-5 space-y-5">
         {notes.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400">
+          <div className="p-10 text-center text-sm text-slate-400">
             इस अध्याय के नोट्स जल्द जोड़े जा रहे हैं।
           </div>
         ) : (
           notes.map((note) => {
             const rawLines = (note.content || "").split("\n").map((l) => l.trim()).filter(Boolean);
             return (
-              <div key={note.id} className="space-y-3">
+              <div key={note.id} className="space-y-3.5 bg-slate-900/40 p-4 rounded-3xl border border-slate-800/80">
                 {note.title && (
-                  <div className="text-sm font-black text-amber-400 uppercase tracking-wide border-b border-slate-800/80 pb-2 flex items-center gap-2">
-                    <BookmarkCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div className="text-sm sm:text-base font-black text-amber-400 uppercase tracking-wide border-b border-slate-800 pb-2.5 flex items-center gap-2">
+                    <BookmarkCheck className="w-5 h-5 text-amber-400 shrink-0" />
                     <span>{note.title}</span>
                   </div>
                 )}
-                <div className="space-y-2">
-                  {rawLines.map((line, idx) => (
-                    <p key={idx} className="text-xs sm:text-sm text-slate-200 leading-relaxed py-0.5 break-words">
-                      {line}
-                    </p>
-                  ))}
+                <div className="space-y-2.5">
+                  {rawLines.map((line, idx) => renderFormattedLine(line, idx))}
                 </div>
               </div>
             );
@@ -315,7 +358,7 @@ export default function ChapterSingleViewPage() {
             </span>
           </div>
 
-          {/* 🎯 STABLE QUESTION CARD (स्थिर कार्ड - नो जर्क) */}
+          {/* 🎯 STABLE QUESTION CARD */}
           {(!quizSubmitted || activeTab !== "quiz") ? (
             currentQ ? (
               <div className="min-h-[520px] p-5 sm:p-6 rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl flex flex-col justify-between space-y-4">
@@ -344,7 +387,7 @@ export default function ChapterSingleViewPage() {
                     <FormattedQuestionText text={currentQ.question} />
                   </div>
 
-                  {/* Large Options List (स्थिर व स्पष्ट) */}
+                  {/* Large Options List */}
                   <div className="space-y-2.5 pt-1">
                     {[
                       { key: "A", text: currentQ.option_a },
@@ -410,7 +453,7 @@ export default function ChapterSingleViewPage() {
                   )}
                 </div>
 
-                {/* Stable Navigation Buttons (नीचे स्थिर) */}
+                {/* Stable Navigation Buttons */}
                 <div className="flex items-center justify-between pt-3 border-t border-slate-850 gap-3 mt-auto">
                   <button
                     type="button"
