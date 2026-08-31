@@ -59,7 +59,7 @@ function PDFNotesSheet({ notes, chapterName }) {
   );
 }
 
-// 🎯 2. ADVANCED BIGGER QUESTION FORMATTER (MATCHING & STATEMENTS)
+// 🎯 2. ADVANCED BIGGER & STABLE QUESTION FORMATTER
 function FormattedQuestionText({ text }) {
   if (!text) return null;
 
@@ -88,7 +88,7 @@ function FormattedQuestionText({ text }) {
     if (rows.length >= 2) {
       return (
         <div className="space-y-3">
-          <p className="text-white text-sm sm:text-base font-bold leading-relaxed">{titlePart.trim()}</p>
+          <p className="text-white text-base font-bold leading-snug">{titlePart.trim()}</p>
           <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950">
             <div className="grid grid-cols-2 bg-indigo-950/70 border-b border-slate-800 px-3.5 py-2 text-xs font-black text-indigo-300">
               <span>सूची - I (विवरण)</span>
@@ -111,44 +111,46 @@ function FormattedQuestionText({ text }) {
   if (text.includes("कथन (A)") || text.includes("कथन(A)") || text.includes("कथन:")) {
     const parts = text.split(/(?=कारण\s*\(R\)|कारण:|सही\s*विकल्प|उपर्युक्त)/gi);
     return (
-      <div className="space-y-2.5 text-xs sm:text-sm">
+      <div className="space-y-2.5 text-sm sm:text-base">
         {parts.map((p, idx) => {
-          const str = p.trim();
+          let str = p.trim();
           if (str.startsWith("कथन")) {
+            const cleanContent = str.replace(/^कथन\s*(\([A-Z]\)|:)?\s*[:\-]?\s*/i, "");
             return (
               <div key={idx} className="p-3.5 rounded-2xl bg-indigo-950/50 border border-indigo-500/30 text-indigo-200">
-                <strong className="text-indigo-400 block font-bold mb-1">📌 कथन (A):</strong>
-                {str.replace(/^कथन\s*(\([A-Z]\)|:)?\s*/i, "")}
+                <strong className="text-indigo-400 block font-black text-xs uppercase tracking-wide mb-1">📌 कथन (A)</strong>
+                <span className="text-white font-medium leading-relaxed">{cleanContent}</span>
               </div>
             );
           }
           if (str.startsWith("कारण")) {
+            const cleanContent = str.replace(/^कारण\s*(\([A-Z]\)|:)?\s*[:\-]?\s*/i, "");
             return (
               <div key={idx} className="p-3.5 rounded-2xl bg-purple-950/50 border border-purple-500/30 text-purple-200">
-                <strong className="text-purple-400 block font-bold mb-1">💡 कारण (R):</strong>
-                {str.replace(/^कारण\s*(\([A-Z]\)|:)?\s*/i, "")}
+                <strong className="text-purple-400 block font-black text-xs uppercase tracking-wide mb-1">💡 कारण (R)</strong>
+                <span className="text-white font-medium leading-relaxed">{cleanContent}</span>
               </div>
             );
           }
-          return <p key={idx} className="text-white font-bold leading-relaxed">{str}</p>;
+          return <p key={idx} className="text-slate-300 font-bold text-sm leading-relaxed">{str}</p>;
         })}
       </div>
     );
   }
 
-  return <p className="text-white text-sm sm:text-base font-bold leading-relaxed whitespace-pre-line">{text}</p>;
+  return <p className="text-white text-base font-bold leading-relaxed tracking-wide whitespace-pre-line">{text}</p>;
 }
 
 // 🚀 3. MAIN COMPONENT
 export default function ChapterSingleViewPage() {
   const { id } = useParams();
   const [chapter, setChapter] = useState(null);
-  const [activeTab, setActiveTab] = useState("mcqs"); // notes, mcqs, pyqs, quiz
+  const [activeTab, setActiveTab] = useState("mcqs");
   const [notes, setNotes] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Focus Arena State (अलग स्पेशल स्क्रीन)
+  // Focus Arena State
   const [isArenaOpen, setIsArenaOpen] = useState(false);
   const [selectedSet, setSelectedSet] = useState(1);
   const [qIndex, setQIndex] = useState(0);
@@ -210,7 +212,7 @@ export default function ChapterSingleViewPage() {
 
   const handleSelectOption = (qId, optKey) => {
     const isPracticeMode = activeTab !== "quiz";
-    if (isPracticeMode && userAnswers[qId]) return; // अभ्यास मोड में उत्तर लॉक
+    if (isPracticeMode && userAnswers[qId]) return;
 
     setUserAnswers((prev) => ({ ...prev, [qId]: optKey }));
   };
@@ -295,16 +297,16 @@ export default function ChapterSingleViewPage() {
   return (
     <main className="max-w-md mx-auto px-3 space-y-3.5 pb-28 pt-1 font-sans select-none">
 
-      {/* 🧭 A. SPECIAL FULL-SCREEN TEST ARENA (जब सेट पर क्लिक हो) */}
+      {/* 🧭 A. SPECIAL FULL-SCREEN TEST ARENA */}
       {isArenaOpen ? (
-        <div className="space-y-4 animate-fadeIn">
+        <div className="space-y-3 animate-fadeIn">
 
           {/* Top Arena Exit Bar */}
-          <div className="flex items-center justify-between p-2 rounded-2xl bg-slate-900 border border-slate-800">
+          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#0e131f] border border-slate-800">
             <button
               type="button"
               onClick={closeArena}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl bg-slate-800 cursor-pointer transition active:scale-95"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-800 cursor-pointer transition active:scale-95"
             >
               <ArrowLeft className="w-4 h-4" /> बाहर निकलें
             </button>
@@ -313,104 +315,108 @@ export default function ChapterSingleViewPage() {
             </span>
           </div>
 
-          {/* Active Question Box */}
+          {/* 🎯 STABLE QUESTION CARD (स्थिर कार्ड - नो जर्क) */}
           {(!quizSubmitted || activeTab !== "quiz") ? (
             currentQ ? (
-              <div className="p-5 sm:p-6 rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl space-y-5">
+              <div className="min-h-[520px] p-5 sm:p-6 rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl flex flex-col justify-between space-y-4">
 
-                {/* Header: Badge & Timer */}
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-black px-2.5 py-0.5 rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
-                      {currentQ.is_pyq ? (currentQ.exam_tag || "PYQ") : "HARD"}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">
-                      प्रश्न {qIndex + 1} / {currentSetQuestions.length}
-                    </span>
+                <div className="space-y-4">
+                  {/* Header: Badge & Timer */}
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
+                        {currentQ.is_pyq ? (currentQ.exam_tag || "PYQ") : "HARD"}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        प्रश्न {qIndex + 1} / {currentSetQuestions.length}
+                      </span>
+                    </div>
+
+                    {activeTab === "quiz" && (
+                      <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20">
+                        <Clock className="w-3.5 h-3.5" /> {formatTime(timeLeft)}
+                      </div>
+                    )}
                   </div>
 
-                  {activeTab === "quiz" && (
-                    <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20">
-                      <Clock className="w-3.5 h-3.5" /> {formatTime(timeLeft)}
+                  {/* Big Formatted Question Text */}
+                  <div className="min-h-[48px]">
+                    <FormattedQuestionText text={currentQ.question} />
+                  </div>
+
+                  {/* Large Options List (स्थिर व स्पष्ट) */}
+                  <div className="space-y-2.5 pt-1">
+                    {[
+                      { key: "A", text: currentQ.option_a },
+                      { key: "B", text: currentQ.option_b },
+                      { key: "C", text: currentQ.option_c },
+                      { key: "D", text: currentQ.option_d }
+                    ].map((opt) => {
+                      const isSelected = userAnswers[currentQ.id] === opt.key;
+                      const isPracticeMode = activeTab !== "quiz";
+                      const isAnswered = isPracticeMode && !!userAnswers[currentQ.id];
+
+                      let optClass = "bg-slate-950/70 border-slate-800/90 text-slate-200 hover:border-slate-700";
+
+                      if (isPracticeMode && isAnswered) {
+                        if (opt.key === currentQ.answer) {
+                          optClass = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold shadow-md shadow-emerald-900/20";
+                        } else if (isSelected) {
+                          optClass = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
+                        } else {
+                          optClass = "bg-slate-950/30 border-slate-900 text-slate-600 opacity-50";
+                        }
+                      } else if (isSelected) {
+                        optClass = "bg-purple-600/25 border-purple-500 text-white font-bold shadow-md shadow-purple-900/30";
+                      }
+
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          disabled={isPracticeMode && isAnswered}
+                          onClick={() => handleSelectOption(currentQ.id, opt.key)}
+                          className={`w-full min-h-[50px] p-3.5 sm:p-4 rounded-2xl border text-left flex items-center justify-between gap-3.5 transition cursor-pointer active:scale-[0.99] ${optClass}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                              isSelected ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-300"
+                            }`}>
+                              {opt.key}
+                            </span>
+                            <span className="text-sm font-medium leading-snug">{opt.text || `विकल्प ${opt.key}`}</span>
+                          </div>
+                          {isPracticeMode && isAnswered && opt.key === currentQ.answer && (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                          )}
+                          {isPracticeMode && isAnswered && isSelected && opt.key !== currentQ.answer && (
+                            <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Instant Explanation in Practice Mode */}
+                  {activeTab !== "quiz" && userAnswers[currentQ.id] && currentQ.explanation && (
+                    <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1.5 animate-fadeIn">
+                      <div className="font-bold flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm">
+                        <HelpCircle className="w-4 h-4" /> विस्तृत व्याख्या:
+                      </div>
+                      <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line text-slate-200">
+                        {currentQ.explanation}
+                      </p>
                     </div>
                   )}
                 </div>
 
-                {/* Big Formatted Question Text */}
-                <FormattedQuestionText text={currentQ.question} />
-
-                {/* Large Options List */}
-                <div className="space-y-2.5 pt-1">
-                  {[
-                    { key: "A", text: currentQ.option_a },
-                    { key: "B", text: currentQ.option_b },
-                    { key: "C", text: currentQ.option_c },
-                    { key: "D", text: currentQ.option_d }
-                  ].map((opt) => {
-                    const isSelected = userAnswers[currentQ.id] === opt.key;
-                    const isPracticeMode = activeTab !== "quiz";
-                    const isAnswered = isPracticeMode && !!userAnswers[currentQ.id];
-
-                    let optClass = "bg-slate-950/70 border-slate-800/90 text-slate-200 hover:border-slate-700";
-
-                    if (isPracticeMode && isAnswered) {
-                      if (opt.key === currentQ.answer) {
-                        optClass = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold shadow-md shadow-emerald-900/20";
-                      } else if (isSelected) {
-                        optClass = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
-                      } else {
-                        optClass = "bg-slate-950/30 border-slate-900 text-slate-600 opacity-50";
-                      }
-                    } else if (isSelected) {
-                      optClass = "bg-purple-600/25 border-purple-500 text-white font-bold shadow-md shadow-purple-900/30";
-                    }
-
-                    return (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        disabled={isPracticeMode && isAnswered}
-                        onClick={() => handleSelectOption(currentQ.id, opt.key)}
-                        className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between gap-3.5 transition cursor-pointer active:scale-[0.99] ${optClass}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                            isSelected ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-300"
-                          }`}>
-                            {opt.key}
-                          </span>
-                          <span className="text-xs sm:text-sm font-medium leading-relaxed">{opt.text || `विकल्प ${opt.key}`}</span>
-                        </div>
-                        {isPracticeMode && isAnswered && opt.key === currentQ.answer && (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-                        )}
-                        {isPracticeMode && isAnswered && isSelected && opt.key !== currentQ.answer && (
-                          <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Instant Explanation in Practice Mode */}
-                {activeTab !== "quiz" && userAnswers[currentQ.id] && currentQ.explanation && (
-                  <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1.5 animate-fadeIn">
-                    <div className="font-bold flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm">
-                      <HelpCircle className="w-4 h-4" /> विस्तृत व्याख्या:
-                    </div>
-                    <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line text-slate-200">
-                      {currentQ.explanation}
-                    </p>
-                  </div>
-                )}
-
-                {/* Navigation Buttons: पिछला / अगला / अगला सेट */}
-                <div className="flex items-center justify-between pt-2 gap-3">
+                {/* Stable Navigation Buttons (नीचे स्थिर) */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-850 gap-3 mt-auto">
                   <button
                     type="button"
                     disabled={qIndex === 0}
                     onClick={() => setQIndex((prev) => prev - 1)}
-                    className="flex-1 py-3 rounded-2xl bg-slate-800/90 text-slate-300 font-bold text-xs disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
+                    className="flex-1 py-3.5 rounded-2xl bg-slate-800/90 text-slate-300 font-bold text-xs disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
                   >
                     <ChevronLeft className="w-4 h-4" /> पिछला
                   </button>
@@ -420,7 +426,7 @@ export default function ChapterSingleViewPage() {
                       <button
                         type="button"
                         onClick={() => setQuizSubmitted(true)}
-                        className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
+                        className="flex-1 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
                       >
                         सबमिट करें
                       </button>
@@ -428,7 +434,7 @@ export default function ChapterSingleViewPage() {
                       <button
                         type="button"
                         onClick={handleGoToNextSet}
-                        className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
+                        className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
                       >
                         {selectedSet < totalSets ? (
                           <>अगला सेट {selectedSet + 1} <FastForward className="w-4 h-4 fill-current" /></>
@@ -441,7 +447,7 @@ export default function ChapterSingleViewPage() {
                     <button
                       type="button"
                       onClick={() => setQIndex((prev) => prev + 1)}
-                      className="flex-1 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
+                      className="flex-1 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
                     >
                       अगला <ChevronRight className="w-4 h-4" />
                     </button>
@@ -451,7 +457,7 @@ export default function ChapterSingleViewPage() {
               </div>
             ) : null
           ) : (
-            /* Results Screen with Collapsible Accordion */
+            /* Results Screen */
             <div className="space-y-4 animate-fadeIn">
               <div className="p-6 rounded-3xl bg-[#0e131f] border border-slate-800 text-center space-y-4 shadow-2xl">
                 <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
@@ -481,14 +487,14 @@ export default function ChapterSingleViewPage() {
                   <button
                     type="button"
                     onClick={() => openSetArena(selectedSet)}
-                    className="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4" /> री-टेस्ट
                   </button>
                   <button
                     type="button"
                     onClick={handleGoToNextSet}
-                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     {selectedSet < totalSets ? `सेट ${selectedSet + 1} टेस्ट ➡️` : "अन्य सेट्स देखें"}
                   </button>
@@ -531,11 +537,11 @@ export default function ChapterSingleViewPage() {
                                 अनुत्तरित
                               </span>
                             ) : isCorrect ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                                 <Check className="w-3 h-3" /> सही (+1)
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
                                 <X className="w-3 h-3" /> गलत (-0.33)
                               </span>
                             )}
@@ -587,9 +593,8 @@ export default function ChapterSingleViewPage() {
           )}
         </div>
       ) : (
-        /* 📚 B. CHAPTER MAIN HUB (अध्याय का मुख्य पेज - नो क्लटर, केवल सेट्स) */
+        /* 📚 B. CHAPTER MAIN HUB */
         <>
-          {/* Breadcrumb */}
           <div className="flex items-center justify-between">
             <Link 
               href={chapter.subjects ? `/subject/${chapter.subjects.id}` : "/"} 
@@ -602,7 +607,6 @@ export default function ChapterSingleViewPage() {
             </span>
           </div>
 
-          {/* Hero Card */}
           <section className="p-4 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-purple-500/20 shadow-xl space-y-1 relative overflow-hidden">
             <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
               {chapter.subjects?.name} • सम्पूर्ण मास्टरक्लास
@@ -613,7 +617,6 @@ export default function ChapterSingleViewPage() {
             </p>
           </section>
 
-          {/* 4 Main Tabs */}
           <section className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
@@ -664,7 +667,6 @@ export default function ChapterSingleViewPage() {
             </button>
           </section>
 
-          {/* Notes View OR Sets Grid */}
           {activeTab === "notes" ? (
             <PDFNotesSheet notes={notes} chapterName={chapter.name} />
           ) : (
@@ -676,7 +678,6 @@ export default function ChapterSingleViewPage() {
                 <span className="text-[10px] text-slate-500 uppercase">टैप करके टेस्ट शुरू करें</span>
               </div>
 
-              {/* Big Sets Cards List */}
               <div className="grid gap-2.5">
                 {Array.from({ length: totalSets }).map((_, idx) => (
                   <button
