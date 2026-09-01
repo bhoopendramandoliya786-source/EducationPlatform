@@ -2,45 +2,106 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { 
   Trophy, BookOpen, Flame, Award, ArrowLeft, 
-  CheckCircle2, Zap, Bookmark, Clock, Share2, 
-  Settings2, Sparkles, ChevronRight, Target
+  CheckCircle2, Zap, Clock, Share2, 
+  Sparkles, ChevronRight, Target, ShieldCheck, LogOut, Loader2
 } from "lucide-react";
 
 export default function StudentProfilePage() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [stats, setStats] = useState({ streak: 0, solved: 0, accuracy: 100, xp: 0 });
   const [targetExam, setTargetExam] = useState("CET / REET 2026");
+  const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
     let isMounted = true;
-    async function getUserData() {
+
+    async function loadDashboardData() {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (isMounted && authUser) setUser(authUser);
+        if (!authUser) {
+          router.push("/login");
+          return;
+        }
+
+        if (isMounted) setUser(authUser);
+
+        // 1. Fetch Profile Data (Streak, Name)
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authUser.id)
+          .single();
+
+        if (profileData && isMounted) {
+          setProfile(profileData);
+        }
+
+        // 2. Fetch Solved Progress & Stats
+        const { count: solvedCount } = await supabase
+          .from("progress")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", authUser.id);
+
+        const currentStreak = profileData?.streak_count || 0;
+        const totalSolved = solvedCount || 0;
+        const calculatedXP = (totalSolved * 10) + (currentStreak * 25);
+
+        if (isMounted) {
+          setStats({
+            streak: currentStreak,
+            solved: totalSolved,
+            accuracy: totalSolved > 0 ? 92 : 100,
+            xp: calculatedXP
+          });
+        }
       } catch (err) {
-        console.error("Auth User Fetch Error:", err);
+        console.error("Dashboard Load Error:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     }
-    getUserData();
+
+    loadDashboardData();
 
     return () => {
       isMounted = false;
     };
-  }, [supabase]);
+  }, [router, supabase]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  };
 
   const shareProfileStats = () => {
-    const text = `🔥 EduAI Pro पर मेरी 12 दिनों की डेली स्ट्रीक और 240 XP रैंक पॉइंट्स हैं! 🎯\n\nआप भी राजस्थान GK और 100 PYQ टेस्ट्स की तैयारी करें: https://education-platform-fawn-six.vercel.app`;
+    const text = `🔥 EduAI Pro पर मेरी ${stats.streak} दिनों की डेली स्ट्रीक और ${stats.xp} XP पॉइंट्स हैं! 🎯\n\nआप भी राजस्थान GK और 100 PYQ टेस्ट्स की तैयारी करें: https://education-platform-fawn-six.vercel.app`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  return (
-    <main className="max-w-md mx-auto px-4 pb-28 pt-1 space-y-4 font-sans select-none">
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-2 text-indigo-400">
+        <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+        <p className="text-xs text-slate-400 font-medium">VIP डैशबोर्ड लोड हो रहा है...</p>
+      </div>
+    );
+  }
 
-      {/* Top Breadcrumb */}
-      <div className="flex items-center justify-between pt-1">
+  const studentName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "प्रतियोगी छात्र";
+
+  return (
+    <main className="max-w-md mx-auto px-4 pb-28 pt-2 space-y-4 font-sans select-none">
+
+      {/* Top Bar */}
+      <div className="flex items-center justify-between">
         <Link 
           href="/" 
           aria-label="होमपेज पर वापस जाएँ"
@@ -48,146 +109,180 @@ export default function StudentProfilePage() {
         >
           <ArrowLeft className="w-3.5 h-3.5" /> वापस होम
         </Link>
-        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
-          <Sparkles className="w-3 h-3 text-indigo-400" /> Student Dashboard
+        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1 shadow-sm shadow-amber-500/20">
+          <Sparkles className="w-3 h-3 text-amber-400" /> VIP MEMBER
         </span>
       </div>
 
-      {/* User Info Card */}
-      <section aria-label="यूज़र प्रोफाइल विवरण" className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-indigo-500/20 flex items-center justify-between shadow-2xl relative overflow-hidden">
-        <div className="flex items-center gap-3.5">
-          <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-indigo-500/30">
-            {user?.email?.substring(0, 1).toUpperCase() || "S"}
-          </div>
-          <div>
-            <h1 className="text-sm sm:text-base font-black text-white leading-tight">
-              {user?.email?.split("@")[0] || "प्रतियोगी छात्र"}
-            </h1>
-            <p className="text-[11px] text-slate-300 mt-0.5 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {user?.email || "निःशुल्क शिक्षार्थी"}
-            </p>
-          </div>
-        </div>
+      {/* VIP Profile Banner Card */}
+      <section className="p-5 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/80 to-slate-950 border border-amber-500/30 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+        {/* Glow effect in background */}
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        <button
-          type="button"
-          onClick={shareProfileStats}
-          aria-label="प्रोफाइल प्रोग्रेस WhatsApp पर शेयर करें"
-          className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-emerald-400 hover:bg-slate-800 transition active:scale-95 cursor-pointer flex-shrink-0"
-        >
-          <Share2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3.5">
+            <div className="relative">
+              <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-amber-500 via-purple-600 to-indigo-600 p-[2px] shadow-lg shadow-indigo-500/30">
+                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center font-black text-amber-300 text-lg">
+                  {studentName.charAt(0).toUpperCase()}
+                </div>
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 rounded-full p-0.5 border border-slate-950 shadow">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm sm:text-base font-black text-white leading-tight">
+                  {studentName}
+                </h1>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 rounded">
+                  PRO
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                {user?.email}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={shareProfileStats}
+            title="WhatsApp पर शेयर करें"
+            className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition active:scale-95 shadow"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </div>
       </section>
 
-      {/* Target Exam Goal Card */}
-      <section aria-label="लक्ष्य परीक्षा चयन" className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 shadow-md">
+      {/* Target Exam Selector */}
+      <section className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex items-center justify-between gap-2 shadow-md">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
             <Target className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-[9px] font-bold text-slate-400 block uppercase">लक्ष्य परीक्षा</span>
+            <span className="text-[9px] font-bold text-slate-400 block uppercase">टारगेट एग्जाम</span>
             <span className="text-xs font-bold text-white">{targetExam}</span>
           </div>
         </div>
         <select
-          aria-label="लक्ष्य परीक्षा चुनें"
           value={targetExam}
           onChange={(e) => setTargetExam(e.target.value)}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-indigo-300 outline-none cursor-pointer"
+          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-indigo-300 outline-none cursor-pointer hover:border-indigo-500/40"
         >
           <option value="CET / REET 2026">CET / REET 2026</option>
           <option value="RPSC 2nd Grade">RPSC 2nd Grade</option>
           <option value="RAS Pre 2026">RAS Pre 2026</option>
           <option value="Rajasthan Police">Rajasthan Police</option>
+          <option value="Patwar Exam 2026">Patwar Exam 2026</option>
         </select>
       </section>
 
-      {/* Stats Cards */}
-      <section aria-label="अध्ययन आंकड़े" className="grid grid-cols-3 gap-2.5">
-        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-1 shadow-md">
-          <Flame className="w-5 h-5 text-amber-400 mx-auto fill-current" />
-          <div className="text-sm font-black text-white">12 दिन</div>
-          <div className="text-[9px] text-slate-400 font-medium">डेली स्ट्रीक</div>
+      {/* Real Performance Metrics (3 Pillars) */}
+      <section className="grid grid-cols-3 gap-2.5">
+        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-orange-500/20 text-center space-y-1 shadow-lg">
+          <div className="w-8 h-8 rounded-xl bg-orange-500/15 mx-auto flex items-center justify-center text-orange-400">
+            <Flame className="w-4 h-4 animate-pulse fill-current" />
+          </div>
+          <div className="text-sm font-black text-white">{stats.streak} दिन</div>
+          <div className="text-[9px] text-orange-400/80 font-bold uppercase tracking-wider">डेली स्ट्रीक</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-1 shadow-md">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" />
-          <div className="text-sm font-black text-white">100%</div>
-          <div className="text-[9px] text-slate-400 font-medium">सटीकता दर</div>
+        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-emerald-500/20 text-center space-y-1 shadow-lg">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/15 mx-auto flex items-center justify-center text-emerald-400">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <div className="text-sm font-black text-white">{stats.solved} हल</div>
+          <div className="text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider">PYQ प्रश्न</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-1 shadow-md">
-          <Award className="w-5 h-5 text-indigo-400 mx-auto" />
-          <div className="text-sm font-black text-white">240 XP</div>
-          <div className="text-[9px] text-slate-400 font-medium">रैंक पॉइंट्स</div>
+        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-indigo-500/20 text-center space-y-1 shadow-lg">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/15 mx-auto flex items-center justify-center text-indigo-400">
+            <Award className="w-4 h-4" />
+          </div>
+          <div className="text-sm font-black text-white">{stats.xp} XP</div>
+          <div className="text-[9px] text-indigo-400/80 font-bold uppercase tracking-wider">रैंक पॉइंट्स</div>
         </div>
       </section>
 
-      {/* Study & Future Features Hub */}
-      <section aria-label="अध्ययन हब लिंक्स" className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-2.5 shadow-xl">
-        <h2 className="text-xs font-bold text-slate-200 px-1">अध्ययन ट्रैकर एवं सेशन्स</h2>
+      {/* Quick Action Navigation */}
+      <section className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-2.5 shadow-xl">
+        <h2 className="text-xs font-bold text-slate-300 px-1 flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>अध्ययन हब एवं टेस्ट सीरीज़</span>
+        </h2>
 
         <div className="grid gap-2 text-xs">
           <Link 
-            href="/notes" 
-            aria-label="पढ़े गए थ्योरी नोट्स देखें"
-            className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
-          >
-            <div className="flex items-center gap-2.5">
-              <BookOpen className="w-4 h-4 text-indigo-400" />
-              <span className="font-semibold">पढ़े गए स्मार्ट नोट्स</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition" />
-          </Link>
-
-          <Link 
             href="/quiz" 
-            aria-label="स्पीड टेस्ट और टेस्ट रिकॉर्ड्स देखें"
-            className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
+            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-emerald-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
           >
-            <div className="flex items-center gap-2.5">
-              <Trophy className="w-4 h-4 text-emerald-400" />
-              <span className="font-semibold">दिए गए मॉक टेस्ट व PYQ परिणाम</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Trophy className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold block text-white">स्पीड टेस्ट और PYQ सेट्स</span>
+                <span className="text-[10px] text-slate-400">अध्यायवार 20-20 टेस्ट सीरीज दें</span>
+              </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 transition" />
           </Link>
 
           <Link 
-            href="/ai-tutor" 
-            aria-label="AI डाउट हिस्ट्री खोलें"
-            className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
+            href="/notes" 
+            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-indigo-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
           >
-            <div className="flex items-center gap-2.5">
-              <Zap className="w-4 h-4 text-purple-400" />
-              <span className="font-semibold">AI ट्यूटर डाउट हिस्ट्री</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold block text-white">स्मार्ट रिवीजन नोट्स</span>
+                <span className="text-[10px] text-slate-400">टू-द-पॉइंट संक्षिप्त नोट्स पढ़ें</span>
+              </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-purple-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition" />
           </Link>
 
           <Link 
-            href="/creator" 
-            aria-label="HD क्विज़ रील्स क्रिएटर खोलें"
-            className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
+            href="/ai-tutor" 
+            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-purple-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
           >
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-rose-400" />
-              <span className="font-semibold">1-क्लिक रील्स क्रिएटर</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <Zap className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold block text-white">AI डाउट सॉल्वर</span>
+                <span className="text-[10px] text-slate-400">कठिन प्रश्नों की तुरंत व्याख्या पूछें</span>
+              </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-rose-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-purple-400 transition" />
           </Link>
         </div>
       </section>
 
-      {/* Upcoming Cloud Sync Box */}
-      <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 flex items-center justify-between text-[11px] text-slate-400">
-        <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
-          <Clock className="w-3.5 h-3.5" /> क्लाउड ऑटो-सिंक एक्टिव
-        </span>
-        <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-          ✓ ऑनलाइन
-        </span>
+      {/* Sync Status & Sign Out */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+          <Clock className="w-3 h-3 text-emerald-400" />
+          <span>क्लाउड डेटा सिंक सक्रिय</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-xl transition active:scale-95 cursor-pointer"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>लॉगआउट</span>
+        </button>
       </div>
 
     </main>
