@@ -34,8 +34,16 @@ export default function LoginPage() {
         );
         setLoading(false);
       } else {
-        // Instant Redirect without lag
-        window.location.href = "/student";
+        // 1. Google Analytics Login Event Trigger
+        if (typeof window !== "undefined" && window.gtag) {
+          window.gtag("event", "login", {
+            method: "Email",
+          });
+        }
+
+        // 2. Client Side Fast Redirect
+        router.push("/student");
+        router.refresh();
       }
     } catch (err) {
       setErrorMsg("इंटरनेट कनेक्शन धीमा है। कृपया पुनः प्रयास करें।");
