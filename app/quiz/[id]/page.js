@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import { 
   ArrowLeft, Clock, CheckCircle2, XCircle, Trophy, 
-  RotateCcw, Share2, BookOpen, HelpCircle
+  RotateCcw, Share2, BookOpen, HelpCircle, Loader2
 } from "lucide-react";
 
 export default function QuizRunnerPage() {
@@ -16,6 +16,7 @@ export default function QuizRunnerPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState("score"); // 'score' | 'solutions'
 
   const [timeLeft, setTimeLeft] = useState(600); // 10 Minutes for 20 Questions
@@ -104,7 +105,7 @@ export default function QuizRunnerPage() {
       }
     }
     loadQuizData();
-  }, [id]);
+  }, [id, supabase]);
 
   // 10-Minute Countdown Timer
   useEffect(() => {
@@ -130,6 +131,80 @@ export default function QuizRunnerPage() {
       total: questions.length,
       percentage: questions.length ? Math.round((correct / questions.length) * 100) : 0
     };
+  };
+
+  // 🌟 QUIZ SUBMISSION WITH SUPABASE + STREAK + GA4
+  const handleSubmitQuiz = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setIsSubmitted(true);
+
+    try {
+      const score = calculateScore();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const today = new Date().toISOString().split("T")[0];
+
+        // 1. Insert Record into progress Table
+        await supabase.from("progress").insert({
+          user_id: user.id,
+          topic_id: id,
+          score: score.correct,
+          questions_attempted: Object.keys(selectedAnswers).length,
+          questions_correct: score.correct,
+          completed: true,
+          last_studied_at: new Date().toISOString()
+        });
+
+        // 2. Update Daily Streak in profiles Table
+        const { data: userProfile } = await supabase
+          .from("profiles")
+          .select("streak_count, last_active_date")
+          .eq("id", user.id)
+          .single();
+
+        if (userProfile) {
+          const lastDate = userProfile.last_active_date;
+          let newStreak = userProfile.streak_count || 0;
+
+          if (lastDate !== today) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+            if (lastDate === yesterdayStr) {
+              newStreak += 1;
+            } else {
+              newStreak = 1;
+            }
+
+            await supabase
+              .from("profiles")
+              .update({
+                streak_count: newStreak,
+                last_active_date: today,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", user.id);
+          }
+        }
+      }
+
+      // 3. Google Analytics Event
+      if (typeof window !== "undefined" && window.gtag) {
+        window.gtag("event", "quiz_complete", {
+          quiz_title: quizTitle,
+          score: score.correct,
+          total: score.total,
+          percentage: score.percentage
+        });
+      }
+    } catch (err) {
+      console.error("Quiz DB Save Error:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const shareScoreOnWhatsApp = (score) => {
@@ -229,6 +304,7 @@ export default function QuizRunnerPage() {
                 return (
                   <button
                     key={opt.key}
+                    type="button"
                     onClick={() => handleSelectOption(opt.key)}
                     className={`w-full p-3.5 rounded-2xl border text-left text-xs flex items-center justify-between transition active:scale-[0.99] ${
                       isSelected
@@ -254,24 +330,35 @@ export default function QuizRunnerPage() {
           {/* Navigation Controls */}
           <div className="flex items-center justify-between pt-1">
             <button
+              type="button"
               disabled={currentIndex === 0}
               onClick={() => setCurrentIndex((prev) => prev - 1)}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 disabled:opacity-30"
+              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 disabled:opacity-30 cursor-pointer"
             >
               ← पिछला
             </button>
 
             {currentIndex === questions.length - 1 ? (
               <button
-                onClick={() => setIsSubmitted(true)}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-lg active:scale-95"
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleSubmitQuiz}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-lg active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
-                सबमिट करें ✓
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>सबमिट हो रहा है...</span>
+                  </>
+                ) : (
+                  <span>सबमिट करें ✓</span>
+                )}
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => setCurrentIndex((prev) => prev + 1)}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-md active:scale-95"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-md active:scale-95 cursor-pointer"
               >
                 अगला →
               </button>
@@ -283,6 +370,7 @@ export default function QuizRunnerPage() {
         <div className="space-y-4">
           <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
             <button
+              type="button"
               onClick={() => setViewMode("score")}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 viewMode === "score" ? "bg-indigo-600 text-white shadow" : "text-slate-400"
@@ -291,6 +379,7 @@ export default function QuizRunnerPage() {
               <Trophy className="w-3.5 h-3.5" /> स्कोरकार्ड
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("solutions")}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 viewMode === "solutions" ? "bg-indigo-600 text-white shadow" : "text-slate-400"
@@ -300,7 +389,7 @@ export default function QuizRunnerPage() {
             </button>
           </div>
 
-          {viewMode === "score" && (
+          {viewMode === "score" && scoreResult && (
             <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-2xl">
               <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-amber-400" />
@@ -330,27 +419,30 @@ export default function QuizRunnerPage() {
               </div>
 
               <button
+                type="button"
                 onClick={() => shareScoreOnWhatsApp(scoreResult)}
-                className="w-full py-3 rounded-2xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95"
+                className="w-full py-3 rounded-2xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
               >
                 <Share2 className="w-4 h-4" /> WhatsApp पर शेयर करें
               </button>
 
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => {
                     setSelectedAnswers({});
                     setIsSubmitted(false);
                     setCurrentIndex(0);
                     setTimeLeft(600);
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-white border border-slate-700 flex items-center justify-center gap-1"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-white border border-slate-700 flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" /> पुनः दें
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode("solutions")}
-                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow flex items-center justify-center gap-1"
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5" /> व्याख्या देखें →
                 </button>

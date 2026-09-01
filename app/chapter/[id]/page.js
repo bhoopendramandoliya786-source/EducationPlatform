@@ -8,12 +8,11 @@ import {
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
   Sparkles, HelpCircle, Trophy, RotateCcw,
   Share2, BookmarkCheck, ChevronRight, ChevronLeft, Clock,
-  ChevronDown, Check, X, Layers, Play, FastForward
+  ChevronDown, Check, X, Layers, Play, FastForward, Loader2
 } from "lucide-react";
 
-// 🌟 1. SMART BOOKLET RENDERER (BIGGER & HIGH-READABILITY FORMAT)
+// 🌟 1. SMART BOOKLET RENDERER
 function PDFNotesSheet({ notes, chapterName }) {
-  // लाइन को अलग-अलग रंगों में हाइलाइट करने का स्मार्ट फ़ंक्शन
   const renderFormattedLine = (line, idx) => {
     if (line.startsWith("📌") || line.startsWith("⚡") || line.startsWith("💡")) {
       return (
@@ -23,13 +22,11 @@ function PDFNotesSheet({ notes, chapterName }) {
       );
     }
 
-    // अगर सवाल-जवाब प्रारूप (— या -) में है
     if (line.includes("—") || line.includes(" - ")) {
       const parts = line.split(/—| - /);
       const questionPart = parts[0]?.trim();
       const answerWithExam = parts.slice(1).join("—").trim();
 
-      // एग्जाम टैग (ब्रैकेट) को अलग करना
       const examMatch = answerWithExam.match(/\(([^)]+)\)$/);
       const examTag = examMatch ? examMatch[1] : null;
       const cleanAnswer = examTag ? answerWithExam.replace(/\([^)]+\)$/, "").trim() : answerWithExam;
@@ -102,7 +99,7 @@ function PDFNotesSheet({ notes, chapterName }) {
   );
 }
 
-// 🎯 2. ADVANCED BIGGER & STABLE QUESTION FORMATTER
+// 🎯 2. ADVANCED QUESTION FORMATTER
 function FormattedQuestionText({ text }) {
   if (!text) return null;
 
@@ -184,7 +181,7 @@ function FormattedQuestionText({ text }) {
   return <p className="text-white text-base font-bold leading-relaxed tracking-wide whitespace-pre-line">{text}</p>;
 }
 
-// 🚀 3. MAIN COMPONENT
+// 🚀 3. MAIN CHAPTER COMPONENT
 export default function ChapterSingleViewPage() {
   const { id } = useParams();
   const [chapter, setChapter] = useState(null);
@@ -199,6 +196,7 @@ export default function ChapterSingleViewPage() {
   const [qIndex, setQIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
   const [isOpenReview, setIsOpenReview] = useState(false);
 
@@ -246,7 +244,7 @@ export default function ChapterSingleViewPage() {
     return () => { isMounted = false; };
   }, [id, supabase]);
 
-  // Timer Countdown for Quiz in Arena
+  // Timer Countdown for Quiz
   useEffect(() => {
     if (!isArenaOpen || activeTab !== "quiz" || quizSubmitted || timeLeft <= 0) return;
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
@@ -265,6 +263,7 @@ export default function ChapterSingleViewPage() {
     setQIndex(0);
     setUserAnswers({});
     setQuizSubmitted(false);
+    setIsSubmitting(false);
     setIsOpenReview(false);
     setTimeLeft(600);
     setIsArenaOpen(true);
@@ -273,6 +272,7 @@ export default function ChapterSingleViewPage() {
   const closeArena = () => {
     setIsArenaOpen(false);
     setQuizSubmitted(false);
+    setIsSubmitting(false);
     setIsOpenReview(false);
     setUserAnswers({});
   };
@@ -286,13 +286,111 @@ export default function ChapterSingleViewPage() {
   const currentSetQuestions = currentTabList.slice(startIndex, startIndex + 20);
   const currentQ = currentSetQuestions[qIndex] || currentSetQuestions[0];
 
-  // ➡️ Handle Next Set Transition
   const handleGoToNextSet = () => {
     if (selectedSet < totalSets) {
       openSetArena(selectedSet + 1);
     } else {
       closeArena();
     }
+  };
+
+  // Result Calculation
+  let correctCount = 0;
+  let wrongCount = 0;
+  let unattemptedCount = 0;
+
+  currentSetQuestions.forEach((q) => {
+    const ans = userAnswers[q.id];
+    if (!ans) unattemptedCount++;
+    else if (ans === q.answer) correctCount++;
+    else wrongCount++;
+  });
+
+  const accuracyPercent = currentSetQuestions.length > 0 ? Math.round((correctCount / currentSetQuestions.length) * 100) : 0;
+
+  // 🌟 QUIZ SUBMISSION WITH SUPABASE + STREAK + GA4
+  const handleSubmitQuiz = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setQuizSubmitted(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const today = new Date().toISOString().split("T")[0];
+        const answeredCount = Object.keys(userAnswers).length;
+
+        // 1. Progress Table में रिकॉर्ड दर्ज करें
+        await supabase.from("progress").insert({
+          user_id: user.id,
+          topic_id: chapter.id,
+          score: correctCount,
+          questions_attempted: answeredCount,
+          questions_correct: correctCount,
+          completed: true,
+          last_studied_at: new Date().toISOString(),
+        });
+
+        // 2. Daily Streak Update
+        const { data: userProfile } = await supabase
+          .from("profiles")
+          .select("streak_count, last_active_date")
+          .eq("id", user.id)
+          .single();
+
+        if (userProfile) {
+          const lastDate = userProfile.last_active_date;
+          let newStreak = userProfile.streak_count || 0;
+
+          if (lastDate !== today) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+            if (lastDate === yesterdayStr) {
+              newStreak += 1;
+            } else {
+              newStreak = 1;
+            }
+
+            await supabase
+              .from("profiles")
+              .update({
+                streak_count: newStreak,
+                last_active_date: today,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", user.id);
+          }
+        }
+      }
+
+      // 3. GA4 Event
+      if (typeof window !== "undefined" && window.gtag) {
+        window.gtag("event", "quiz_submit", {
+          chapter_name: chapter.name,
+          set_number: selectedSet,
+          score: correctCount,
+          accuracy: accuracyPercent,
+        });
+      }
+    } catch (err) {
+      console.error("Quiz submission save error:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const shareScoreOnWhatsApp = () => {
+    const text = `🔥 मैंने EduAI Pro पर "${chapter.name} (Set ${selectedSet})" टेस्ट में ${currentSetQuestions.length} में से ${correctCount} सही (${accuracyPercent}%) स्कोर किया! 🎯\n\nअभी टेस्ट दें: https://education-platform-fawn-six.vercel.app/chapter/${id}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const formatTime = (sec) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
   if (loading) {
@@ -311,31 +409,6 @@ export default function ChapterSingleViewPage() {
       </main>
     );
   }
-
-  // Result Calculation
-  let correctCount = 0;
-  let wrongCount = 0;
-  let unattemptedCount = 0;
-
-  currentSetQuestions.forEach((q) => {
-    const ans = userAnswers[q.id];
-    if (!ans) unattemptedCount++;
-    else if (ans === q.answer) correctCount++;
-    else wrongCount++;
-  });
-
-  const accuracyPercent = currentSetQuestions.length > 0 ? Math.round((correctCount / currentSetQuestions.length) * 100) : 0;
-
-  const shareScoreOnWhatsApp = () => {
-    const text = `🔥 मैंने EduAI Pro पर "${chapter.name} (Set ${selectedSet})" टेस्ट में ${currentSetQuestions.length} में से ${correctCount} सही (${accuracyPercent}%) स्कोर किया! 🎯\n\nअभी टेस्ट दें: https://education-platform-fawn-six.vercel.app/chapter/${id}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
-  };
-
-  const formatTime = (sec) => {
-    const m = Math.floor(sec / 60).toString().padStart(2, "0");
-    const s = (sec % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
 
   return (
     <main className="max-w-md mx-auto px-3 space-y-3.5 pb-28 pt-1 font-sans select-none">
@@ -358,7 +431,7 @@ export default function ChapterSingleViewPage() {
             </span>
           </div>
 
-          {/* 🎯 STABLE QUESTION CARD */}
+          {/* 🎯 QUESTION CARD */}
           {(!quizSubmitted || activeTab !== "quiz") ? (
             currentQ ? (
               <div className="min-h-[520px] p-5 sm:p-6 rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl flex flex-col justify-between space-y-4">
@@ -382,12 +455,12 @@ export default function ChapterSingleViewPage() {
                     )}
                   </div>
 
-                  {/* Big Formatted Question Text */}
+                  {/* Formatted Question Text */}
                   <div className="min-h-[48px]">
                     <FormattedQuestionText text={currentQ.question} />
                   </div>
 
-                  {/* Large Options List */}
+                  {/* Options List */}
                   <div className="space-y-2.5 pt-1">
                     {[
                       { key: "A", text: currentQ.option_a },
@@ -440,7 +513,7 @@ export default function ChapterSingleViewPage() {
                     })}
                   </div>
 
-                  {/* Instant Explanation in Practice Mode */}
+                  {/* Explanation in Practice Mode */}
                   {activeTab !== "quiz" && userAnswers[currentQ.id] && currentQ.explanation && (
                     <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1.5 animate-fadeIn">
                       <div className="font-bold flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm">
@@ -453,7 +526,7 @@ export default function ChapterSingleViewPage() {
                   )}
                 </div>
 
-                {/* Stable Navigation Buttons */}
+                {/* Navigation Buttons */}
                 <div className="flex items-center justify-between pt-3 border-t border-slate-850 gap-3 mt-auto">
                   <button
                     type="button"
@@ -468,10 +541,18 @@ export default function ChapterSingleViewPage() {
                     activeTab === "quiz" ? (
                       <button
                         type="button"
-                        onClick={() => setQuizSubmitted(true)}
+                        disabled={isSubmitting}
+                        onClick={handleSubmitQuiz}
                         className="flex-1 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
                       >
-                        सबमिट करें
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>सबमिट हो रहा है...</span>
+                          </>
+                        ) : (
+                          <span>सबमिट करें</span>
+                        )}
                       </button>
                     ) : (
                       <button
@@ -525,6 +606,14 @@ export default function ChapterSingleViewPage() {
                     <div className="text-[10px] text-slate-400">सटीकता</div>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={shareScoreOnWhatsApp}
+                  className="w-full py-3 rounded-2xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4" /> WhatsApp पर शेयर करें
+                </button>
 
                 <div className="flex gap-2.5 pt-1">
                   <button
