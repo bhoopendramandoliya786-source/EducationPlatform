@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import { 
   Trophy, BookOpen, Flame, Award, ArrowLeft, 
   CheckCircle2, Zap, Clock, Share2, 
@@ -17,13 +17,17 @@ export default function StudentProfilePage() {
   const [stats, setStats] = useState({ streak: 0, solved: 0, accuracy: 100, xp: 0 });
   const [targetExam, setTargetExam] = useState("CET / REET 2026");
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadDashboardData() {
       try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) {
           router.push("/login");
@@ -32,7 +36,6 @@ export default function StudentProfilePage() {
 
         if (isMounted) setUser(authUser);
 
-        // 1. Fetch Profile Data (Streak, Name)
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
@@ -43,7 +46,6 @@ export default function StudentProfilePage() {
           setProfile(profileData);
         }
 
-        // 2. Fetch Solved Progress & Stats
         const { count: solvedCount } = await supabase
           .from("progress")
           .select("id", { count: "exact", head: true })
@@ -73,9 +75,13 @@ export default function StudentProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [router, supabase]);
+  }, [router]);
 
   const handleLogout = async () => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
@@ -88,8 +94,8 @@ export default function StudentProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-2 text-indigo-400">
-        <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-2.5 text-emerald-400">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         <p className="text-xs text-slate-400 font-medium">VIP डैशबोर्ड लोड हो रहा है...</p>
       </div>
     );
@@ -98,50 +104,50 @@ export default function StudentProfilePage() {
   const studentName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "प्रतियोगी छात्र";
 
   return (
-    <main className="max-w-md mx-auto px-4 pb-28 pt-2 space-y-4 font-sans select-none">
+    <main className="max-w-lg mx-auto px-3.5 pb-24 pt-2 space-y-4 font-sans select-none">
 
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <Link 
           href="/" 
           aria-label="होमपेज पर वापस जाएँ"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-emerald-400 transition"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> वापस होम
+          <ArrowLeft className="w-4 h-4" /> वापस होम
         </Link>
-        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1 shadow-sm shadow-amber-500/20">
-          <Sparkles className="w-3 h-3 text-amber-400" /> VIP MEMBER
+        <span className="text-[10px] font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm shadow-emerald-500/10">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> VIP MEMBER
         </span>
       </div>
 
       {/* VIP Profile Banner Card */}
-      <section className="p-5 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/80 to-slate-950 border border-amber-500/30 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-        {/* Glow effect in background */}
-        <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+      <section className="p-5 rounded-[28px] bg-gradient-to-b from-slate-900/95 to-slate-950 border border-emerald-500/25 shadow-2xl relative overflow-hidden backdrop-blur-xl space-y-4">
+        <div className="absolute top-0 inset-x-8 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center gap-3.5">
             <div className="relative">
-              <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-amber-500 via-purple-600 to-indigo-600 p-[2px] shadow-lg shadow-indigo-500/30">
-                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center font-black text-amber-300 text-lg">
+              <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500 p-[2px] shadow-lg shadow-emerald-500/20">
+                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center font-black text-emerald-400 text-lg">
                   {studentName.charAt(0).toUpperCase()}
                 </div>
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 rounded-full p-0.5 border border-slate-950 shadow">
+              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 rounded-full p-0.5 border border-slate-950 shadow">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </div>
             </div>
 
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-sm sm:text-base font-black text-white leading-tight">
+                <h1 className="text-base font-black text-white leading-tight">
                   {studentName}
                 </h1>
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 rounded">
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 rounded">
                   PRO
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 {user?.email}
               </p>
@@ -152,7 +158,7 @@ export default function StudentProfilePage() {
             type="button"
             onClick={shareProfileStats}
             title="WhatsApp पर शेयर करें"
-            className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition active:scale-95 shadow"
+            className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition active:scale-95 shadow cursor-pointer"
           >
             <Share2 className="w-4 h-4" />
           </button>
@@ -160,9 +166,9 @@ export default function StudentProfilePage() {
       </section>
 
       {/* Target Exam Selector */}
-      <section className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex items-center justify-between gap-2 shadow-md">
+      <section className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/90 flex items-center justify-between gap-2 shadow-sm">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
             <Target className="w-4 h-4" />
           </div>
           <div>
@@ -173,7 +179,7 @@ export default function StudentProfilePage() {
         <select
           value={targetExam}
           onChange={(e) => setTargetExam(e.target.value)}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-indigo-300 outline-none cursor-pointer hover:border-indigo-500/40"
+          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-emerald-300 outline-none cursor-pointer hover:border-emerald-500/40"
         >
           <option value="CET / REET 2026">CET / REET 2026</option>
           <option value="RPSC 2nd Grade">RPSC 2nd Grade</option>
@@ -185,35 +191,35 @@ export default function StudentProfilePage() {
 
       {/* Real Performance Metrics (3 Pillars) */}
       <section className="grid grid-cols-3 gap-2.5">
-        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-orange-500/20 text-center space-y-1 shadow-lg">
-          <div className="w-8 h-8 rounded-xl bg-orange-500/15 mx-auto flex items-center justify-center text-orange-400">
+        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center space-y-1 shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 mx-auto flex items-center justify-center text-amber-400">
             <Flame className="w-4 h-4 animate-pulse fill-current" />
           </div>
           <div className="text-sm font-black text-white">{stats.streak} दिन</div>
-          <div className="text-[9px] text-orange-400/80 font-bold uppercase tracking-wider">डेली स्ट्रीक</div>
+          <div className="text-[9px] text-amber-400/90 font-bold uppercase tracking-wider">डेली स्ट्रीक</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-emerald-500/20 text-center space-y-1 shadow-lg">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/15 mx-auto flex items-center justify-center text-emerald-400">
+        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-emerald-500/20 text-center space-y-1 shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mx-auto flex items-center justify-center text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <div className="text-sm font-black text-white">{stats.solved} हल</div>
-          <div className="text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider">PYQ प्रश्न</div>
+          <div className="text-[9px] text-emerald-400/90 font-bold uppercase tracking-wider">PYQ प्रश्न</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-indigo-500/20 text-center space-y-1 shadow-lg">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/15 mx-auto flex items-center justify-center text-indigo-400">
+        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-teal-500/20 text-center space-y-1 shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 mx-auto flex items-center justify-center text-teal-400">
             <Award className="w-4 h-4" />
           </div>
           <div className="text-sm font-black text-white">{stats.xp} XP</div>
-          <div className="text-[9px] text-indigo-400/80 font-bold uppercase tracking-wider">रैंक पॉइंट्स</div>
+          <div className="text-[9px] text-teal-400/90 font-bold uppercase tracking-wider">रैंक पॉइंट्स</div>
         </div>
       </section>
 
       {/* Quick Action Navigation */}
-      <section className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-2.5 shadow-xl">
+      <section className="p-4 rounded-[28px] bg-slate-900/80 border border-slate-800/90 space-y-2.5 shadow-xl">
         <h2 className="text-xs font-bold text-slate-300 px-1 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
           <span>अध्ययन हब एवं टेस्ट सीरीज़</span>
         </h2>
 
@@ -236,10 +242,10 @@ export default function StudentProfilePage() {
 
           <Link 
             href="/notes" 
-            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-indigo-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
+            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-emerald-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                 <BookOpen className="w-4 h-4" />
               </div>
               <div>
@@ -247,15 +253,15 @@ export default function StudentProfilePage() {
                 <span className="text-[10px] text-slate-400">टू-द-पॉइंट संक्षिप्त नोट्स पढ़ें</span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 transition" />
           </Link>
 
           <Link 
             href="/ai-tutor" 
-            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-purple-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
+            className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-emerald-500/50 text-slate-300 hover:text-white flex items-center justify-between group transition active:scale-[0.99]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+              <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
                 <Zap className="w-4 h-4" />
               </div>
               <div>
@@ -263,7 +269,7 @@ export default function StudentProfilePage() {
                 <span className="text-[10px] text-slate-400">कठिन प्रश्नों की तुरंत व्याख्या पूछें</span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-purple-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-teal-400 transition" />
           </Link>
         </div>
       </section>
