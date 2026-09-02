@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -8,15 +7,16 @@ import {
   ArrowLeft, BookOpen, CheckCircle2, XCircle, 
   Sparkles, HelpCircle, Trophy, RotateCcw,
   Share2, BookmarkCheck, ChevronRight, ChevronLeft, Clock,
-  ChevronDown, Check, X, Layers, Play, FastForward, Loader2
+  ChevronDown, Check, X, Layers, Play, FastForward, Loader2,
+  Bookmark, Award, ArrowUpRight
 } from "lucide-react";
 
-// 🌟 1. SMART BOOKLET RENDERER
+// 🌟 1. SMART BOOKLET RENDERER (EMERALD LUXE)
 function PDFNotesSheet({ notes, chapterName }) {
   const renderFormattedLine = (line, idx) => {
     if (line.startsWith("📌") || line.startsWith("⚡") || line.startsWith("💡")) {
       return (
-        <div key={idx} className="p-3 rounded-2xl bg-indigo-950/60 border border-indigo-500/40 text-sm font-bold text-indigo-200 mb-2">
+        <div key={idx} className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs sm:text-sm font-bold text-emerald-200 mb-2.5">
           {line}
         </div>
       );
@@ -32,16 +32,16 @@ function PDFNotesSheet({ notes, chapterName }) {
       const cleanAnswer = examTag ? answerWithExam.replace(/\([^)]+\)$/, "").trim() : answerWithExam;
 
       return (
-        <div key={idx} className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition space-y-1.5">
-          <p className="text-sm sm:text-base font-bold text-white leading-relaxed">
+        <div key={idx} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition space-y-2">
+          <p className="text-xs sm:text-sm font-bold text-slate-100 leading-relaxed">
             {questionPart}
           </p>
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <span className="text-sm font-black text-emerald-400 flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/40">
+            <span className="text-xs sm:text-sm font-black text-emerald-400 flex items-center gap-1.5">
               <span className="text-slate-400 font-normal text-xs">उत्तर:</span> {cleanAnswer}
             </span>
             {examTag && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30">
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-teal-500/10 text-teal-300 border border-teal-500/20">
                 {examTag}
               </span>
             )}
@@ -51,43 +51,43 @@ function PDFNotesSheet({ notes, chapterName }) {
     }
 
     return (
-      <p key={idx} className="text-sm sm:text-base text-slate-200 leading-relaxed py-1 break-words font-medium">
+      <p key={idx} className="text-xs sm:text-sm text-slate-300 leading-relaxed py-1 break-words font-medium">
         {line}
       </p>
     );
   };
 
   return (
-    <div className="rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl overflow-hidden font-sans text-slate-200">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-purple-950/50 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+    <div className="rounded-[28px] bg-slate-900/80 border border-slate-800/90 shadow-2xl overflow-hidden font-sans text-slate-200">
+      <div className="bg-gradient-to-r from-slate-900 via-emerald-950/40 to-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
         <div>
-          <span className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-amber-400" /> EduAI Pro • नोट्स
+          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-emerald-400" /> EduAI Pro • नोट्स
           </span>
           <h2 className="text-base sm:text-lg font-black text-white mt-0.5">{chapterName}</h2>
         </div>
-        <span className="text-[11px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-xl">
+        <span className="text-[10px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-xl">
           SMART BOOKLET
         </span>
       </div>
 
-      <div className="p-4 sm:p-5 space-y-5">
+      <div className="p-4 sm:p-5 space-y-4">
         {notes.length === 0 ? (
-          <div className="p-10 text-center text-sm text-slate-400">
+          <div className="p-10 text-center text-xs text-slate-400">
             इस अध्याय के नोट्स जल्द जोड़े जा रहे हैं।
           </div>
         ) : (
           notes.map((note) => {
             const rawLines = (note.content || "").split("\n").map((l) => l.trim()).filter(Boolean);
             return (
-              <div key={note.id} className="space-y-3.5 bg-slate-900/40 p-4 rounded-3xl border border-slate-800/80">
+              <div key={note.id} className="space-y-3 bg-slate-950/50 p-4 rounded-2xl border border-slate-800/70">
                 {note.title && (
-                  <div className="text-sm sm:text-base font-black text-amber-400 uppercase tracking-wide border-b border-slate-800 pb-2.5 flex items-center gap-2">
-                    <BookmarkCheck className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div className="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wide border-b border-slate-800/80 pb-2 flex items-center gap-2">
+                    <BookmarkCheck className="w-4 h-4 text-amber-400 shrink-0" />
                     <span>{note.title}</span>
                   </div>
                 )}
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {rawLines.map((line, idx) => renderFormattedLine(line, idx))}
                 </div>
               </div>
@@ -128,17 +128,17 @@ function FormattedQuestionText({ text }) {
     if (rows.length >= 2) {
       return (
         <div className="space-y-3">
-          <p className="text-white text-base font-bold leading-snug">{titlePart.trim()}</p>
+          <p className="text-white text-sm sm:text-base font-bold leading-snug">{titlePart.trim()}</p>
           <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950">
-            <div className="grid grid-cols-2 bg-indigo-950/70 border-b border-slate-800 px-3.5 py-2 text-xs font-black text-indigo-300">
+            <div className="grid grid-cols-2 bg-emerald-950/40 border-b border-slate-800 px-3.5 py-2 text-xs font-black text-emerald-300">
               <span>सूची - I (विवरण)</span>
               <span>सूची - II (सुमेलन)</span>
             </div>
             <div className="divide-y divide-slate-800/60">
               {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-2 px-3.5 py-2.5 text-xs sm:text-sm">
+                <div key={i} className="grid grid-cols-2 px-3.5 py-2 text-xs">
                   <span className="font-medium pr-2 text-slate-300">{r.col1}</span>
-                  <span className="font-bold text-indigo-300 border-l border-slate-800/80 pl-3">{r.col2}</span>
+                  <span className="font-bold text-emerald-300 border-l border-slate-800/80 pl-3">{r.col2}</span>
                 </div>
               ))}
             </div>
@@ -151,14 +151,14 @@ function FormattedQuestionText({ text }) {
   if (text.includes("कथन (A)") || text.includes("कथन(A)") || text.includes("कथन:")) {
     const parts = text.split(/(?=कारण\s*\(R\)|कारण:|सही\s*विकल्प|उपर्युक्त)/gi);
     return (
-      <div className="space-y-2.5 text-sm sm:text-base">
+      <div className="space-y-2 text-xs sm:text-sm">
         {parts.map((p, idx) => {
           let str = p.trim();
           if (str.startsWith("कथन")) {
             const cleanContent = str.replace(/^कथन\s*(\([A-Z]\)|:)?\s*[:\-]?\s*/i, "");
             return (
-              <div key={idx} className="p-3.5 rounded-2xl bg-indigo-950/50 border border-indigo-500/30 text-indigo-200">
-                <strong className="text-indigo-400 block font-black text-xs uppercase tracking-wide mb-1">📌 कथन (A)</strong>
+              <div key={idx} className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/25 text-emerald-200">
+                <strong className="text-emerald-400 block font-black text-xs uppercase tracking-wide mb-1">📌 कथन (A)</strong>
                 <span className="text-white font-medium leading-relaxed">{cleanContent}</span>
               </div>
             );
@@ -166,19 +166,19 @@ function FormattedQuestionText({ text }) {
           if (str.startsWith("कारण")) {
             const cleanContent = str.replace(/^कारण\s*(\([A-Z]\)|:)?\s*[:\-]?\s*/i, "");
             return (
-              <div key={idx} className="p-3.5 rounded-2xl bg-purple-950/50 border border-purple-500/30 text-purple-200">
-                <strong className="text-purple-400 block font-black text-xs uppercase tracking-wide mb-1">💡 कारण (R)</strong>
+              <div key={idx} className="p-3.5 rounded-2xl bg-teal-950/30 border border-teal-500/25 text-teal-200">
+                <strong className="text-teal-400 block font-black text-xs uppercase tracking-wide mb-1">💡 कारण (R)</strong>
                 <span className="text-white font-medium leading-relaxed">{cleanContent}</span>
               </div>
             );
           }
-          return <p key={idx} className="text-slate-300 font-bold text-sm leading-relaxed">{str}</p>;
+          return <p key={idx} className="text-slate-300 font-bold text-xs sm:text-sm leading-relaxed">{str}</p>;
         })}
       </div>
     );
   }
 
-  return <p className="text-white text-base font-bold leading-relaxed tracking-wide whitespace-pre-line">{text}</p>;
+  return <p className="text-white text-sm sm:text-base font-bold leading-relaxed whitespace-pre-line">{text}</p>;
 }
 
 // 🚀 3. MAIN CHAPTER COMPONENT
@@ -308,7 +308,6 @@ export default function ChapterSingleViewPage() {
 
   const accuracyPercent = currentSetQuestions.length > 0 ? Math.round((correctCount / currentSetQuestions.length) * 100) : 0;
 
-  // 🌟 QUIZ SUBMISSION WITH SUPABASE + STREAK + GA4
   const handleSubmitQuiz = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -321,7 +320,6 @@ export default function ChapterSingleViewPage() {
         const today = new Date().toISOString().split("T")[0];
         const answeredCount = Object.keys(userAnswers).length;
 
-        // 1. Progress Table में रिकॉर्ड दर्ज करें
         await supabase.from("progress").insert({
           user_id: user.id,
           topic_id: chapter.id,
@@ -332,7 +330,6 @@ export default function ChapterSingleViewPage() {
           last_studied_at: new Date().toISOString(),
         });
 
-        // 2. Daily Streak Update
         const { data: userProfile } = await supabase
           .from("profiles")
           .select("streak_count, last_active_date")
@@ -366,7 +363,6 @@ export default function ChapterSingleViewPage() {
         }
       }
 
-      // 3. GA4 Event
       if (typeof window !== "undefined" && window.gtag) {
         window.gtag("event", "quiz_submit", {
           chapter_name: chapter.name,
@@ -395,7 +391,7 @@ export default function ChapterSingleViewPage() {
 
   if (loading) {
     return (
-      <main className="max-w-md mx-auto px-4 pt-6 space-y-4 animate-pulse">
+      <main className="max-w-lg mx-auto px-4 pt-6 space-y-4 animate-pulse">
         <div className="h-6 w-32 bg-slate-900 rounded-lg" />
         <div className="h-28 bg-slate-900 rounded-3xl border border-slate-800" />
       </main>
@@ -404,44 +400,46 @@ export default function ChapterSingleViewPage() {
 
   if (!chapter) {
     return (
-      <main className="max-w-md mx-auto px-4 pt-12 text-center text-xs text-slate-400">
-        अध्याय नहीं मिला। <Link href="/" className="text-indigo-400 font-bold ml-1">होम जाएँ</Link>
+      <main className="max-w-lg mx-auto px-4 pt-12 text-center text-xs text-slate-400">
+        अध्याय नहीं मिला। <Link href="/" className="text-emerald-400 font-bold ml-1">होम जाएँ</Link>
       </main>
     );
   }
 
   return (
-    <main className="max-w-md mx-auto px-3 space-y-3.5 pb-28 pt-1 font-sans select-none">
+    <main className="max-w-lg mx-auto px-3.5 space-y-4 pb-20 pt-2 font-sans select-none">
 
       {/* 🧭 A. SPECIAL FULL-SCREEN TEST ARENA */}
       {isArenaOpen ? (
-        <div className="space-y-3 animate-fadeIn">
+        <div className="space-y-3.5 animate-fadeIn">
 
-          {/* Top Arena Exit Bar */}
-          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#0e131f] border border-slate-800">
+          {/* Top Arena Header Bar */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl">
             <button
               type="button"
               onClick={closeArena}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-800 cursor-pointer transition active:scale-95"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-800/80 transition active:scale-95"
             >
-              <ArrowLeft className="w-4 h-4" /> बाहर निकलें
+              <ArrowLeft className="w-3.5 h-3.5" /> बाहर निकलें
             </button>
-            <span className="text-xs font-black text-purple-400">
-              {activeTab === "quiz" ? "स्पीड टेस्ट" : activeTab === "pyqs" ? "PYQs अभ्यास" : "MCQs अभ्यास"} • Set {selectedSet}/{totalSets}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-emerald-400">
+                {activeTab === "quiz" ? "स्पीड टेस्ट" : activeTab === "pyqs" ? "PYQs अभ्यास" : "MCQs अभ्यास"} • Set {selectedSet}/{totalSets}
+              </span>
+            </div>
           </div>
 
           {/* 🎯 QUESTION CARD */}
           {(!quizSubmitted || activeTab !== "quiz") ? (
             currentQ ? (
-              <div className="min-h-[520px] p-5 sm:p-6 rounded-3xl bg-[#0e131f] border border-slate-800/90 shadow-2xl flex flex-col justify-between space-y-4">
+              <div className="space-y-4">
+                <div className="p-5 sm:p-6 rounded-[28px] bg-gradient-to-b from-slate-900/95 to-slate-950 border border-slate-800/90 shadow-2xl space-y-4">
 
-                <div className="space-y-4">
                   {/* Header: Badge & Timer */}
                   <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
-                        {currentQ.is_pyq ? (currentQ.exam_tag || "PYQ") : "HARD"}
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">
+                        {currentQ.is_pyq ? (currentQ.exam_tag || "PYQ") : "अभ्यास प्रश्न"}
                       </span>
                       <span className="text-xs font-bold text-slate-400">
                         प्रश्न {qIndex + 1} / {currentSetQuestions.length}
@@ -472,18 +470,18 @@ export default function ChapterSingleViewPage() {
                       const isPracticeMode = activeTab !== "quiz";
                       const isAnswered = isPracticeMode && !!userAnswers[currentQ.id];
 
-                      let optClass = "bg-slate-950/70 border-slate-800/90 text-slate-200 hover:border-slate-700";
+                      let optClass = "bg-slate-950/80 border-slate-800/90 text-slate-200 hover:border-emerald-500/40 hover:bg-slate-900/80";
 
                       if (isPracticeMode && isAnswered) {
                         if (opt.key === currentQ.answer) {
-                          optClass = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold shadow-md shadow-emerald-900/20";
+                          optClass = "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold shadow-md shadow-emerald-950/40";
                         } else if (isSelected) {
                           optClass = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
                         } else {
-                          optClass = "bg-slate-950/30 border-slate-900 text-slate-600 opacity-50";
+                          optClass = "bg-slate-950/30 border-slate-900 text-slate-600 opacity-40";
                         }
                       } else if (isSelected) {
-                        optClass = "bg-purple-600/25 border-purple-500 text-white font-bold shadow-md shadow-purple-900/30";
+                        optClass = "bg-emerald-500/20 border-emerald-500 text-emerald-200 font-bold shadow-md shadow-emerald-950/40";
                       }
 
                       return (
@@ -492,21 +490,21 @@ export default function ChapterSingleViewPage() {
                           type="button"
                           disabled={isPracticeMode && isAnswered}
                           onClick={() => handleSelectOption(currentQ.id, opt.key)}
-                          className={`w-full min-h-[50px] p-3.5 sm:p-4 rounded-2xl border text-left flex items-center justify-between gap-3.5 transition cursor-pointer active:scale-[0.99] ${optClass}`}
+                          className={`w-full min-h-[48px] p-3.5 rounded-2xl border text-left flex items-center justify-between gap-3.5 transition cursor-pointer active:scale-[0.99] ${optClass}`}
                         >
                           <div className="flex items-center gap-3">
-                            <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                              isSelected ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-300"
+                            <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+                              isSelected ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-300"
                             }`}>
                               {opt.key}
                             </span>
-                            <span className="text-sm font-medium leading-snug">{opt.text || `विकल्प ${opt.key}`}</span>
+                            <span className="text-xs sm:text-sm font-medium leading-snug">{opt.text || `विकल्प ${opt.key}`}</span>
                           </div>
                           {isPracticeMode && isAnswered && opt.key === currentQ.answer && (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                           )}
                           {isPracticeMode && isAnswered && isSelected && opt.key !== currentQ.answer && (
-                            <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+                            <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
                           )}
                         </button>
                       );
@@ -515,76 +513,106 @@ export default function ChapterSingleViewPage() {
 
                   {/* Explanation in Practice Mode */}
                   {activeTab !== "quiz" && userAnswers[currentQ.id] && currentQ.explanation && (
-                    <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1.5 animate-fadeIn">
-                      <div className="font-bold flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm">
+                    <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-200 space-y-1.5 animate-fadeIn">
+                      <div className="font-bold flex items-center gap-1.5 text-emerald-400 text-xs">
                         <HelpCircle className="w-4 h-4" /> विस्तृत व्याख्या:
                       </div>
-                      <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line text-slate-200">
+                      <p className="text-xs leading-relaxed whitespace-pre-line text-slate-200">
                         {currentQ.explanation}
                       </p>
                     </div>
                   )}
-                </div>
 
-                {/* Navigation Buttons */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-850 gap-3 mt-auto">
-                  <button
-                    type="button"
-                    disabled={qIndex === 0}
-                    onClick={() => setQIndex((prev) => prev - 1)}
-                    className="flex-1 py-3.5 rounded-2xl bg-slate-800/90 text-slate-300 font-bold text-xs disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> पिछला
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 gap-2.5">
+                    <button
+                      type="button"
+                      disabled={qIndex === 0}
+                      onClick={() => setQIndex((prev) => prev - 1)}
+                      className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs disabled:opacity-30 flex items-center justify-center gap-1 transition active:scale-95"
+                    >
+                      <ChevronLeft className="w-4 h-4" /> पिछला
+                    </button>
 
-                  {qIndex === currentSetQuestions.length - 1 ? (
-                    activeTab === "quiz" ? (
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={handleSubmitQuiz}
-                        className="flex-1 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>सबमिट हो रहा है...</span>
-                          </>
-                        ) : (
-                          <span>सबमिट करें</span>
-                        )}
-                      </button>
+                    {qIndex === currentSetQuestions.length - 1 ? (
+                      activeTab === "quiz" ? (
+                        <button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={handleSubmitQuiz}
+                          className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1 transition active:scale-95"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>सबमिट हो रहा है...</span>
+                            </>
+                          ) : (
+                            <span>सबमिट करें</span>
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleGoToNextSet}
+                          className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1 transition active:scale-95"
+                        >
+                          {selectedSet < totalSets ? (
+                            <>अगला सेट {selectedSet + 1} <FastForward className="w-3.5 h-3.5 fill-current" /></>
+                          ) : (
+                            <>अभ्यास समाप्त <Check className="w-3.5 h-3.5" /></>
+                          )}
+                        </button>
+                      )
                     ) : (
                       <button
                         type="button"
-                        onClick={handleGoToNextSet}
-                        className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
+                        onClick={() => setQIndex((prev) => prev + 1)}
+                        className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1 transition active:scale-95"
                       >
-                        {selectedSet < totalSets ? (
-                          <>अगला सेट {selectedSet + 1} <FastForward className="w-4 h-4 fill-current" /></>
-                        ) : (
-                          <>अभ्यास समाप्त • सेट्स देखें <Check className="w-4 h-4" /></>
-                        )}
+                        अगला <ChevronRight className="w-4 h-4" />
                       </button>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setQIndex((prev) => prev + 1)}
-                      className="flex-1 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95"
-                    >
-                      अगला <ChevronRight className="w-4 h-4" />
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
 
+                {/* 🔢 TCS-Style Question Jump Palette */}
+                <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                    <span>प्रश्न पैलेट (सीधे प्रश्न पर जाएँ)</span>
+                    <span className="text-emerald-400 font-bold">
+                      {Object.keys(userAnswers).length}/{currentSetQuestions.length} हल
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentSetQuestions.map((q, idx) => {
+                      const isAnswered = !!userAnswers[q.id];
+                      const isCurrent = idx === qIndex;
+
+                      let pillStyle = "bg-slate-950 border-slate-800 text-slate-400";
+                      if (isCurrent) pillStyle = "border-emerald-400 text-white font-black bg-emerald-950/60 ring-1 ring-emerald-500/40";
+                      else if (isAnswered) pillStyle = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-bold";
+
+                      return (
+                        <button
+                          key={q.id}
+                          type="button"
+                          onClick={() => setQIndex(idx)}
+                          className={`w-8 h-8 rounded-lg border text-xs flex items-center justify-center transition active:scale-90 ${pillStyle}`}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ) : null
           ) : (
             /* Results Screen */
             <div className="space-y-4 animate-fadeIn">
-              <div className="p-6 rounded-3xl bg-[#0e131f] border border-slate-800 text-center space-y-4 shadow-2xl">
-                <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
+              <div className="p-6 rounded-[28px] bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-2xl">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
                   <Trophy className="w-8 h-8" />
                 </div>
                 <div>
@@ -592,25 +620,25 @@ export default function ChapterSingleViewPage() {
                   <p className="text-xs text-slate-400">{chapter.name} • Set {selectedSet}</p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5 py-2">
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
-                    <div className="text-emerald-400 font-black text-lg">{correctCount}</div>
-                    <div className="text-[10px] text-slate-400">सही उत्तर</div>
+                <div className="grid grid-cols-3 gap-2.5 py-1">
+                  <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-emerald-400 font-black text-xl">{correctCount}</div>
+                    <div className="text-[10px] text-slate-400 font-medium">सही उत्तर</div>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
-                    <div className="text-rose-400 font-black text-lg">{wrongCount}</div>
-                    <div className="text-[10px] text-slate-400">गलत उत्तर</div>
+                  <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-rose-400 font-black text-xl">{wrongCount}</div>
+                    <div className="text-[10px] text-slate-400 font-medium">गलत उत्तर</div>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
-                    <div className="text-amber-400 font-black text-lg">{accuracyPercent}%</div>
-                    <div className="text-[10px] text-slate-400">सटीकता</div>
+                  <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-amber-400 font-black text-xl">{accuracyPercent}%</div>
+                    <div className="text-[10px] text-slate-400 font-medium">सटीकता</div>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={shareScoreOnWhatsApp}
-                  className="w-full py-3 rounded-2xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl bg-[#25D366] text-slate-950 font-black text-xs shadow flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                 >
                   <Share2 className="w-4 h-4" /> WhatsApp पर शेयर करें
                 </button>
@@ -619,14 +647,14 @@ export default function ChapterSingleViewPage() {
                   <button
                     type="button"
                     onClick={() => openSetArena(selectedSet)}
-                    className="flex-1 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5"
                   >
-                    <RotateCcw className="w-4 h-4" /> री-टेस्ट
+                    <RotateCcw className="w-3.5 h-3.5" /> री-टेस्ट
                   </button>
                   <button
                     type="button"
                     onClick={handleGoToNextSet}
-                    className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-1.5"
                   >
                     {selectedSet < totalSets ? `सेट ${selectedSet + 1} टेस्ट ➡️` : "अन्य सेट्स देखें"}
                   </button>
@@ -634,21 +662,19 @@ export default function ChapterSingleViewPage() {
               </div>
 
               {/* Accordion Review */}
-              <div className="rounded-3xl bg-[#0e131f] border border-slate-800 overflow-hidden shadow-xl">
+              <div className="rounded-[24px] bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl">
                 <button
                   type="button"
                   onClick={() => setIsOpenReview(!isOpenReview)}
-                  className="w-full p-4 flex items-center justify-between bg-slate-900/90 hover:bg-slate-800 transition cursor-pointer"
+                  className="w-full p-4 flex items-center justify-between bg-slate-900 hover:bg-slate-850 transition"
                 >
                   <div className="flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4 text-purple-400" />
+                    <HelpCircle className="w-4 h-4 text-emerald-400" />
                     <span className="text-xs sm:text-sm font-bold text-white">
                       {isOpenReview ? "उत्तर व व्याख्या छिपाएँ" : "🔍 सभी प्रश्नों के उत्तर व व्याख्या देखें"}
                     </span>
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpenReview ? "rotate-180" : ""}`} />
-                  </div>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isOpenReview ? "rotate-180" : ""}`} />
                 </button>
 
                 {isOpenReview && (
@@ -665,15 +691,13 @@ export default function ChapterSingleViewPage() {
                               प्रश्न #{idx + 1}
                             </span>
                             {isUnattempted ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                                अनुत्तरित
-                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">अनुत्तरित</span>
                             ) : isCorrect ? (
-                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                                 <Check className="w-3 h-3" /> सही (+1)
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
                                 <X className="w-3 h-3" /> गलत (-0.33)
                               </span>
                             )}
@@ -693,7 +717,7 @@ export default function ChapterSingleViewPage() {
                               else if (userAns === opt.key && !isCorrect) optStyle = "bg-rose-500/20 border-rose-500 text-rose-300 line-through font-semibold";
 
                               return (
-                                <div key={opt.key} className={`p-3 rounded-2xl border text-xs sm:text-sm flex items-center justify-between ${optStyle}`}>
+                                <div key={opt.key} className={`p-3 rounded-xl border text-xs flex items-center justify-between ${optStyle}`}>
                                   <div className="flex items-center gap-2.5">
                                     <span className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300">
                                       {opt.key}
@@ -708,8 +732,8 @@ export default function ChapterSingleViewPage() {
                           </div>
 
                           {q.explanation && (
-                            <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
-                              <div className="font-bold flex items-center gap-1 text-indigo-300">
+                            <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-200 space-y-1">
+                              <div className="font-bold flex items-center gap-1 text-emerald-400">
                                 <HelpCircle className="w-3.5 h-3.5" /> व्याख्या:
                               </div>
                               <p className="text-xs leading-relaxed whitespace-pre-line text-slate-200">{q.explanation}</p>
@@ -730,7 +754,7 @@ export default function ChapterSingleViewPage() {
           <div className="flex items-center justify-between">
             <Link 
               href={chapter.subjects ? `/subject/${chapter.subjects.id}` : "/"} 
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> वापस विषय ({chapter.subjects?.name || "विषय"})
             </Link>
@@ -739,25 +763,26 @@ export default function ChapterSingleViewPage() {
             </span>
           </div>
 
-          <section className="p-4 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/60 border border-purple-500/20 shadow-xl space-y-1 relative overflow-hidden">
-            <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
-              {chapter.subjects?.name} • सम्पूर्ण मास्टरक्लास
+          <section className="p-5 rounded-[28px] bg-gradient-to-b from-slate-900/95 to-slate-950 border border-emerald-500/20 shadow-xl space-y-2 relative overflow-hidden">
+            <div className="text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> {chapter.subjects?.name} • सम्पूर्ण मास्टरक्लास
             </div>
-            <h1 className="text-base sm:text-lg font-black text-white leading-snug">{chapter.name}</h1>
+            <h1 className="text-lg sm:text-xl font-black text-white leading-snug">{chapter.name}</h1>
             <p className="text-xs text-slate-300 leading-relaxed">
               {chapter.description || "अवधारणाओं को समझें एवं 20-20 टेस्ट सेट्स का अभ्यास करें।"}
             </p>
           </section>
 
+          {/* 4 Mode Tabs (2x2 Grid) */}
           <section className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
               onClick={() => setActiveTab("notes")}
-              className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                activeTab === "notes" ? "bg-purple-950/50 border-purple-500 shadow-md" : "bg-[#0e131f] border-slate-800/90"
+              className={`p-3.5 rounded-2xl border text-left transition ${
+                activeTab === "notes" ? "bg-emerald-950/40 border-emerald-500 shadow-md" : "bg-slate-900/70 border-slate-800"
               }`}
             >
-              <BookOpen className="w-4 h-4 text-purple-400 mb-1" />
+              <BookOpen className="w-4 h-4 text-emerald-400 mb-1" />
               <h2 className="text-xs font-bold text-white leading-tight">स्मार्ट नोट्स</h2>
               <p className="text-[10px] text-slate-400 mt-0.5">{notes.length} शीट उपलब्ध</p>
             </button>
@@ -765,8 +790,8 @@ export default function ChapterSingleViewPage() {
             <button
               type="button"
               onClick={() => setActiveTab("mcqs")}
-              className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                activeTab === "mcqs" ? "bg-purple-950/50 border-purple-500 shadow-md" : "bg-[#0e131f] border-slate-800/90"
+              className={`p-3.5 rounded-2xl border text-left transition ${
+                activeTab === "mcqs" ? "bg-emerald-950/40 border-emerald-500 shadow-md" : "bg-slate-900/70 border-slate-800"
               }`}
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-400 mb-1" />
@@ -777,8 +802,8 @@ export default function ChapterSingleViewPage() {
             <button
               type="button"
               onClick={() => setActiveTab("pyqs")}
-              className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                activeTab === "pyqs" ? "bg-purple-950/50 border-purple-500 shadow-md" : "bg-[#0e131f] border-slate-800/90"
+              className={`p-3.5 rounded-2xl border text-left transition ${
+                activeTab === "pyqs" ? "bg-emerald-950/40 border-emerald-500 shadow-md" : "bg-slate-900/70 border-slate-800"
               }`}
             >
               <Sparkles className="w-4 h-4 text-amber-400 mb-1" />
@@ -789,11 +814,11 @@ export default function ChapterSingleViewPage() {
             <button
               type="button"
               onClick={() => setActiveTab("quiz")}
-              className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                activeTab === "quiz" ? "bg-purple-950/50 border-purple-500 shadow-md" : "bg-[#0e131f] border-slate-800/90"
+              className={`p-3.5 rounded-2xl border text-left transition ${
+                activeTab === "quiz" ? "bg-emerald-950/40 border-emerald-500 shadow-md" : "bg-slate-900/70 border-slate-800"
               }`}
             >
-              <Trophy className="w-4 h-4 text-purple-400 mb-1" />
+              <Trophy className="w-4 h-4 text-cyan-400 mb-1" />
               <h2 className="text-xs font-bold text-white leading-tight">स्पीड टेस्ट</h2>
               <p className="text-[10px] text-slate-400 mt-0.5">20 Qs • 10 मिनट</p>
             </button>
@@ -804,10 +829,10 @@ export default function ChapterSingleViewPage() {
           ) : (
             <section className="space-y-3 pt-1">
               <div className="flex items-center justify-between text-xs font-bold text-slate-300 px-1">
-                <span className="flex items-center gap-1.5 text-purple-400">
+                <span className="flex items-center gap-1.5 text-emerald-400">
                   <Layers className="w-4 h-4" /> उपलब्ध 20-20 टेस्ट सेट्स ({totalSets})
                 </span>
-                <span className="text-[10px] text-slate-500 uppercase">टैप करके टेस्ट शुरू करें</span>
+                <span className="text-[10px] text-slate-500">टैप करके शुरू करें</span>
               </div>
 
               <div className="grid gap-2.5">
@@ -816,14 +841,14 @@ export default function ChapterSingleViewPage() {
                     key={idx}
                     type="button"
                     onClick={() => openSetArena(idx + 1)}
-                    className="w-full p-4 rounded-2xl bg-[#0e131f] hover:bg-purple-950/30 border border-slate-800/90 hover:border-purple-500/50 flex items-center justify-between group transition active:scale-[0.99] cursor-pointer shadow-lg"
+                    className="w-full p-4 rounded-2xl bg-slate-900/80 hover:bg-emerald-950/20 border border-slate-800 hover:border-emerald-500/40 flex items-center justify-between group transition active:scale-[0.99] shadow-md"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-purple-600/15 border border-purple-500/25 flex items-center justify-center text-purple-400 font-black text-sm group-hover:scale-105 transition">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-sm group-hover:scale-105 transition">
                         {idx + 1}
                       </div>
                       <div className="text-left">
-                        <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-purple-300 transition">
+                        <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 transition">
                           प्रैक्टिस सेट #{idx + 1}
                         </h3>
                         <p className="text-[11px] text-slate-400 mt-0.5">
@@ -832,7 +857,7 @@ export default function ChapterSingleViewPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs font-bold text-purple-400 group-hover:translate-x-1 transition">
+                    <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition">
                       <Play className="w-3.5 h-3.5 fill-current" /> शुरू करें
                     </div>
                   </button>
@@ -846,3 +871,4 @@ export default function ChapterSingleViewPage() {
     </main>
   );
 }
+EOF
