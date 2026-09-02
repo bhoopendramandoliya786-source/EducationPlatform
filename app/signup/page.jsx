@@ -1,9 +1,10 @@
 "use client";
+
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase/client";
-import { ArrowLeft, Lock, Mail, User, Loader2, UserPlus, AlertCircle, CheckCircle2 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+import { ArrowLeft, Lock, Mail, User, Loader2, UserPlus, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -13,7 +14,6 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const supabase = createClient();
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -29,6 +29,11 @@ export default function SignUpPage() {
     setSuccessMsg("");
 
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
@@ -47,20 +52,16 @@ export default function SignUpPage() {
         );
         setLoading(false);
       } else {
-        // 1. Google Analytics Sign Up Event Trigger
         if (typeof window !== "undefined" && window.gtag) {
           window.gtag("event", "sign_up", {
             method: "Email",
           });
         }
 
-        // 2. Email Confirmation Check
         if (data?.session) {
-          // Direct login if email confirmation is disabled
           router.push("/student");
           router.refresh();
         } else {
-          // If email confirmation is enabled in Supabase
           setSuccessMsg("खाता सफलतापूर्वक बन गया! अपनी ईमेल पर आए लिंक से वेरिफाई करें या लॉगिन करें।");
           setLoading(false);
         }
@@ -72,28 +73,30 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-6 space-y-5">
+    <div className="max-w-md mx-auto px-4 pt-4 pb-20 space-y-4 font-sans select-none">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-emerald-400 transition"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> वापस होम पर
+        <ArrowLeft className="w-3.5 h-3.5" /> वापस होम
       </Link>
 
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-950/70 via-slate-900 to-slate-950 border border-indigo-500/20 space-y-5 shadow-2xl relative overflow-hidden">
-        {/* Header Icon */}
+      <div className="p-6 rounded-[28px] bg-gradient-to-b from-slate-900/95 to-slate-950 border border-emerald-500/20 space-y-5 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 inset-x-8 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+
+        {/* Header Icon & Title */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 mx-auto flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mx-auto flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
             <UserPlus className="w-6 h-6" />
           </div>
-          <h1 className="text-lg font-black text-white">नया खाता बनाएं</h1>
+          <h1 className="text-xl font-black text-white tracking-tight">नया खाता बनाएं</h1>
           <p className="text-xs text-slate-400">अपनी तैयारी शुरू करें और रैंक ट्रैक करें</p>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
           <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -101,14 +104,14 @@ export default function SignUpPage() {
         {/* Success Alert */}
         {successMsg && (
           <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{successMsg}</span>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSignUp} className="space-y-3.5">
-          <div className="space-y-1">
+        <form onSubmit={handleSignUp} className="space-y-4">
+          <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-300">पूरा नाम</label>
             <div className="relative">
               <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -119,12 +122,12 @@ export default function SignUpPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="विद्यार्थी का नाम"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50 transition"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-300">ईमेल आईडी</label>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -135,12 +138,12 @@ export default function SignUpPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="student@example.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50 transition"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-300">पासवर्ड (न्यूनतम 6 अक्षर)</label>
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -151,7 +154,7 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50 transition"
               />
             </div>
           </div>
@@ -159,11 +162,11 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-xs font-bold text-white shadow-lg shadow-indigo-500/25 active:scale-[0.98] disabled:opacity-70 transition flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-xs font-black text-slate-950 shadow-lg shadow-emerald-500/20 active:scale-[0.98] disabled:opacity-70 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
                 <span>खाता बनाया जा रहा है...</span>
               </>
             ) : (
@@ -174,7 +177,7 @@ export default function SignUpPage() {
 
         <div className="text-center pt-1 text-xs text-slate-400">
           पहले से खाता है?{" "}
-          <Link href="/login" className="text-indigo-400 font-bold hover:underline">
+          <Link href="/login" className="text-emerald-400 font-bold hover:underline ml-0.5">
             लॉगिन करें
           </Link>
         </div>
