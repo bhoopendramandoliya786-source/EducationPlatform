@@ -3,23 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Flame } from "lucide-react";
-import TelegramBanner from "./TelegramBanner";
-import InstallPWA from "./InstallPWA";
-import BottomNavigation from "./BottomNavigation";
-import Footer from "./Footer";
+import TelegramBanner from "../../components/TelegramBanner";
+import InstallPWA from "../../components/InstallPWA";
+import BottomNavigation from "../../components/BottomNavigation";
+import Footer from "../../components/Footer";
 
 export default function AppShell({ children }) {
   const pathname = usePathname();
 
-  // जिन पेजों पर पूरा फोकस चाहिए, वहाँ से फ़ूटर, बैनर और बॉटम बार हटाएँ
+  // जिन पेजों पर पूरा स्क्रीन स्पेस चाहिए
   const isFocusMode = 
     pathname?.startsWith("/quiz") || 
+    pathname?.startsWith("/chapter") || 
     pathname?.startsWith("/ai-tutor") ||
     pathname?.startsWith("/admin");
 
   return (
     <>
-      {/* Smart Compact Header (Theme: Emerald Pro) */}
+      {/* Smart Compact Header */}
       <header className="sticky top-0 z-40 bg-[#06090e]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between gap-2.5">
         <Link href="/" aria-label="EduAI Pro होमपेज" className="flex items-center gap-2 flex-shrink-0 group">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center font-black text-slate-950 text-sm shadow-md shadow-emerald-500/20 group-hover:scale-105 transition">
@@ -48,13 +49,10 @@ export default function AppShell({ children }) {
         </div>
       </header>
 
-      {/* Non-intrusive Install PWA */}
       {!isFocusMode && <InstallPWA />}
 
-      {/* Main Content Area */}
       <main className="flex-1 w-full">{children}</main>
 
-      {/* Bottom UI Elements (केवल होम/ब्राउज़िंग पेजों पर दिखेंगे, टेस्ट में नहीं) */}
       {!isFocusMode && (
         <>
           <TelegramBanner />
